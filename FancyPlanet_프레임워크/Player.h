@@ -24,7 +24,7 @@ protected:
 	XMFLOAT3					m_xmf3Look = XMFLOAT3(0.0f, 0.0f, 1.0f);
 
 	XMFLOAT3					m_xmf3Velocity = XMFLOAT3(0.0f, 0.0f, 0.0f);
-	XMFLOAT3     				m_xmf3Gravity = XMFLOAT3(0.0f, 0.0f, 0.0f);
+	XMFLOAT3     			m_xmf3Gravity = XMFLOAT3(0.0f, 0.0f, 0.0f);
 
 	float           			m_fPitch = 0.0f;
 	float           			m_fYaw = 0.0f;
@@ -40,13 +40,26 @@ protected:
 	CCamera						*m_pCamera = NULL;
 
 public:
-	CPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature, void *pContext = NULL, int nMeshes = 1);
+	CPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature
+		, void *pContext = NULL, int nMeshes = 1);
 	virtual ~CPlayer();
 
-	XMFLOAT3 GetPosition() { return(m_xmf3Position); }
-	XMFLOAT3 GetLookVector() { return(m_xmf3Look); }
-	XMFLOAT3 GetUpVector() { return(m_xmf3Up); }
-	XMFLOAT3 GetRightVector() { return(m_xmf3Right); }
+	XMFLOAT3 GetPosition() 
+	{
+		return(m_xmf3Position); 
+	}
+	XMFLOAT3 GetLookVector() 
+	{
+		return(m_xmf3Look); 
+	}
+	XMFLOAT3 GetUpVector()
+	{
+		return(m_xmf3Up); 
+	}
+	XMFLOAT3 GetRightVector() 
+	{
+		return(m_xmf3Right);
+	}
 
 	void SetFriction(float fFriction) { m_fFriction = fFriction; }
 	void SetGravity(const XMFLOAT3& xmf3Gravity) { m_xmf3Gravity = xmf3Gravity; }
@@ -76,13 +89,13 @@ public:
 	virtual void OnCameraUpdateCallback(float fTimeElapsed) { }
 	void SetCameraUpdatedContext(LPVOID pContext) { m_pCameraUpdatedContext = pContext; }
 
-	ID3D12Resource *CreateShaderVariables(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList);
 	virtual void ReleaseShaderVariables();
 	virtual void UpdateShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList);
 
 	CCamera *OnChangeCamera(DWORD nNewCameraMode, DWORD nCurrentCameraMode);
 
-	virtual CCamera *ChangeCamera(DWORD nNewCameraMode, float fTimeElapsed) { return(NULL); }
+	virtual CCamera *ChangeCamera(DWORD nNewCameraMode, float fTimeElapsed);
+	
 	virtual void OnPrepareRender();
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera = NULL);
 	virtual void Animate(float fTimeElapsed);

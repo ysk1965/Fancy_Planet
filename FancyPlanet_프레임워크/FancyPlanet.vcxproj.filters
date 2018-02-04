@@ -13,6 +13,12 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="Terrain">
+      <UniqueIdentifier>{688d3e8a-8cc5-49da-8ef8-b5310f6a8ca7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Test">
+      <UniqueIdentifier>{1291981a-f0bd-461f-9848-ffb8e7b28990}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h">
@@ -48,6 +54,15 @@
     <ClInclude Include="d3dx12.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
+    <ClInclude Include="Scene.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="Mesh.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="Shader.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -74,6 +89,15 @@
     <ClCompile Include="Object.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
+    <ClCompile Include="Scene.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="Mesh.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="Shader.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="FancyPlanet.rc">
@@ -87,5 +111,26 @@
     <Image Include="FancyPlanet.ico">
       <Filter>리소스 파일</Filter>
     </Image>
+    <Image Include="Assets\Image\Terrain\Base_Texture.dds">
+      <Filter>Terrain</Filter>
+    </Image>
+    <Image Include="Assets\Image\Terrain\Detail_Texture_7.dds">
+      <Filter>Terrain</Filter>
+    </Image>
+    <Image Include="..\Assets\Image\Test\rock3.png">
+      <Filter>Test</Filter>
+    </Image>
+    <Image Include="..\Assets\Image\Test\rock3Normal.dds">
+      <Filter>Test</Filter>
+    </Image>
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="Shaders.hlsl" />
+    <FxCompile Include="Light.hlsl" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Assets\Image\Terrain\HeightMap.raw">
+      <Filter>Terrain</Filter>
+    </None>
   </ItemGroup>
 </Project>
