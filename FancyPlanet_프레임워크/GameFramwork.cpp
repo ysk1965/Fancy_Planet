@@ -608,15 +608,6 @@ void CGameFramework::BuildObjects()
 		m_ppbDivision[i] = pbNew;
 	}
 
-#ifdef _WITH_APACHE_MODEL
-	m_pPlayer->SetPosition(XMFLOAT3(0.0f, 350.0f, -300.0f));
-	m_pPlayer->Rotate(0.0f, -45.0f, 0.0f);
-#endif
-#ifdef _WITH_GUNSHIP_MODEL
-	m_pPlayer->SetPosition(XMFLOAT3(0.0f, 0.0f, 0.0f));
-	//	m_pPlayer->Rotate(0.0f, 0.0f, 0.0f);
-#endif
-
 	for (int i = 0; i < NUM_SUBSETS; i++)
 	{
 		m_ppd3dCommandLists[i]->Close();
@@ -667,12 +658,18 @@ void CGameFramework::ProcessInput()
 	if (!bProcessedByScene)
 	{
 		DWORD dwDirection = 0;
-		if (pKeysBuffer[VK_UP] & 0xF0) dwDirection |= DIR_FORWARD;
-		if (pKeysBuffer[VK_DOWN] & 0xF0) dwDirection |= DIR_BACKWARD;
-		if (pKeysBuffer[VK_LEFT] & 0xF0) dwDirection |= DIR_LEFT;
-		if (pKeysBuffer[VK_RIGHT] & 0xF0) dwDirection |= DIR_RIGHT;
-		if (pKeysBuffer[VK_PRIOR] & 0xF0) dwDirection |= DIR_UP;
-		if (pKeysBuffer[VK_NEXT] & 0xF0) dwDirection |= DIR_DOWN;
+		if (pKeysBuffer[87] & 0xF0)
+			dwDirection |= DIR_FORWARD;
+		if (pKeysBuffer[83] & 0xF0)
+			dwDirection |= DIR_BACKWARD;
+		if (pKeysBuffer[65] & 0xF0)
+			dwDirection |= DIR_LEFT;
+		if (pKeysBuffer[68] & 0xF0)
+			dwDirection |= DIR_RIGHT;
+		if (pKeysBuffer[VK_PRIOR] & 0xF0) 
+			dwDirection |= DIR_UP;
+		if (pKeysBuffer[VK_NEXT] & 0xF0) 
+			dwDirection |= DIR_DOWN;
 		
 
 		float cxDelta = 0.0f, cyDelta = 0.0f;

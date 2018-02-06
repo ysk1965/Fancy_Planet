@@ -1,7 +1,3 @@
-//-----------------------------------------------------------------------------
-// File: CGameObject.cpp
-//-----------------------------------------------------------------------------
-
 #include "stdafx.h"
 #include "Object.h"
 #include "Shader.h"
@@ -30,7 +26,9 @@ CTexture::~CTexture()
 {
 	if (m_ppd3dTextures)
 	{
-		for (int i = 0; i < m_nTextures; i++) if (m_ppd3dTextures[i]) m_ppd3dTextures[i]->Release();
+		for (int i = 0; i < m_nTextures; i++) 
+			if (m_ppd3dTextures[i]) 
+				m_ppd3dTextures[i]->Release();
 	}
 
 	if (m_pRootArgumentInfos)
@@ -311,7 +309,7 @@ void CGameObject::Render(ID3D12GraphicsCommandList *pd3dCommandList, int iRootPa
 
 		for (int i = 0; i < m_nMeshes; i++)
 		{
-			if (m_ppMeshes[i]) 
+			if (m_ppMeshes[i] )
 				m_ppMeshes[i]->Render(pd3dCommandList);
 		}
 	}
@@ -338,7 +336,8 @@ void CGameObject::Render(ID3D12GraphicsCommandList *pd3dCommandList, int iRootPa
 	{
 		for (int i = 0; i < m_nMeshes; i++)
 		{
-			if (m_ppMeshes[i]) m_ppMeshes[i]->Render(pd3dCommandList, nInstances);
+			if (m_ppMeshes[i]) 
+				m_ppMeshes[i]->Render(pd3dCommandList, nInstances);
 		}
 	}
 }
@@ -352,7 +351,8 @@ void CGameObject::ReleaseUploadBuffers()
 		}
 	}
 
-	if (m_pMaterial) m_pMaterial->ReleaseUploadBuffers();
+	if (m_pMaterial) 
+		m_pMaterial->ReleaseUploadBuffers();
 
 	if (m_pSibling) 
 		m_pSibling->ReleaseUploadBuffers();
@@ -384,6 +384,17 @@ CGameObject *CGameObject::FindFrame(_TCHAR *pstrFrameName)
 	return(NULL);
 }
 
+void CGameObject::SetWorldPosition(float x, float y, float z)
+{
+	m_xmf4x4World._41 = x;
+	m_xmf4x4World._42 = y;
+	m_xmf4x4World._43 = z;
+}
+
+void CGameObject::SetWorldPosition(XMFLOAT3 xmf3Position)
+{
+	SetWorldPosition(xmf3Position.x, xmf3Position.y, xmf3Position.z);
+}
 void CGameObject::SetPosition(float x, float y, float z)
 {
 	m_xmf4x4ToParentTransform._41 = x;
@@ -477,7 +488,8 @@ void CGameObject::Rotate(XMFLOAT4 *pxmf4Quaternion)
 }
 
 
-void CGameObject::LoadGeometryFromFile(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature, TCHAR *pstrFileName)
+void CGameObject::LoadGeometryFromFile(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList
+	, ID3D12RootSignature *pd3dGraphicsRootSignature, TCHAR *pstrFileName)
 {
 	ifstream fi;
 
@@ -812,7 +824,7 @@ CSkyBox::~CSkyBox()
 void CSkyBox::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera)
 {
 	XMFLOAT3 xmf3CameraPos = pCamera->GetPosition();
-	SetPosition(xmf3CameraPos.x, xmf3CameraPos.y, xmf3CameraPos.z);
+	SetWorldPosition(xmf3CameraPos.x, xmf3CameraPos.y, xmf3CameraPos.z);
 
 	OnPrepareRender();
 
@@ -844,13 +856,12 @@ void CSkyBox::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamer
 	}
 }
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-CharaterObject::CharaterObject(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature, UINT nMeshes) : CGameObject(nMeshes)
+CharaterObject::CharaterObject(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature, UINT nMeshes, TCHAR *pstrFileName) : CGameObject(nMeshes)
 {
-	LoadGeometryFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, L"../Assets/Model.dat");
+	LoadGeometryFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, pstrFileName);
 
-	SetScale(20.0f, 20.0f, 20.0f);
+	SetScale(200.0f, 200.0f, 200.0f);
 }
 CharaterObject::~CharaterObject()
 {
-
 }

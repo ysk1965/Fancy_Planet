@@ -22,9 +22,9 @@ Texture2D gtxtTerrainDetailTexture : register(t5);
 Texture2D gtxtTerrainNormalMap : register(t6);
 Texture2D gtxtTexture_Stone : register(t7);
 Texture2D gtxtTexture_StoneNormal : register(t8);
-Texture2D gtxtModel_Diffuse_body : register(t10);
-Texture2D gtxtModel_Normal_body : register(t11);
-Texture2D gtxtModel_Specular_body : register(t12);
+Texture2D gtxtModel_Diffuse : register(t10);
+Texture2D gtxtModel_Normal : register(t11);
+Texture2D gtxtModel_Specular : register(t12);
 SamplerState gWrapSamplerState : register(s0);
 SamplerState gClampSamplerState : register(s1);
 #include "Light.hlsl"
@@ -179,15 +179,12 @@ VS_OUTPUT VS_TDL(VS_INPUT input)
 PS_TEXTURED_DEFFERREDLIGHTING_OUTPUT PS_TDL(VS_OUTPUT input) : SV_TARGET
 {
 	PS_TEXTURED_DEFFERREDLIGHTING_OUTPUT output;
-	float2 uv1, uv2;
+	float2 uv1;
 
 	uv1.x = input.uv.x;
 	uv1.y = 1.0f - input.uv.y;
 
-	uv2.x = input.uv.x;
-	uv2.x = input.uv.y;
-
-	float3 diffuse = gtxtModel_Diffuse_body.Sample(gWrapSamplerState, uv1).rgb;
+	float3 diffuse = gtxtModel_Diffuse.Sample(gWrapSamplerState, uv1).rgb;
 
 	output.diffuse = float4(diffuse, 1.0f);
 
@@ -196,7 +193,7 @@ PS_TEXTURED_DEFFERREDLIGHTING_OUTPUT PS_TDL(VS_OUTPUT input) : SV_TARGET
 	float3 B = cross(N, T);
 	float3x3 TBN = float3x3(T, B, N);
 	// 노말맵으로 부터 법선벡터를 가져온다.
-	float3 normal = gtxtModel_Normal_body.Sample(gWrapSamplerState, uv1).rgb;
+	float3 normal = gtxtModel_Normal.Sample(gWrapSamplerState, uv1).rgb;
 	// -1 와 1사이 값으로 변환한다.
 	normal = 2.0f * normal - 1.0f;
 	float3 normalW = mul(normal, TBN);
@@ -279,7 +276,7 @@ PS_TEXTURED_DEFFERREDLIGHTING_OUTPUT PSTextured(VS_TEXTURED_OUTPUT input) : SV_T
 	uv1.x = input.uv.x;
 	uv1.y = 1.0f - input.uv.y;
 
-	float3 diffuse = gtxtModel_Diffuse_body.Sample(gWrapSamplerState, uv1).rgb;
+	float3 diffuse = gtxtModel_Diffuse.Sample(gWrapSamplerState, uv1).rgb;
 
 	output.depth = float4(input.positionW, 1.0f);
 	output.diffuse = float4(diffuse, 1.0f);
@@ -298,3 +295,56 @@ float4 PSSkyBox(VS_TEXTURED_OUTPUT input) : SV_TARGET
 	return(cColor);
 }
 
+
+cbuffer cbSkinned : register(b11)
+{
+	float4x4 gmtxBoneTransforms[96];
+};
+
+struct A_VS_INPUT
+{
+	float3 position:POSITION;
+	float3 normal:NORMAL;
+	float2 uv:TEXCOORD;
+	float3 tangent : TANGENT;
+	float3 boneWeights:WEIGHTS;
+	uint4 boneIndices : BONEINDICES;
+};
+struct A_VS_OUTPUT
+{
+	float4 position : SV_POSITION;
+	float3 postionW : POSITION;
+	float3 normalW : NORMAL;
+	float2 uv : TEXCOORD;
+	float3 tangentW : TANGENT;
+};
+A_VS_OUTPUT VS(A_VS_INPUT input)
+{
+	A_VS_OUTPUT output;
+
+	float4 fWeight = { 0.0f, 0.0f, 0.0f, 0.0f };
+	fWeight[0] = input.boneWeights.x;
+	fWeight[1] = input.boneWeights.y;
+	fWeight[2] = input.boneWeights.z;
+	fWeight[3] = 1 - fWeight[0] - fWeight[1] - fWeight[2];
+
+	float3 position = float3(0.0f, 0.0f, 0.0f);
+	float3 normal = float3(0.0f, 0.0f, 0.0f);
+	float3 tangent = float3(0.0f, 0.0f, 0.0f);
+
+	for (int i = 0; i < 4; i++)
+	{
+		position = fWeight[i]*mul(float4(input.position, 1.0f), gmtxBoneTransforms[input.boneIndices[i]]).xyz;
+		normal += fWeight[i] * mul(input.normal, (float3x3)gmtxBoneTransforms[input.boneIndices[i]]);
+		tangent += fWeight[i] * mul(input.tangent.xyz, (float3x3)gmtxBoneTransforms[input.boneIndices[i]]);
+	}
+	output.uv = input.uv;
+	output.postionW = mul(float4(position, 1.0f), gmtxWorld).xyz;
+	output.normalW = mul(normal, (float3x3)gmtxWorld);
+	output.tangentW = mul(tangent, (float3x3)gmtxWorld);
+	matrix mtxWorldViewProjection = mul(gmtxWorld, gmtxView);
+	mtxWorldViewProjection = mul(mtxWorldViewProjection, gmtxProjection);
+	output.position = mul(float4(input.position, 1.0f), mtxWorldViewProjection);
+
+	return output;
+}

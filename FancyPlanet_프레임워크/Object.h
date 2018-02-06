@@ -5,6 +5,7 @@
 #pragma once
 #include "Mesh.h"
 #include "Camera.h"
+#include "AnimationController.h"
 
 #define DIR_FORWARD					0x01
 #define DIR_BACKWARD				0x02
@@ -42,7 +43,6 @@ public:
 
 private:
 	int								m_nReferences = 0;
-
 	UINT							m_nTextureType = RESOURCE_TEXTURE2D;
 	int								m_nTextures = 0;
 	ID3D12Resource					**m_ppd3dTextures = NULL;
@@ -67,8 +67,14 @@ public:
 	void LoadTextureFromFile(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, wchar_t *pszFileName, UINT nIndex);
 
 	int GetTextureCount() { return(m_nTextures); }
-	ID3D12Resource *GetTexture(int nIndex) { return(m_ppd3dTextures[nIndex]); }
-	UINT GetTextureType() { return(m_nTextureType); }
+	ID3D12Resource *GetTexture(int nIndex) 
+	{
+		return(m_ppd3dTextures[nIndex]);
+	}
+	UINT GetTextureType() 
+	{
+		return(m_nTextureType);
+	}
 
 	void ReleaseUploadBuffers();	
 };
@@ -133,6 +139,7 @@ public:
 	CMaterial						*m_pMaterial = NULL;
 
 	D3D12_GPU_DESCRIPTOR_HANDLE		m_d3dCbvGPUDescriptorHandle;
+	AnimationController				*m_pAnimationController;
 
 protected:
 	ID3D12Resource					*m_pd3dcbGameObject = NULL;
@@ -167,6 +174,9 @@ public:
 	XMFLOAT3 GetUp();
 	XMFLOAT3 GetRight();
 
+
+	void SetWorldPosition(XMFLOAT3 xmf3Position);
+	void SetWorldPosition(float x, float y, float z);
 	void SetPosition(float x, float y, float z);
 	void SetPosition(XMFLOAT3 xmf3Position);
 	void SetLocalPosition(XMFLOAT3 xmf3Position);
@@ -236,6 +246,6 @@ public:
 class CharaterObject : public CGameObject
 {
 public:
-	CharaterObject(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature, UINT nMeshes);
+	CharaterObject(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature, UINT nMeshes, TCHAR *pstrFileName);
 	~CharaterObject();
 };

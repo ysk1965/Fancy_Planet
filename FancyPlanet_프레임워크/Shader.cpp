@@ -850,11 +850,6 @@ void CTextureToFullScreenShader::UpdateShaderVariables(ID3D12GraphicsCommandList
 	::memcpy(m_pcbMappedLights, m_pLights, sizeof(LIGHTS));
 	::memcpy(m_pcbMappedMaterials, m_pMaterials, sizeof(MATERIALS));
 
-	if (m_pLights)
-	{
-		m_pLights->m_pLights[0].m_xmf3Position = m_pPlayer->GetPosition();
-		m_pLights->m_pLights[0].m_xmf3Direction = m_pPlayer->GetLookVector();
-	}
 }
 
 void CTextureToFullScreenShader::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera)

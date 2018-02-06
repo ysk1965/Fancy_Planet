@@ -102,8 +102,8 @@ void TerrainAndSkyBoxScene::Render(ID3D12GraphicsCommandList *pd3dCommandList, C
 
 	pCamera->SetViewportsAndScissorRects(pd3dCommandList);
 	pCamera->UpdateShaderVariables(pd3dCommandList);
-	//if (m_pSkyBox)
-	//	m_pSkyBox->Render(pd3dCommandList, pCamera);
+	if (m_pSkyBox)
+		m_pSkyBox->Render(pd3dCommandList, pCamera);
 
 	if (m_pTerrain)
 	{
@@ -419,12 +419,17 @@ void CharacterScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsComman
 	pTestShader->BuildObjects(pd3dDevice, pd3dCommandList, 1);
 	m_ppShaders[0] = pTestShader;
 
-	m_nObjects = 1;
+	m_nObjects = 4;
 	m_ppObjects = new CGameObject*[m_nObjects];
 
-	m_ppObjects[0] = new CharaterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, 0);
-	m_ppObjects[0]->SetPosition(XMFLOAT3(0.0f, 0.0f, 0.0f));
-
+	m_ppObjects[0] = new CharaterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, 0, L"../Assets/WhaleModel.dat");
+	m_ppObjects[0]->SetPosition(XMFLOAT3(1500.0f, 300.0f, 1500.0f));
+	m_ppObjects[1] = new CharaterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, 0, L"../Assets/KnightModel.dat");
+	m_ppObjects[1]->SetPosition(XMFLOAT3(1000.0f, 300.0f, 1000.0f));
+	m_ppObjects[2] = new CharaterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, 0, L"../Assets/Model.dat");
+	m_ppObjects[2]->SetPosition(XMFLOAT3(500.0f, 300.0f, 500.0f));
+	m_ppObjects[3] = new CharaterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, 0, L"../Assets/SoldierModel.dat");
+	m_ppObjects[3]->SetPosition(XMFLOAT3(500.0f, 300.0f, 1500.0f));
 }
 void CharacterScene::ReleaseObjects()
 {
