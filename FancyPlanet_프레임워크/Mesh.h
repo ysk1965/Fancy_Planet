@@ -36,6 +36,52 @@ public:
 	CTexturedVertex(XMFLOAT3 xmf3Position, XMFLOAT2 xmf2TexCoord = XMFLOAT2(0.0f, 0.0f)) { m_xmf3Position = xmf3Position; m_xmf2TexCoord = xmf2TexCoord; }
 	~CTexturedVertex() { }
 };
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+class CAnimation1TexturedVertex : public CTexturedVertex
+{
+public:
+	XMFLOAT3						m_xmf3BoneWeights;
+
+public:
+	CAnimation1TexturedVertex() 
+	{
+		m_xmf3Position = XMFLOAT3(0.0f, 0.0f, 0.0f); 
+		m_xmf2TexCoord = XMFLOAT2(0.0f, 0.0f); 
+		m_xmf3BoneWeights = XMFLOAT3(0.0f, 0.0f, 0.0f);
+	}
+	CAnimation1TexturedVertex(XMFLOAT3 xmf3Position, XMFLOAT2 xmf2TexCoord = XMFLOAT2(0.0f, 0.0f), XMFLOAT3 xmf3BoneWeights = XMFLOAT3(0.0f, 0.0f, 0.0f))
+	{
+		m_xmf3Position = xmf3Position; 
+		m_xmf2TexCoord = xmf2TexCoord; 
+		m_xmf3BoneWeights = xmf3BoneWeights;
+	}
+	~CAnimation1TexturedVertex() { }
+};
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+class CAnimation2TexturedVertex : public CAnimation1TexturedVertex
+{
+public:
+	XMINT4						m_xmi4BoneIndices;
+
+public:
+	CAnimation2TexturedVertex()
+	{
+		m_xmf3Position = XMFLOAT3(0.0f, 0.0f, 0.0f);
+		m_xmf2TexCoord = XMFLOAT2(0.0f, 0.0f);
+		m_xmf3BoneWeights = XMFLOAT3(0.0f, 0.0f, 0.0f);
+		m_xmi4BoneIndices = XMINT4(0, 0, 0, 0);
+	}
+	CAnimation2TexturedVertex(XMFLOAT3 xmf3Position, XMFLOAT2 xmf2TexCoord = XMFLOAT2(0.0f, 0.0f), XMFLOAT3 xmf3BoneWeights = XMFLOAT3(0.0f, 0.0f, 0.0f), XMINT4 xmi4BoneIndices = XMINT4(0, 0, 0, 0))
+	{
+		m_xmf3Position = xmf3Position;
+		m_xmf2TexCoord = xmf2TexCoord;
+		m_xmf3BoneWeights = xmf3BoneWeights;
+		m_xmi4BoneIndices = xmi4BoneIndices;
+	}
+	~CAnimation2TexturedVertex() { }
+};
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 class CDiffusedTexturedVertex : public CDiffusedVertex
 {
@@ -134,6 +180,62 @@ public:
 	CIlluminatedTexturedTBNVertex(XMFLOAT3 xmf3Position, XMFLOAT3 xmf3tanget = XMFLOAT3(0.0f, 0.0f, 0.0f), XMFLOAT3 xmf3Normal = XMFLOAT3(0.0f, 0.0f, 0.0f), XMFLOAT2 xmf2TexCoord = XMFLOAT2(0.0f, 0.0f)) { m_xmf3Position = xmf3Position; m_xmf3Normal = xmf3Normal; m_xmf2TexCoord = xmf2TexCoord; m_xmf3Tangent = xmf3tanget; }
 	~CIlluminatedTexturedTBNVertex() { }
 };
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+class CAnimation1Vertex : public CIlluminatedTexturedTBNVertex
+{
+protected:
+	XMFLOAT3						m_xmf3BoneWeights;
+public:
+	CAnimation1Vertex() 
+	{
+		m_xmf3Position = XMFLOAT3(0.0f, 0.0f, 0.0f); 
+		m_xmf2TexCoord = XMFLOAT2(0.0f, 0.0f); 
+		m_xmf3Normal = XMFLOAT3(0.0f, 0.0f, 0.0f); 
+		m_xmf3Tangent = XMFLOAT3(0.0f, 0.0f, 0.0f); 
+		m_xmf3BoneWeights = XMFLOAT3(0.0f, 0.0f, 0.0f);
+	}
+	CAnimation1Vertex(XMFLOAT3 xmf3Position, XMFLOAT3 xmf3tanget = XMFLOAT3(0.0f, 0.0f, 0.0f), XMFLOAT3 xmf3Normal = XMFLOAT3(0.0f, 0.0f, 0.0f)
+		, XMFLOAT2 xmf2TexCoord = XMFLOAT2(0.0f, 0.0f), XMFLOAT3 xmf3BoneWeights = XMFLOAT3(0.0f, 0.0f, 0.0f)) 
+	{
+		m_xmf3Position = xmf3Position; 
+		m_xmf3Normal = xmf3Normal; 
+		m_xmf2TexCoord = xmf2TexCoord; 
+		m_xmf3Tangent = xmf3tanget; 
+		m_xmf3BoneWeights = xmf3BoneWeights;
+	}
+	~CAnimation1Vertex() { }
+};
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+
+class CAnimation2Vertex : public CAnimation1Vertex
+{
+protected:
+	XMINT4						m_xmi4BoneIndices;
+public:
+	CAnimation2Vertex()
+	{
+		m_xmf3Position = XMFLOAT3(0.0f, 0.0f, 0.0f);
+		m_xmf2TexCoord = XMFLOAT2(0.0f, 0.0f);
+		m_xmf3Normal = XMFLOAT3(0.0f, 0.0f, 0.0f);
+		m_xmf3Tangent = XMFLOAT3(0.0f, 0.0f, 0.0f);
+		m_xmf3BoneWeights = XMFLOAT3(0.0f, 0.0f, 0.0f);
+		m_xmi4BoneIndices = XMINT4(0, 0, 0, 0);
+	}
+	CAnimation2Vertex(XMFLOAT3 xmf3Position, XMFLOAT3 xmf3tanget = XMFLOAT3(0.0f, 0.0f, 0.0f), XMFLOAT3 xmf3Normal = XMFLOAT3(0.0f, 0.0f, 0.0f)
+		, XMFLOAT2 xmf2TexCoord = XMFLOAT2(0.0f, 0.0f), XMFLOAT3 xmf3BoneWeights = XMFLOAT3(0.0f, 0.0f, 0.0f), XMINT4 xmi4BoneIndices = XMINT4(0, 0, 0, 0))
+	{
+		m_xmf3Position = xmf3Position;
+		m_xmf3Normal = xmf3Normal;
+		m_xmf2TexCoord = xmf2TexCoord;
+		m_xmf3Tangent = xmf3tanget;
+		m_xmf3BoneWeights = xmf3BoneWeights;
+		m_xmi4BoneIndices = xmi4BoneIndices;
+	}
+	~CAnimation2Vertex() { }
+};
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -197,6 +299,17 @@ public:
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
+class CMeshAnimationTextured : public CMesh
+{
+public:
+	CMeshAnimationTextured(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList);
+	CMeshAnimationTextured(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList
+		, UINT nVertices, XMFLOAT3 *pxmf3Positions, XMFLOAT2 *pxmf2UVs, XMFLOAT3 *xmf3BoneWeights, XMINT4 *xmi4BoneIndices, UINT nIndices, UINT *pnIndices);
+	virtual ~CMeshAnimationTextured();
+};
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
 class CMeshIlluminated : public CMesh
 {
 public:
@@ -231,6 +344,19 @@ public:
 	CMeshIlluminatedTexturedTBN(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, UINT nVertices, XMFLOAT3 *pxmf3Positions, XMFLOAT3 *pxmf3Tangents, XMFLOAT3 *pxmf3Normals, XMFLOAT2 *pxmf2UVs, UINT nIndices, UINT *pnIndices);
 	virtual ~CMeshIlluminatedTexturedTBN();
 };
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+class CAnimationMesh : public CMeshIlluminatedTexturedTBN
+{
+public:
+	CAnimationMesh(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList);
+	CAnimationMesh(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, UINT nVertices, 
+		XMFLOAT3 *pxmf3Positions, XMFLOAT3 *pxmf3Tangents, XMFLOAT3 *pxmf3Normals, XMFLOAT2 *pxmf2UVs, 
+		XMFLOAT3 *pxmf3BoneWeights, XMINT4 *pxmi4BoneIndices, UINT nIndices, UINT *pnIndices);
+	virtual ~CAnimationMesh();
+};
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 
 class CCubeMeshIlluminatedTBNTextured : public CMeshIlluminatedTexturedTBN
 {

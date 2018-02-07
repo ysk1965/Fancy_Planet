@@ -122,6 +122,43 @@ CMeshTextured::~CMeshTextured()
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
+CMeshAnimationTextured::CMeshAnimationTextured(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList) : CMesh(pd3dDevice, pd3dCommandList)
+{
+
+}
+CMeshAnimationTextured::CMeshAnimationTextured(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList
+	, UINT nVertices, XMFLOAT3 *pxmf3Positions, XMFLOAT2 *pxmf2UVs, XMFLOAT3 *xmf3BoneWeights, XMINT4 *xmi4BoneIndices, UINT nIndices, UINT *pnIndices) : CMesh(pd3dDevice, pd3dCommandList)
+{
+	m_nStride = sizeof(CAnimation2TexturedVertex);
+	m_nVertices = nVertices;
+
+	CAnimation2TexturedVertex *pVertices = new CAnimation2TexturedVertex[m_nVertices];
+	for (UINT i = 0; i < m_nVertices; i++) 
+		pVertices[i] = CAnimation2TexturedVertex(pxmf3Positions[i], pxmf2UVs[i], xmf3BoneWeights[i], xmi4BoneIndices[i]);
+
+	m_pd3dVertexBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, pVertices, m_nStride * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dVertexUploadBuffer);
+
+	m_d3dVertexBufferView.BufferLocation = m_pd3dVertexBuffer->GetGPUVirtualAddress();
+	m_d3dVertexBufferView.StrideInBytes = m_nStride;
+	m_d3dVertexBufferView.SizeInBytes = m_nStride * m_nVertices;
+
+	if (nIndices > 0)
+	{
+		m_nIndices = nIndices;
+
+		m_pd3dIndexBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, pnIndices, sizeof(UINT) * m_nIndices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_INDEX_BUFFER, &m_pd3dIndexUploadBuffer);
+
+		m_d3dIndexBufferView.BufferLocation = m_pd3dIndexBuffer->GetGPUVirtualAddress();
+		m_d3dIndexBufferView.Format = DXGI_FORMAT_R32_UINT;
+		m_d3dIndexBufferView.SizeInBytes = sizeof(UINT) * m_nIndices;
+	}
+}
+CMeshAnimationTextured::~CMeshAnimationTextured()
+{
+
+}
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
 CMeshIlluminated::CMeshIlluminated(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList) : CMesh(pd3dDevice, pd3dCommandList)
 {
 }
@@ -316,7 +353,46 @@ CMeshIlluminatedTexturedTBN::~CMeshIlluminatedTexturedTBN()
 {
 
 }
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+CAnimationMesh::CAnimationMesh(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList) : CMeshIlluminatedTexturedTBN(pd3dDevice, pd3dCommandList)
+{
+
+}
+CAnimationMesh::CAnimationMesh(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, UINT nVertices,
+	XMFLOAT3 *pxmf3Positions, XMFLOAT3 *pxmf3Tangents, XMFLOAT3 *pxmf3Normals, XMFLOAT2 *pxmf2UVs,
+	XMFLOAT3 *pxmf3BoneWeights, XMINT4 *pxmi4BoneIndices, UINT nIndices, UINT *pnIndices) : CMeshIlluminatedTexturedTBN(pd3dDevice, pd3dCommandList)
+{
+	m_nStride = sizeof(CAnimation2Vertex);
+	m_nVertices = nVertices;
+
+	CAnimation2Vertex *pVertices = new CAnimation2Vertex[m_nVertices];
+	for (UINT i = 0; i < m_nVertices; i++)
+		pVertices[i] = CAnimation2Vertex(pxmf3Positions[i], pxmf3Tangents[i], pxmf3Normals[i], pxmf2UVs[i], pxmf3BoneWeights[i], pxmi4BoneIndices[i]);
+
+	m_pd3dVertexBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, pVertices, m_nStride * m_nVertices
+		, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dVertexUploadBuffer);
+
+	m_d3dVertexBufferView.BufferLocation = m_pd3dVertexBuffer->GetGPUVirtualAddress();
+	m_d3dVertexBufferView.StrideInBytes = m_nStride;
+	m_d3dVertexBufferView.SizeInBytes = m_nStride * m_nVertices;
+
+	if (nIndices > 0)
+	{
+		m_nIndices = nIndices;
+
+		m_pd3dIndexBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, pnIndices, sizeof(UINT) * m_nIndices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_INDEX_BUFFER, &m_pd3dIndexUploadBuffer);
+
+		m_d3dIndexBufferView.BufferLocation = m_pd3dIndexBuffer->GetGPUVirtualAddress();
+		m_d3dIndexBufferView.Format = DXGI_FORMAT_R32_UINT;
+		m_d3dIndexBufferView.SizeInBytes = sizeof(UINT) * m_nIndices;
+	}
+}
+CAnimationMesh::~CAnimationMesh()
+{
+
+}
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 CCubeMeshIlluminatedTBNTextured::CCubeMeshIlluminatedTBNTextured(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, float fWidth,
 	float fHeight, float fDepth) : CMeshIlluminatedTexturedTBN(pd3dDevice, pd3dCommandList)
 {

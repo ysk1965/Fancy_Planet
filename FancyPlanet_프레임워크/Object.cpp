@@ -535,6 +535,9 @@ void CGameObject::LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, ID3D12Gra
 		XMFLOAT2 *pxmf2TextureCoords0 = NULL;
 		XMFLOAT3 *pxmf3Normals = NULL;
 		XMFLOAT3 *pxmf3Tangents = NULL;
+		XMFLOAT3 *pxmf3BoneWeights = NULL;
+		XMINT4 *pxmi4BoneIndices = NULL;
+
 		char* pstrAlbedoTextureName = NULL;
 		char* pstrNormalTextureName = NULL;
 		UINT *pnIndices = NULL;
@@ -554,6 +557,8 @@ void CGameObject::LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, ID3D12Gra
 		pxmf2TextureCoords0 = new XMFLOAT2[nVertices];
 		pxmf3Normals = new XMFLOAT3[nVertices];
 		pxmf3Tangents = new XMFLOAT3[nVertices];
+		pxmf3BoneWeights = new XMFLOAT3[nVertices];
+		pxmi4BoneIndices = new XMINT4[nVertices];
 
 		InFile.read((char*)pxmf3Positions, sizeof(XMFLOAT3) * nVertices); // 정점 받기
 		InFile.read((char*)pxmf2TextureCoords0, sizeof(XMFLOAT2) * nVertices); // uv 받기
@@ -563,6 +568,8 @@ void CGameObject::LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, ID3D12Gra
 			InFile.read((char*)pxmf3Normals, sizeof(XMFLOAT3) * nVertices); // 법선 받기
 			InFile.read((char*)pxmf3Tangents, sizeof(XMFLOAT3) * nVertices); // 탄젠트 받기
 		}
+		InFile.read((char*)pxmf3BoneWeights, sizeof(XMFLOAT3) * nVertices); // 본가중치 받기
+		InFile.read((char*)pxmi4BoneIndices, sizeof(XMINT4) * nVertices); // 본인덱스 받기
 
 		int Namesize;
 		InFile.read((char*)&Namesize, sizeof(int)); // 디퓨즈맵이름 받기
@@ -577,9 +584,10 @@ void CGameObject::LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, ID3D12Gra
 		}
 
 		if (nVertices > 0 && nDrawType > 1)
-			pMesh = new CMeshIlluminatedTexturedTBN(pd3dDevice, pd3dCommandList, nVertices, pxmf3Positions, pxmf3Tangents, pxmf3Normals, pxmf2TextureCoords0, nIndices, pnIndices);
+			pMesh = new CAnimationMesh(pd3dDevice, pd3dCommandList, nVertices, pxmf3Positions, pxmf3Tangents
+				, pxmf3Normals, pxmf2TextureCoords0, pxmf3BoneWeights, pxmi4BoneIndices, nIndices, pnIndices);
 		else if (nVertices > 0)
-			pMesh = new CMeshTextured(pd3dDevice, pd3dCommandList, nVertices, pxmf3Positions, pxmf2TextureCoords0, nIndices, pnIndices);
+			pMesh = new CMeshAnimationTextured(pd3dDevice, pd3dCommandList, nVertices, pxmf3Positions, pxmf2TextureCoords0, pxmf3BoneWeights, pxmi4BoneIndices, nIndices, pnIndices);
 
 		if (pMesh)
 			SetMesh(0, pMesh);
