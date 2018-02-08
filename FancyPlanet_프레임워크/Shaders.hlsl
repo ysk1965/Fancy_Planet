@@ -296,7 +296,7 @@ float4 PSSkyBox(VS_TEXTURED_OUTPUT input) : SV_TARGET
 }
 
 
-cbuffer cbSkinned : register(b11)
+cbuffer cbSkinned : register(b13)
 {
 	float4x4 gmtxBoneTransforms[96];
 };

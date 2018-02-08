@@ -184,6 +184,8 @@ CGameObject::~CGameObject()
 		delete m_pSibling;
 	if (m_pChild) 
 		delete m_pChild;
+	if (m_pxmmtxBindPoses)
+		delete[] m_pxmmtxBindPoses;
 }
 
 void CGameObject::ResizeMeshes(int nMeshes)
@@ -247,7 +249,15 @@ ID3D12Resource *CGameObject::CreateShaderVariables(ID3D12Device *pd3dDevice, ID3
 
 	return(m_pd3dcbGameObject);
 }
+ID3D12Resource *CGameObject::CreateBindPosVariables(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList)
+{
+	UINT ncbElementBytes = ((sizeof(XMFLOAT4X4) + 255) & ~255); //256의 배수
+	m_pd3dcbBindPoses = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
 
+	m_pd3dcbBindPoses->Map(0, NULL, (void **)&m_pcbMappedGameObject);
+
+	return(m_pd3dcbBindPoses);
+}
 void CGameObject::ReleaseShaderVariables()
 {
 	if (m_pd3dcbGameObject)
@@ -272,11 +282,14 @@ void CGameObject::Animate(float fTimeElapsed)
 	if (m_pChild) m_pChild->Animate(fTimeElapsed);
 }
 
-void CGameObject::SetRootParameter(ID3D12GraphicsCommandList *pd3dCommandList, int iRootParameterIndex)
+void CGameObject::SetRootParameter1(ID3D12GraphicsCommandList *pd3dCommandList, int iRootParameterIndex)
 {
 		pd3dCommandList->SetGraphicsRootDescriptorTable(iRootParameterIndex, m_d3dCbvGPUDescriptorHandle);
 }
-
+void CGameObject::SetRootParameter2(ID3D12GraphicsCommandList *pd3dCommandList, int iRootParameterIndex)
+{
+	pd3dCommandList->SetGraphicsRootDescriptorTable(iRootParameterIndex, m_d3dBindPosesGPUDescriptorStartHandle);
+}
 void CGameObject::OnPrepareRender()
 {
 }
@@ -287,6 +300,9 @@ void CGameObject::Render(ID3D12GraphicsCommandList *pd3dCommandList, int iRootPa
 		return;
 
 	OnPrepareRender();
+
+	if (m_pxmmtxBindPoses)
+		SetRootParameter2(pd3dCommandList, 8);
 
 	if (m_pMaterial)
 	{
@@ -305,7 +321,7 @@ void CGameObject::Render(ID3D12GraphicsCommandList *pd3dCommandList, int iRootPa
 
 	if (m_nMeshes > 0)
 	{
-		SetRootParameter(pd3dCommandList, iRootParameterIndex);
+		SetRootParameter1(pd3dCommandList, iRootParameterIndex);
 
 		for (int i = 0; i < m_nMeshes; i++)
 		{
@@ -330,7 +346,7 @@ void CGameObject::Render(ID3D12GraphicsCommandList *pd3dCommandList, int iRootPa
 		}
 	}
 
-	SetRootParameter(pd3dCommandList, iRootParameterIndex);
+	SetRootParameter1(pd3dCommandList, iRootParameterIndex);
 
 	if (m_ppMeshes)
 	{
@@ -570,7 +586,9 @@ void CGameObject::LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, ID3D12Gra
 		}
 		InFile.read((char*)pxmf3BoneWeights, sizeof(XMFLOAT3) * nVertices); // 본가중치 받기
 		InFile.read((char*)pxmi4BoneIndices, sizeof(XMINT4) * nVertices); // 본인덱스 받기
-
+		InFile.read((char*)&m_nBindPoses, sizeof(int));
+		m_pxmmtxBindPoses = new XMFLOAT4X4[m_nBindPoses];
+		InFile.read((char*)m_pxmmtxBindPoses, sizeof(XMFLOAT4X4)*m_nBindPoses);
 		int Namesize;
 		InFile.read((char*)&Namesize, sizeof(int)); // 디퓨즈맵이름 받기
 		pstrAlbedoTextureName = new char[Namesize];
@@ -641,9 +659,14 @@ void CGameObject::LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, ID3D12Gra
 
 		pMaterial->SetTexture(pTexture);
 
-		UINT ncbElementBytes = ((sizeof(CB_GAMEOBJECT_INFO) + 255) & ~255);
+		UINT ncbElement1Bytes = ((sizeof(CB_GAMEOBJECT_INFO) + 255) & ~255);
+		UINT ncbElement2Bytes = ((sizeof(XMFLOAT4X4) + 255) & ~255);
 
 		ID3D12Resource *pd3dcbResource = CreateShaderVariables(pd3dDevice, pd3dCommandList);
+		ID3D12Resource *pd3dcbBindPosResource = CreateBindPosVariables(pd3dDevice, pd3dCommandList);
+
+		CreateBindPosDescriptorHeaps(pd3dDevice, pd3dCommandList, m_nBindPoses);
+		CreateConstantBufferViews(pd3dDevice, pd3dCommandList, m_nBindPoses, pd3dcbBindPosResource, ncbElement2Bytes);
 
 		CShader* pShader = NULL;
 
@@ -655,7 +678,7 @@ void CGameObject::LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, ID3D12Gra
 		pShader->CreateShader(pd3dDevice, pd3dGraphicsRootSignature, 4);
 		pShader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 		pShader->CreateCbvAndSrvDescriptorHeaps(pd3dDevice, pd3dCommandList, 1, nDrawType);
-		pShader->CreateConstantBufferViews(pd3dDevice, pd3dCommandList, 1, pd3dcbResource, ncbElementBytes);
+		pShader->CreateConstantBufferViews(pd3dDevice, pd3dCommandList, 1, pd3dcbResource, ncbElement1Bytes);
 		pShader->CreateShaderResourceViews(pd3dDevice, pd3dCommandList, pTexture, 5, true);
 		SetCbvGPUDescriptorHandle(pShader->GetGPUCbvDescriptorStartHandle());
 
@@ -715,6 +738,36 @@ void CGameObject::SetChild(CGameObject *pChild)
 	}
 	if (pChild) 
 		pChild->m_pParent = this;
+}
+
+void CGameObject::CreateBindPosDescriptorHeaps(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList
+	, int nConstantBufferViews)
+{
+	D3D12_DESCRIPTOR_HEAP_DESC d3dDescriptorHeapDesc;
+	d3dDescriptorHeapDesc.NumDescriptors = nConstantBufferViews; //CBVs
+	d3dDescriptorHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+	d3dDescriptorHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+	d3dDescriptorHeapDesc.NodeMask = 0;
+	HRESULT hResult = pd3dDevice->CreateDescriptorHeap(&d3dDescriptorHeapDesc, __uuidof(ID3D12DescriptorHeap), (void **)&m_pd3dBindPosesDescriptorHeap);
+
+	m_d3dBindPosesCPUDescriptorStartHandle = m_pd3dBindPosesDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+	m_d3dBindPosesGPUDescriptorStartHandle = m_pd3dBindPosesDescriptorHeap->GetGPUDescriptorHandleForHeapStart();
+	m_d3dBindPosesCPUDescriptorStartHandle.ptr = m_d3dBindPosesCPUDescriptorStartHandle.ptr + (::gnCbvSrvDescriptorIncrementSize * nConstantBufferViews);
+	m_d3dBindPosesGPUDescriptorStartHandle.ptr = m_d3dBindPosesGPUDescriptorStartHandle.ptr + (::gnCbvSrvDescriptorIncrementSize * nConstantBufferViews);
+}
+
+void CGameObject::CreateConstantBufferViews(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, int nConstantBufferViews, ID3D12Resource *pd3dConstantBuffers, UINT nStride)
+{
+	D3D12_GPU_VIRTUAL_ADDRESS d3dGpuVirtualAddress = pd3dConstantBuffers->GetGPUVirtualAddress();
+	D3D12_CONSTANT_BUFFER_VIEW_DESC d3dCBVDesc;
+	d3dCBVDesc.SizeInBytes = nStride;
+	for (int j = 0; j < nConstantBufferViews; j++)
+	{
+		d3dCBVDesc.BufferLocation = d3dGpuVirtualAddress + (nStride * j);
+		D3D12_CPU_DESCRIPTOR_HANDLE d3dCbvCPUDescriptorHandle;
+		d3dCbvCPUDescriptorHandle.ptr = m_d3dBindPosesCPUDescriptorStartHandle.ptr + (::gnCbvSrvDescriptorIncrementSize * j);
+		pd3dDevice->CreateConstantBufferView(&d3dCBVDesc, d3dCbvCPUDescriptorHandle);
+	}
 }
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
