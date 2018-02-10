@@ -411,25 +411,14 @@ void CharacterScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsComman
 {
 	m_pd3dGraphicsRootSignature = CreateGraphicsRootSignature(pd3dDevice);
 
-	m_nShaders = 1;
+	m_nShaders = 0;
 	m_ppShaders = new CShader*[m_nShaders];
 
-	CTestShader *pTestShader = new CTestShader();
-	pTestShader->CreateShader(pd3dDevice, m_pd3dGraphicsRootSignature, 4);
-	pTestShader->BuildObjects(pd3dDevice, pd3dCommandList, 1);
-	m_ppShaders[0] = pTestShader;
-
-	m_nObjects = 4;
+	m_nObjects = 1;
 	m_ppObjects = new CGameObject*[m_nObjects];
 
-	m_ppObjects[0] = new CharaterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, 0, L"../Assets/WhaleModel.dat");
+	m_ppObjects[0] = new CharaterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, 0, L"../Assets/WhaleModel2.dat");
 	m_ppObjects[0]->SetPosition(XMFLOAT3(1500.0f, 300.0f, 1500.0f));
-	m_ppObjects[1] = new CharaterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, 0, L"../Assets/KnightModel.dat");
-	m_ppObjects[1]->SetPosition(XMFLOAT3(1000.0f, 300.0f, 1000.0f));
-	m_ppObjects[2] = new CharaterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, 0, L"../Assets/Model.dat");
-	m_ppObjects[2]->SetPosition(XMFLOAT3(500.0f, 300.0f, 500.0f));
-	m_ppObjects[3] = new CharaterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, 0, L"../Assets/SoldierModel.dat");
-	m_ppObjects[3]->SetPosition(XMFLOAT3(500.0f, 300.0f, 1500.0f));
 }
 void CharacterScene::ReleaseObjects()
 {
@@ -481,11 +470,11 @@ void CharacterScene::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera 
 
 	FrustumCulling(pCamera);
 
-	//for (int i = 0; i < m_nShaders; i++)
-	//{
-	//	if (m_ppShaders[i])
-	//		m_ppShaders[i]->Render(pd3dCommandList, pCamera);
-	//}                                                                        
+	for (int i = 0; i < m_nShaders; i++)
+	{
+		if (m_ppShaders[i])
+			m_ppShaders[i]->Render(pd3dCommandList, pCamera);
+	}                                                                        
 	for (int i = 0; i < m_nObjects; i++)
 	{
 		m_ppObjects[i]->UpdateTransform(NULL);
@@ -536,7 +525,7 @@ ID3D12RootSignature *CharacterScene::CreateGraphicsRootSignature(ID3D12Device *p
 
 	pd3dDescriptorRanges[6].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_CBV;
 	pd3dDescriptorRanges[6].NumDescriptors = 1;
-	pd3dDescriptorRanges[6].BaseShaderRegister = 13; // BindPos
+	pd3dDescriptorRanges[6].BaseShaderRegister = 13;
 	pd3dDescriptorRanges[6].RegisterSpace = 0;
 	pd3dDescriptorRanges[6].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 
@@ -585,7 +574,7 @@ ID3D12RootSignature *CharacterScene::CreateGraphicsRootSignature(ID3D12Device *p
 	pd3dRootParameters[8].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
 	pd3dRootParameters[8].DescriptorTable.NumDescriptorRanges = 1;
 	pd3dRootParameters[8].DescriptorTable.pDescriptorRanges = &pd3dDescriptorRanges[6];
-	pd3dRootParameters[8].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+	pd3dRootParameters[8].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
 
 	D3D12_STATIC_SAMPLER_DESC pd3dSamplerDescs[1];
 

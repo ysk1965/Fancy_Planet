@@ -17,6 +17,10 @@ cbuffer cbGameObjectInfo : register(b2)
 	uint		gnMaterial : packoffset(c4);
 };
 
+cbuffer cbSkinned : register(b13)
+{
+	float4x4 gmtxBoneTransforms[96] : packoffset(c0);
+};
 Texture2D gtxtTerrainBaseTexture : register(t4);
 Texture2D gtxtTerrainDetailTexture : register(t5);
 Texture2D gtxtTerrainNormalMap : register(t6);
@@ -175,8 +179,16 @@ VS_OUTPUT VS_TDL(VS_INPUT input)
 
 	return(output);
 }
+struct A_VS_OUTPUT
+{
+	float4 position : SV_POSITION;
+	float3 positionW : POSITION;
+	float3 normalW : NORMAL;
+	float2 uv : TEXCOORD;
+	float3 tangentW : TANGENT;
+};
 [earlydepthstencil]
-PS_TEXTURED_DEFFERREDLIGHTING_OUTPUT PS_TDL(VS_OUTPUT input) : SV_TARGET
+PS_TEXTURED_DEFFERREDLIGHTING_OUTPUT PS_TDL(A_VS_OUTPUT input) : SV_TARGET
 {
 	PS_TEXTURED_DEFFERREDLIGHTING_OUTPUT output;
 	float2 uv1;
@@ -296,10 +308,6 @@ float4 PSSkyBox(VS_TEXTURED_OUTPUT input) : SV_TARGET
 }
 
 
-cbuffer cbSkinned : register(b13)
-{
-	float4x4 gmtxBoneTransforms[96];
-};
 
 struct A_VS_INPUT
 {
@@ -310,15 +318,8 @@ struct A_VS_INPUT
 	float3 boneWeights:WEIGHTS;
 	uint4 boneIndices : BONEINDICES;
 };
-struct A_VS_OUTPUT
-{
-	float4 position : SV_POSITION;
-	float3 postionW : POSITION;
-	float3 normalW : NORMAL;
-	float2 uv : TEXCOORD;
-	float3 tangentW : TANGENT;
-};
-A_VS_OUTPUT VS(A_VS_INPUT input)
+
+A_VS_OUTPUT ANIMATION_VS(A_VS_INPUT input)
 {
 	A_VS_OUTPUT output;
 
@@ -339,7 +340,7 @@ A_VS_OUTPUT VS(A_VS_INPUT input)
 		tangent += fWeight[i] * mul(input.tangent.xyz, (float3x3)gmtxBoneTransforms[input.boneIndices[i]]);
 	}
 	output.uv = input.uv;
-	output.postionW = mul(float4(position, 1.0f), gmtxWorld).xyz;
+	output.positionW = mul(float4(position, 1.0f), gmtxWorld).xyz;
 	output.normalW = mul(normal, (float3x3)gmtxWorld);
 	output.tangentW = mul(tangent, (float3x3)gmtxWorld);
 	matrix mtxWorldViewProjection = mul(gmtxWorld, gmtxView);

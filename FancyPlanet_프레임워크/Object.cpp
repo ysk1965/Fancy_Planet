@@ -184,8 +184,6 @@ CGameObject::~CGameObject()
 		delete m_pSibling;
 	if (m_pChild) 
 		delete m_pChild;
-	if (m_pxmmtxBindPoses)
-		delete[] m_pxmmtxBindPoses;
 }
 
 void CGameObject::ResizeMeshes(int nMeshes)
@@ -251,10 +249,10 @@ ID3D12Resource *CGameObject::CreateShaderVariables(ID3D12Device *pd3dDevice, ID3
 }
 ID3D12Resource *CGameObject::CreateBindPosVariables(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList)
 {
-	UINT ncbElementBytes = ((sizeof(XMFLOAT4X4) + 255) & ~255); //256의 배수
-	m_pd3dcbBindPoses = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
+	UINT ncbElementBytes = ((sizeof(BIND_POS) + 255) & ~255); //256의 배수
+	m_pd3dcbBindPoses = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
 
-	m_pd3dcbBindPoses->Map(0, NULL, (void **)&m_pcbMappedGameObject);
+	m_pd3dcbBindPoses->Map(0, NULL, NULL);
 
 	return(m_pd3dcbBindPoses);
 }
@@ -301,34 +299,37 @@ void CGameObject::Render(ID3D12GraphicsCommandList *pd3dCommandList, int iRootPa
 
 	OnPrepareRender();
 
-	if (m_pxmmtxBindPoses)
+	if (m_nBindPoses > 0)
+	{ 
 		SetRootParameter2(pd3dCommandList, 8);
 
-	if (m_pMaterial)
-	{
-		if (m_pMaterial->m_pShader)
+		if (m_pMaterial)
 		{
-			m_pMaterial->m_pShader->Render(pd3dCommandList, pCamera);
-			m_pMaterial->m_pShader->UpdateShaderVariables(pd3dCommandList);
+			if (m_pMaterial->m_pShader)
+			{
+				m_pMaterial->m_pShader->Render(pd3dCommandList, pCamera);
+				m_pMaterial->m_pShader->UpdateShaderVariables(pd3dCommandList);
 
-			UpdateShaderVariables(pd3dCommandList);
+				UpdateShaderVariables(pd3dCommandList);
+			}
+			if (m_pMaterial->m_pTexture)
+			{
+				m_pMaterial->m_pTexture->UpdateShaderVariables(pd3dCommandList);
+			}
 		}
-		if (m_pMaterial->m_pTexture)
+
+		if (m_nMeshes > 0)
 		{
-			m_pMaterial->m_pTexture->UpdateShaderVariables(pd3dCommandList);
+			SetRootParameter1(pd3dCommandList, iRootParameterIndex);
+
+			for (int i = 0; i < m_nMeshes; i++)
+			{
+				if (m_ppMeshes[i])
+					m_ppMeshes[i]->Render(pd3dCommandList);
+			}
 		}
 	}
 
-	if (m_nMeshes > 0)
-	{
-		SetRootParameter1(pd3dCommandList, iRootParameterIndex);
-
-		for (int i = 0; i < m_nMeshes; i++)
-		{
-			if (m_ppMeshes[i] )
-				m_ppMeshes[i]->Render(pd3dCommandList);
-		}
-	}
 	if (m_pSibling)
 		m_pSibling->Render(pd3dCommandList, 2, pCamera);
 	if (m_pChild) 
@@ -517,8 +518,21 @@ void CGameObject::LoadGeometryFromFile(ID3D12Device *pd3dDevice, ID3D12GraphicsC
 	}
 
 	LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, fi, 0, 1);
-	
+	LoadAnimation(fi);
 	fi.close(); // 파일 닫기
+}
+void CGameObject::LoadAnimation(ifstream& InFile)
+{
+	UINT nAnimation = 0;
+	InFile.read((char*)&nAnimation, sizeof(UINT));
+	m_pAnimationController = new AnimationController(nAnimation);
+	for (int i = 0; i < m_pAnimationController->GetAnimationCount(); i++)
+	{
+		InFile.read((char*)&m_pAnimationController->m_pAnimation[i].nTime, sizeof(UINT));
+		m_pAnimationController->m_pAnimation[i].pFrame = new FRAME[m_pAnimationController->m_pAnimation[i].nTime];
+
+		InFile.read((char*)m_pAnimationController->m_pAnimation[i].pFrame, sizeof(FRAME) * m_pAnimationController->m_pAnimation[i].nTime);
+	}
 }
 TCHAR* char2tchar(char * asc)
 {
@@ -587,8 +601,7 @@ void CGameObject::LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, ID3D12Gra
 		InFile.read((char*)pxmf3BoneWeights, sizeof(XMFLOAT3) * nVertices); // 본가중치 받기
 		InFile.read((char*)pxmi4BoneIndices, sizeof(XMINT4) * nVertices); // 본인덱스 받기
 		InFile.read((char*)&m_nBindPoses, sizeof(int));
-		m_pxmmtxBindPoses = new XMFLOAT4X4[m_nBindPoses];
-		InFile.read((char*)m_pxmmtxBindPoses, sizeof(XMFLOAT4X4)*m_nBindPoses);
+		InFile.read((char*)&m_BindPoses, sizeof(XMFLOAT4X4)*m_nBindPoses);
 		int Namesize;
 		InFile.read((char*)&Namesize, sizeof(int)); // 디퓨즈맵이름 받기
 		pstrAlbedoTextureName = new char[Namesize];
@@ -660,13 +673,13 @@ void CGameObject::LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, ID3D12Gra
 		pMaterial->SetTexture(pTexture);
 
 		UINT ncbElement1Bytes = ((sizeof(CB_GAMEOBJECT_INFO) + 255) & ~255);
-		UINT ncbElement2Bytes = ((sizeof(XMFLOAT4X4) + 255) & ~255);
+		UINT ncbElement2Bytes = (((sizeof(BIND_POS)) + 255) & ~255);
 
 		ID3D12Resource *pd3dcbResource = CreateShaderVariables(pd3dDevice, pd3dCommandList);
 		ID3D12Resource *pd3dcbBindPosResource = CreateBindPosVariables(pd3dDevice, pd3dCommandList);
 
-		CreateBindPosDescriptorHeaps(pd3dDevice, pd3dCommandList, m_nBindPoses);
-		CreateConstantBufferViews(pd3dDevice, pd3dCommandList, m_nBindPoses, pd3dcbBindPosResource, ncbElement2Bytes);
+		CreateBindPosDescriptorHeaps(pd3dDevice, pd3dCommandList, 1);
+		CreateConstantBufferViews(pd3dDevice, pd3dCommandList, 1, pd3dcbBindPosResource, ncbElement2Bytes);
 
 		CShader* pShader = NULL;
 
@@ -752,8 +765,6 @@ void CGameObject::CreateBindPosDescriptorHeaps(ID3D12Device *pd3dDevice, ID3D12G
 
 	m_d3dBindPosesCPUDescriptorStartHandle = m_pd3dBindPosesDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
 	m_d3dBindPosesGPUDescriptorStartHandle = m_pd3dBindPosesDescriptorHeap->GetGPUDescriptorHandleForHeapStart();
-	m_d3dBindPosesCPUDescriptorStartHandle.ptr = m_d3dBindPosesCPUDescriptorStartHandle.ptr + (::gnCbvSrvDescriptorIncrementSize * nConstantBufferViews);
-	m_d3dBindPosesGPUDescriptorStartHandle.ptr = m_d3dBindPosesGPUDescriptorStartHandle.ptr + (::gnCbvSrvDescriptorIncrementSize * nConstantBufferViews);
 }
 
 void CGameObject::CreateConstantBufferViews(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, int nConstantBufferViews, ID3D12Resource *pd3dConstantBuffers, UINT nStride)

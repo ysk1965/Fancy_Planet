@@ -358,7 +358,7 @@ void CDefferredLightingTexturedShader::CreateShader(ID3D12Device *pd3dDevice, ID
 }
 D3D12_INPUT_LAYOUT_DESC CDefferredLightingTexturedShader::CreateInputLayout()
 {
-	UINT nInputElementDescs = 4;
+	UINT nInputElementDescs = 6;
 	D3D12_INPUT_ELEMENT_DESC *pd3dInputElementDescs = new D3D12_INPUT_ELEMENT_DESC[nInputElementDescs];
 	//정점 정보를 위한 입력 원소이다. 
 
@@ -366,6 +366,8 @@ D3D12_INPUT_LAYOUT_DESC CDefferredLightingTexturedShader::CreateInputLayout()
 	pd3dInputElementDescs[1] = { "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
 	pd3dInputElementDescs[2] = { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 24, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
 	pd3dInputElementDescs[3] = { "TANGENT", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 32, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+	pd3dInputElementDescs[4] = { "WEIGHTS", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 44, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+	pd3dInputElementDescs[5] = { "BONEINDICES", 0, DXGI_FORMAT_R32G32B32A32_UINT, 0, 60, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
 
 	D3D12_INPUT_LAYOUT_DESC d3dInputLayoutDesc;
 	d3dInputLayoutDesc.pInputElementDescs = pd3dInputElementDescs;
@@ -375,7 +377,7 @@ D3D12_INPUT_LAYOUT_DESC CDefferredLightingTexturedShader::CreateInputLayout()
 
 D3D12_SHADER_BYTECODE CDefferredLightingTexturedShader::CreateVertexShader(ID3DBlob **ppd3dShaderBlob)
 {
-	return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "VS_TDL", "vs_5_1", ppd3dShaderBlob));
+	return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "ANIMATION_VS", "vs_5_1", ppd3dShaderBlob));
 }
 
 D3D12_SHADER_BYTECODE CDefferredLightingTexturedShader::CreatePixelShader(ID3DBlob **ppd3dShaderBlob)

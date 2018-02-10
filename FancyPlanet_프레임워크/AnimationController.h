@@ -7,13 +7,15 @@ enum
 	RUN,
 	ATTACK
 };
+struct FRAME
+{
+	XMFLOAT3 Translation;
+	XMFLOAT4 RotationQuat;
+};
 struct ANIMATION
 {
-	UINT nSIze;
-	float *TimePos;
-	XMFLOAT3 *Translation;
-	XMFLOAT3 *Scale;
-	XMFLOAT4 *RotationQuat;
+	UINT nTime;
+	FRAME* pFrame;
 };
 class AnimationController
 {
@@ -22,11 +24,16 @@ private:
 	UINT m_nState = IDLE;
 	UINT m_nCurrentFrame;
 
-	ANIMATION **m_pAnimation;
 public:
+	UINT GetAnimationCount()
+	{
+		return m_nAnimation;
+	}
 	AnimationController(UINT nAnimation);
 	~AnimationController();
-	void ChangeAnimation(UINT nState);
-	void AddAnimation(UINT nAnimation, UINT nKeyframe, XMFLOAT3 *Translation, XMFLOAT3 *Scale, XMFLOAT4 *RotationQuat, float* TimePos);
+	//void ChangeAnimation(UINT nState);
+	//void AddAnimation(UINT nAnimation, UINT nKeyframe, XMFLOAT3 *Translation, XMFLOAT3 *Scale, XMFLOAT4 *RotationQuat, float* TimePos);
+	
+	ANIMATION *m_pAnimation;
 };
 

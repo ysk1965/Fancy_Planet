@@ -34,7 +34,10 @@ struct SRVROOTARGUMENTINFO
 };
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
-
+struct BIND_POS
+{
+	XMFLOAT4X4 m_xmf4x4Bindposes[96];
+};
 class CTexture
 {
 public:
@@ -146,8 +149,9 @@ public:
 protected:
 	ID3D12Resource					*m_pd3dcbGameObject = NULL;
 	CB_GAMEOBJECT_INFO				*m_pcbMappedGameObject = NULL;
+
 	ID3D12Resource					*m_pd3dcbBindPoses = NULL;
-	XMFLOAT4X4								*m_pxmmtxBindPoses = NULL;
+	BIND_POS								m_BindPoses;
 
 	ID3D12DescriptorHeap			*m_pd3dBindPosesDescriptorHeap = NULL;
 
@@ -202,6 +206,7 @@ public:
 	void Rotate(float fPitch = 10.0f, float fYaw = 10.0f, float fRoll = 10.0f);
 	void Rotate(XMFLOAT3 *pxmf3Axis, float fAngle);
 	void Rotate(XMFLOAT4 *pxmf4Quaternion);
+	void LoadAnimation(ifstream& InFile);
 	void LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, 
 		ID3D12RootSignature *pd3dGraphicsRootSignature, ifstream& InFile, UINT nFrame, UINT nSub);
 	void LoadGeometryFromFile(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature, TCHAR *pstrFileName);
