@@ -247,15 +247,6 @@ ID3D12Resource *CGameObject::CreateShaderVariables(ID3D12Device *pd3dDevice, ID3
 
 	return(m_pd3dcbGameObject);
 }
-ID3D12Resource *CGameObject::CreateBindPosVariables(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList)
-{
-	UINT ncbElementBytes = ((sizeof(BIND_POS) + 255) & ~255); //256의 배수
-	m_pd3dcbBindPoses = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
-
-	m_pd3dcbBindPoses->Map(0, NULL, NULL);
-
-	return(m_pd3dcbBindPoses);
-}
 void CGameObject::ReleaseShaderVariables()
 {
 	if (m_pd3dcbGameObject)
@@ -263,6 +254,7 @@ void CGameObject::ReleaseShaderVariables()
 		m_pd3dcbGameObject->Unmap(0, NULL);
 		m_pd3dcbGameObject->Release();
 	}
+	
 	if (m_pMaterial) 
 		m_pMaterial->ReleaseShaderVariables();
 }
@@ -274,67 +266,71 @@ void CGameObject::UpdateShaderVariables(ID3D12GraphicsCommandList *pd3dCommandLi
 		m_pcbMappedGameObject->m_nMaterial = m_pMaterial->m_nReflection;
 }
 
-void CGameObject::Animate(float fTimeElapsed)
+void CGameObject::UpdateAnimationVariables(ID3D12GraphicsCommandList *pd3dCommandList)
 {
-	if (m_pSibling) m_pSibling->Animate(fTimeElapsed);
-	if (m_pChild) m_pChild->Animate(fTimeElapsed);
+	
+	
 }
 
-void CGameObject::SetRootParameter1(ID3D12GraphicsCommandList *pd3dCommandList, int iRootParameterIndex)
+void CGameObject::Animate(float fTimeElapsed)
+{
+	if (m_pSibling) 
+		m_pSibling->Animate(fTimeElapsed);
+	if (m_pChild) 
+		m_pChild->Animate(fTimeElapsed);
+}
+
+void CGameObject::SetRootParameter(ID3D12GraphicsCommandList *pd3dCommandList, int iRootParameterIndex)
 {
 		pd3dCommandList->SetGraphicsRootDescriptorTable(iRootParameterIndex, m_d3dCbvGPUDescriptorHandle);
 }
-void CGameObject::SetRootParameter2(ID3D12GraphicsCommandList *pd3dCommandList, int iRootParameterIndex)
-{
-	pd3dCommandList->SetGraphicsRootDescriptorTable(iRootParameterIndex, m_d3dBindPosesGPUDescriptorStartHandle);
-}
+
 void CGameObject::OnPrepareRender()
 {
 }
 
 void CGameObject::Render(ID3D12GraphicsCommandList *pd3dCommandList, int iRootParameterIndex, CCamera *pCamera)
 {
-	if (!m_bActive) 
+	if (!m_bActive)
 		return;
 
 	OnPrepareRender();
 
-	if (m_nBindPoses > 0)
-	{ 
-		SetRootParameter2(pd3dCommandList, 8);
+	if (m_pAnimationController)
+		m_pAnimationController->AdvanceAnimation(pd3dCommandList);
 
-		if (m_pMaterial)
+	if (m_pMaterial)
+	{
+		if (m_pMaterial->m_pShader)
 		{
-			if (m_pMaterial->m_pShader)
-			{
-				m_pMaterial->m_pShader->Render(pd3dCommandList, pCamera);
-				m_pMaterial->m_pShader->UpdateShaderVariables(pd3dCommandList);
+			m_pMaterial->m_pShader->Render(pd3dCommandList, pCamera);
+			m_pMaterial->m_pShader->UpdateShaderVariables(pd3dCommandList);
 
-				UpdateShaderVariables(pd3dCommandList);
-			}
-			if (m_pMaterial->m_pTexture)
-			{
-				m_pMaterial->m_pTexture->UpdateShaderVariables(pd3dCommandList);
-			}
+			UpdateShaderVariables(pd3dCommandList);
 		}
-
-		if (m_nMeshes > 0)
+		if (m_pMaterial->m_pTexture)
 		{
-			SetRootParameter1(pd3dCommandList, iRootParameterIndex);
+			m_pMaterial->m_pTexture->UpdateShaderVariables(pd3dCommandList);
+		}
+	}
 
-			for (int i = 0; i < m_nMeshes; i++)
-			{
-				if (m_ppMeshes[i])
-					m_ppMeshes[i]->Render(pd3dCommandList);
-			}
+	if (m_nMeshes > 0)
+	{
+		SetRootParameter(pd3dCommandList, iRootParameterIndex);
+
+		for (int i = 0; i < m_nMeshes; i++)
+		{
+			if (m_ppMeshes[i])
+				m_ppMeshes[i]->Render(pd3dCommandList);
 		}
 	}
 
 	if (m_pSibling)
 		m_pSibling->Render(pd3dCommandList, 2, pCamera);
-	if (m_pChild) 
+	if (m_pChild)
 		m_pChild->Render(pd3dCommandList, 2, pCamera);
 }
+
 void CGameObject::Render(ID3D12GraphicsCommandList *pd3dCommandList, int iRootParameterIndex, CCamera *pCamera, UINT nInstances)
 {
 	OnPrepareRender();
@@ -347,7 +343,7 @@ void CGameObject::Render(ID3D12GraphicsCommandList *pd3dCommandList, int iRootPa
 		}
 	}
 
-	SetRootParameter1(pd3dCommandList, iRootParameterIndex);
+	SetRootParameter(pd3dCommandList, iRootParameterIndex);
 
 	if (m_ppMeshes)
 	{
@@ -387,15 +383,16 @@ void CGameObject::UpdateTransform(XMFLOAT4X4 *pxmf4x4Parent)
 		m_pChild->UpdateTransform(&m_xmf4x4World);
 }
 
-CGameObject *CGameObject::FindFrame(_TCHAR *pstrFrameName)
+CGameObject *CGameObject::FindObject()
 {
 	CGameObject *pFrameObject = NULL;
-	if (!_tcsncmp(m_pstrFrameName, pstrFrameName, _tcslen(pstrFrameName))) return(this);
+	if (m_nMeshes > 0) 
+		return(this);
 
 	if (m_pSibling) 
-		if (pFrameObject = m_pSibling->FindFrame(pstrFrameName)) 
+		if (pFrameObject = m_pSibling->FindObject())
 			return(pFrameObject);
-	if (m_pChild) if (pFrameObject = m_pChild->FindFrame(pstrFrameName)) 
+	if (m_pChild) if (pFrameObject = m_pChild->FindObject())
 		return(pFrameObject);
 
 	return(NULL);
@@ -518,20 +515,27 @@ void CGameObject::LoadGeometryFromFile(ID3D12Device *pd3dDevice, ID3D12GraphicsC
 	}
 
 	LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, fi, 0, 1);
-	LoadAnimation(fi);
+	LoadAnimation(pd3dDevice, pd3dCommandList, fi);
 	fi.close(); // 파일 닫기
 }
-void CGameObject::LoadAnimation(ifstream& InFile)
+void CGameObject::LoadAnimation(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ifstream& InFile)
 {
 	UINT nAnimation = 0;
-	InFile.read((char*)&nAnimation, sizeof(UINT));
-	m_pAnimationController = new AnimationController(nAnimation);
-	for (int i = 0; i < m_pAnimationController->GetAnimationCount(); i++)
-	{
-		InFile.read((char*)&m_pAnimationController->m_pAnimation[i].nTime, sizeof(UINT));
-		m_pAnimationController->m_pAnimation[i].pFrame = new FRAME[m_pAnimationController->m_pAnimation[i].nTime];
 
-		InFile.read((char*)m_pAnimationController->m_pAnimation[i].pFrame, sizeof(FRAME) * m_pAnimationController->m_pAnimation[i].nTime);
+	CGameObject* pFindObjecct = FindObject();
+
+	if (pFindObjecct)
+	{
+		InFile.read((char*)&nAnimation, sizeof(UINT));
+		pFindObjecct->m_pAnimationController = new AnimationController(pd3dDevice, pd3dCommandList, nAnimation);
+
+		for (int i = 0; i < pFindObjecct->m_pAnimationController->GetAnimationCount(); i++)
+		{
+			InFile.read((char*)&pFindObjecct->m_pAnimationController->m_pAnimation[i].nTime, sizeof(UINT));
+			pFindObjecct->m_pAnimationController->m_pAnimation[i].pFrame = new FRAME[pFindObjecct->m_pAnimationController->m_pAnimation[i].nTime];
+
+			InFile.read((char*)pFindObjecct->m_pAnimationController->m_pAnimation[i].pFrame, sizeof(FRAME) * pFindObjecct->m_pAnimationController->m_pAnimation[i].nTime);
+		}
 	}
 }
 TCHAR* char2tchar(char * asc)
@@ -601,7 +605,10 @@ void CGameObject::LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, ID3D12Gra
 		InFile.read((char*)pxmf3BoneWeights, sizeof(XMFLOAT3) * nVertices); // 본가중치 받기
 		InFile.read((char*)pxmi4BoneIndices, sizeof(XMINT4) * nVertices); // 본인덱스 받기
 		InFile.read((char*)&m_nBindPoses, sizeof(int));
-		InFile.read((char*)&m_BindPoses, sizeof(XMFLOAT4X4)*m_nBindPoses);
+
+		m_pAnimationController->m_pBindPoses = new XMFLOAT4X4[m_nBindPoses];
+
+		InFile.read((char*)&m_pAnimationController->m_pBindPoses, sizeof(XMFLOAT4X4)*m_nBindPoses);
 		int Namesize;
 		InFile.read((char*)&Namesize, sizeof(int)); // 디퓨즈맵이름 받기
 		pstrAlbedoTextureName = new char[Namesize];
@@ -672,15 +679,10 @@ void CGameObject::LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, ID3D12Gra
 
 		pMaterial->SetTexture(pTexture);
 
-		UINT ncbElement1Bytes = ((sizeof(CB_GAMEOBJECT_INFO) + 255) & ~255);
-		UINT ncbElement2Bytes = (((sizeof(BIND_POS)) + 255) & ~255);
+		UINT ncbElementBytes = ((sizeof(CB_GAMEOBJECT_INFO) + 255) & ~255);
 
 		ID3D12Resource *pd3dcbResource = CreateShaderVariables(pd3dDevice, pd3dCommandList);
-		ID3D12Resource *pd3dcbBindPosResource = CreateBindPosVariables(pd3dDevice, pd3dCommandList);
-
-		CreateBindPosDescriptorHeaps(pd3dDevice, pd3dCommandList, 1);
-		CreateConstantBufferViews(pd3dDevice, pd3dCommandList, 1, pd3dcbBindPosResource, ncbElement2Bytes);
-
+		
 		CShader* pShader = NULL;
 
 		if (nDrawType == 1)
@@ -691,7 +693,7 @@ void CGameObject::LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, ID3D12Gra
 		pShader->CreateShader(pd3dDevice, pd3dGraphicsRootSignature, 4);
 		pShader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 		pShader->CreateCbvAndSrvDescriptorHeaps(pd3dDevice, pd3dCommandList, 1, nDrawType);
-		pShader->CreateConstantBufferViews(pd3dDevice, pd3dCommandList, 1, pd3dcbResource, ncbElement1Bytes);
+		pShader->CreateConstantBufferViews(pd3dDevice, pd3dCommandList, 1, pd3dcbResource, ncbElementBytes);
 		pShader->CreateShaderResourceViews(pd3dDevice, pd3dCommandList, pTexture, 5, true);
 		SetCbvGPUDescriptorHandle(pShader->GetGPUCbvDescriptorStartHandle());
 
@@ -753,33 +755,8 @@ void CGameObject::SetChild(CGameObject *pChild)
 		pChild->m_pParent = this;
 }
 
-void CGameObject::CreateBindPosDescriptorHeaps(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList
-	, int nConstantBufferViews)
-{
-	D3D12_DESCRIPTOR_HEAP_DESC d3dDescriptorHeapDesc;
-	d3dDescriptorHeapDesc.NumDescriptors = nConstantBufferViews; //CBVs
-	d3dDescriptorHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-	d3dDescriptorHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-	d3dDescriptorHeapDesc.NodeMask = 0;
-	HRESULT hResult = pd3dDevice->CreateDescriptorHeap(&d3dDescriptorHeapDesc, __uuidof(ID3D12DescriptorHeap), (void **)&m_pd3dBindPosesDescriptorHeap);
 
-	m_d3dBindPosesCPUDescriptorStartHandle = m_pd3dBindPosesDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
-	m_d3dBindPosesGPUDescriptorStartHandle = m_pd3dBindPosesDescriptorHeap->GetGPUDescriptorHandleForHeapStart();
-}
 
-void CGameObject::CreateConstantBufferViews(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, int nConstantBufferViews, ID3D12Resource *pd3dConstantBuffers, UINT nStride)
-{
-	D3D12_GPU_VIRTUAL_ADDRESS d3dGpuVirtualAddress = pd3dConstantBuffers->GetGPUVirtualAddress();
-	D3D12_CONSTANT_BUFFER_VIEW_DESC d3dCBVDesc;
-	d3dCBVDesc.SizeInBytes = nStride;
-	for (int j = 0; j < nConstantBufferViews; j++)
-	{
-		d3dCBVDesc.BufferLocation = d3dGpuVirtualAddress + (nStride * j);
-		D3D12_CPU_DESCRIPTOR_HANDLE d3dCbvCPUDescriptorHandle;
-		d3dCbvCPUDescriptorHandle.ptr = m_d3dBindPosesCPUDescriptorStartHandle.ptr + (::gnCbvSrvDescriptorIncrementSize * j);
-		pd3dDevice->CreateConstantBufferView(&d3dCBVDesc, d3dCbvCPUDescriptorHandle);
-	}
-}
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 CHeightMapTerrain::CHeightMapTerrain(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature, LPCTSTR pFileName, int nWidth, int nLength, int nBlockWidth, int nBlockLength, XMFLOAT3 xmf3Scale, XMFLOAT4 xmf4Color) : CGameObject(0)

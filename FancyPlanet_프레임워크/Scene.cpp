@@ -478,7 +478,7 @@ void CharacterScene::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera 
 	for (int i = 0; i < m_nObjects; i++)
 	{
 		m_ppObjects[i]->UpdateTransform(NULL);
-		m_ppObjects[i]->Render(pd3dCommandList, 2, pCamera);
+		m_ppObjects[i]->AnimationCharacterRender(pd3dCommandList, 2, pCamera);
 	}
 }
 ID3D12RootSignature *CharacterScene::CreateGraphicsRootSignature(ID3D12Device *pd3dDevice)

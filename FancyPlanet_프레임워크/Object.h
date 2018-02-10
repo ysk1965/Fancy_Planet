@@ -34,10 +34,7 @@ struct SRVROOTARGUMENTINFO
 };
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
-struct BIND_POS
-{
-	XMFLOAT4X4 m_xmf4x4Bindposes[96];
-};
+
 class CTexture
 {
 public:
@@ -150,13 +147,6 @@ protected:
 	ID3D12Resource					*m_pd3dcbGameObject = NULL;
 	CB_GAMEOBJECT_INFO				*m_pcbMappedGameObject = NULL;
 
-	ID3D12Resource					*m_pd3dcbBindPoses = NULL;
-	BIND_POS								m_BindPoses;
-
-	ID3D12DescriptorHeap			*m_pd3dBindPosesDescriptorHeap = NULL;
-
-	D3D12_CPU_DESCRIPTOR_HANDLE		m_d3dBindPosesCPUDescriptorStartHandle;
-	D3D12_GPU_DESCRIPTOR_HANDLE		m_d3dBindPosesGPUDescriptorStartHandle;
 public:
 	void SetMesh(int nIndex, CMesh *pMesh);
 	void SetShader(CShader *pShader);
@@ -169,15 +159,12 @@ public:
 	D3D12_GPU_DESCRIPTOR_HANDLE GetCbvGPUDescriptorHandle() { return(m_d3dCbvGPUDescriptorHandle); }
 
 	virtual ID3D12Resource *CreateShaderVariables(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList);
-	ID3D12Resource *CreateBindPosVariables(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList);
 	virtual void ReleaseShaderVariables();
 	virtual void UpdateShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList);
-	void CreateBindPosDescriptorHeaps(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, int nConstantBufferViews);
-	void CreateConstantBufferViews(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, int nConstantBufferViews, ID3D12Resource *pd3dConstantBuffers, UINT nStride);
+	virtual void UpdateAnimationVariables(ID3D12GraphicsCommandList *pd3dCommandList);
 	virtual void OnPrepareRender();
-	virtual void SetRootParameter1(ID3D12GraphicsCommandList *pd3dCommandList, int iRootParameterIndex);
-	void SetRootParameter2(ID3D12GraphicsCommandList *pd3dCommandList, int iRootParameterIndex);
-
+	virtual void SetRootParameter(ID3D12GraphicsCommandList *pd3dCommandList, int iRootParameterIndex);
+	
 	virtual void Animate(float fTimeElapsed);
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, int iRootParameterIndex, CCamera *pCamera = NULL);
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, int iRootParameterIndex, CCamera *pCamera, UINT nInstances);
@@ -206,7 +193,7 @@ public:
 	void Rotate(float fPitch = 10.0f, float fYaw = 10.0f, float fRoll = 10.0f);
 	void Rotate(XMFLOAT3 *pxmf3Axis, float fAngle);
 	void Rotate(XMFLOAT4 *pxmf4Quaternion);
-	void LoadAnimation(ifstream& InFile);
+	void LoadAnimation(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ifstream& InFile);
 	void LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, 
 		ID3D12RootSignature *pd3dGraphicsRootSignature, ifstream& InFile, UINT nFrame, UINT nSub);
 	void LoadGeometryFromFile(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature, TCHAR *pstrFileName);
@@ -218,7 +205,7 @@ public:
 	CGameObject 					*m_pSibling = NULL;
 
 	CGameObject *GetParent() { return(m_pParent); }
-	CGameObject *FindFrame(_TCHAR *pstrFrameName);
+	CGameObject *FindObject();
 };
 
 class CHeightMapTerrain : public CGameObject
