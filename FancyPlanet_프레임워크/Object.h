@@ -137,6 +137,7 @@ public:
 	int								m_nMeshes;
 
 	UINT m_nBindPoses = 0;
+	XMFLOAT4X4* m_pBindPoses = NULL;
 
 	CMaterial						*m_pMaterial = NULL;
 

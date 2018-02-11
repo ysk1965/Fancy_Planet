@@ -527,7 +527,7 @@ void CGameObject::LoadAnimation(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandL
 	if (pFindObjecct)
 	{
 		InFile.read((char*)&nAnimation, sizeof(UINT));
-		pFindObjecct->m_pAnimationController = new AnimationController(pd3dDevice, pd3dCommandList, nAnimation);
+		pFindObjecct->m_pAnimationController = new AnimationController(pd3dDevice, pd3dCommandList, nAnimation, m_pBindPoses, m_nBindPoses);
 
 		for (int i = 0; i < pFindObjecct->m_pAnimationController->GetAnimationCount(); i++)
 		{
@@ -606,9 +606,9 @@ void CGameObject::LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, ID3D12Gra
 		InFile.read((char*)pxmi4BoneIndices, sizeof(XMINT4) * nVertices); // 본인덱스 받기
 		InFile.read((char*)&m_nBindPoses, sizeof(int));
 
-		m_pAnimationController->m_pBindPoses = new XMFLOAT4X4[m_nBindPoses];
+		m_pBindPoses = new XMFLOAT4X4[m_nBindPoses];
 
-		InFile.read((char*)&m_pAnimationController->m_pBindPoses, sizeof(XMFLOAT4X4)*m_nBindPoses);
+		InFile.read((char*)m_pBindPoses, sizeof(XMFLOAT4X4)*m_nBindPoses);
 		int Namesize;
 		InFile.read((char*)&Namesize, sizeof(int)); // 디퓨즈맵이름 받기
 		pstrAlbedoTextureName = new char[Namesize];

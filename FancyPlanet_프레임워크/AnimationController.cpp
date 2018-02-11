@@ -2,7 +2,8 @@
 #include "AnimationController.h"
 
 
-AnimationController::AnimationController(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, UINT nAnimation) : m_nAnimation(nAnimation)
+AnimationController::AnimationController(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, UINT nAnimation, 
+	XMFLOAT4X4* pBindPoses, UINT nBindPos) : m_nAnimation(nAnimation), m_pBindPoses(pBindPoses), m_nBindpos(nBindPos)
 {
 	m_pAnimation = new ANIMATION[m_nAnimation];
 
@@ -12,6 +13,9 @@ AnimationController::AnimationController(ID3D12Device *pd3dDevice, ID3D12Graphic
 
 	CreateBoneTransformDescriptorHeaps(pd3dDevice, pd3dCommandList, 1);
 	CreateConstantBufferViews(pd3dDevice, pd3dCommandList, 1, pd3dcbBoneTransformsResource, ncbElementBytes);
+
+	m_pxmf4x4toParentTransforms = new XMFLOAT4X4[m_nBindpos];
+	m_pxmf4x4toRootTransforms = new XMFLOAT4X4[m_nBindpos];
 }
 
 
@@ -24,9 +28,9 @@ AnimationController::~AnimationController()
 	}
 }
 
-void AnimationController::Interpolate(float fTime, XMFLOAT4X4* m_xmf4x4ToParentTransforms, UINT nBindPoses)
+void AnimationController::Interpolate(float fTime, XMFLOAT4X4* m_xmf4x4ToParentTransforms)
 {
-	for (int i = 0; i < nBindPoses; i++)
+	for (int i = 0; i < m_nBindpos; i++)
 	{
 		XMFLOAT3 Scale = XMFLOAT3(1.0f, 1.0f, 1.0f);
 
@@ -78,26 +82,30 @@ void AnimationController::CreateConstantBufferViews(ID3D12Device *pd3dDevice, ID
 		pd3dDevice->CreateConstantBufferView(&d3dCBVDesc, d3dCbvCPUDescriptorHandle);
 	}
 }
-void AnimationController::AdvanceAnimation(ID3D12GraphicsCommandList* pd3dCommandList, UINT nBindPoses)
+void AnimationController::AdvanceAnimation(ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	pd3dCommandList->SetGraphicsRootDescriptorTable(8, m_d3dBoneTransformsGPUDescriptorStartHandle);
 
-	XMFLOAT4X4* toParentTransforms = NULL;
+	Interpolate(0.0f, m_pxmf4x4toParentTransforms);
+	
+	m_pxmf4x4toRootTransforms[0] = m_pxmf4x4toParentTransforms[0];
 
-	Interpolate(0.0f, toParentTransforms, nBindPoses);
-
-	XMFLOAT4X4* toRootTransforms = NULL;
-	toRootTransforms[0] = toParentTransforms[0];
-	XMStoreFloat4x4(&m_pBoneTransforms->m_xmf4x4BoneTransform[0], XMMatrixTranspose(XMLoadFloat4x4(&toRootTransforms[0])));
-
-	for (int i = 1; i < nBindPoses; i++)
+	for (int i = 1; i < m_nBindpos; i++)
 	{
-		XMMATRIX toParent = XMLoadFloat4x4(&toParentTransforms[i]);
+		XMMATRIX toParent = XMLoadFloat4x4(&m_pxmf4x4toParentTransforms[i]);
 
-		XMMATRIX parentToRoot = XMLoadFloat4x4(&m_pBindPoses[i]);
+		XMMATRIX parentToRoot = XMLoadFloat4x4(&m_pxmf4x4toRootTransforms[i -1]);
 
 		XMMATRIX toRoot = XMMatrixMultiply(toParent, parentToRoot);
 
-		XMStoreFloat4x4(&m_pBoneTransforms->m_xmf4x4BoneTransform[i], toRoot);
+		XMStoreFloat4x4(&m_pxmf4x4toRootTransforms[i], toRoot);
+	}
+
+	for (UINT i = 0; i < m_nBindpos; i++)
+	{
+		XMMATRIX offset = XMLoadFloat4x4(&m_pBindPoses[i]); // 해당 뼈의 영역으로 점들을 이동시킨다. 
+		XMMATRIX toRoot = XMLoadFloat4x4(&m_pxmf4x4toRootTransforms[i]);
+		XMMATRIX finalTransform = XMMatrixMultiply(offset, toRoot);
+		XMStoreFloat4x4(&m_pBoneTransforms->m_xmf4x4BoneTransform[i], XMMatrixTranspose(offset));
 	}
 }
