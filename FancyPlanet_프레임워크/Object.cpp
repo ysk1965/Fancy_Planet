@@ -527,14 +527,14 @@ void CGameObject::LoadAnimation(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandL
 	if (pFindObjecct)
 	{
 		InFile.read((char*)&nAnimation, sizeof(UINT));
-		pFindObjecct->m_pAnimationController = new AnimationController(pd3dDevice, pd3dCommandList, nAnimation, m_pBindPoses, m_nBindPoses);
+		pFindObjecct->m_pAnimationController = new AnimationController(pd3dDevice, pd3dCommandList, nAnimation, pFindObjecct->m_pBindPoses, pFindObjecct->m_nBindPoses);
 
 		for (int i = 0; i < pFindObjecct->m_pAnimationController->GetAnimationCount(); i++)
 		{
 			InFile.read((char*)&pFindObjecct->m_pAnimationController->m_pAnimation[i].nTime, sizeof(UINT));
-			pFindObjecct->m_pAnimationController->m_pAnimation[i].pFrame = new FRAME[pFindObjecct->m_pAnimationController->m_pAnimation[i].nTime];
-
-			InFile.read((char*)pFindObjecct->m_pAnimationController->m_pAnimation[i].pFrame, sizeof(FRAME) * pFindObjecct->m_pAnimationController->m_pAnimation[i].nTime);
+			pFindObjecct->m_pAnimationController->m_pAnimation[i].pFrame = new FRAME[pFindObjecct->m_pAnimationController->m_pAnimation[i].nTime * pFindObjecct->m_nBindPoses];
+			
+			InFile.read((char*)pFindObjecct->m_pAnimationController->m_pAnimation[i].pFrame, sizeof(FRAME) * pFindObjecct->m_nBindPoses * pFindObjecct->m_pAnimationController->m_pAnimation[i].nTime);
 		}
 	}
 }
@@ -583,6 +583,8 @@ void CGameObject::LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, ID3D12Gra
 
 		int nDrawType = 0;
 		InFile.read((char*)&nSubMesh, sizeof(int)); // 서브매쉬 갯수 받기
+
+		InFile.read((char*)&m_nBoneIndex, sizeof(int));
 
 		InFile.read((char*)&nDrawType, sizeof(int)); // 그리기 타입 받기
 

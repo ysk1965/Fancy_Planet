@@ -27,7 +27,6 @@ AnimationController::~AnimationController()
 		m_pd3dcbBoneTransforms->Release();
 	}
 }
-
 void AnimationController::Interpolate(float fTime, XMFLOAT4X4* m_xmf4x4ToParentTransforms)
 {
 	for (int i = 0; i < m_nBindpos; i++)
@@ -35,11 +34,12 @@ void AnimationController::Interpolate(float fTime, XMFLOAT4X4* m_xmf4x4ToParentT
 		XMFLOAT3 Scale = XMFLOAT3(1.0f, 1.0f, 1.0f);
 
 		XMVECTOR S = XMLoadFloat3(&Scale);
-		XMVECTOR P = XMLoadFloat3(&m_pAnimation[0].pFrame[i].Translation[m_nCurrentFrame]);
-		XMVECTOR Q = XMLoadFloat4(&m_pAnimation[0].pFrame[i].RotationQuat[m_nCurrentFrame]);
+		XMVECTOR P = XMLoadFloat3(&m_pAnimation[0].pFrame[m_nBindpos*m_nCurrentFrame + i].Translation);
+		XMVECTOR Q = XMLoadFloat4(&m_pAnimation[0].pFrame[m_nBindpos*m_nCurrentFrame + i].RotationQuat);
 
 		XMVECTOR zero = XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);
 		XMStoreFloat4x4(&m_xmf4x4ToParentTransforms[i], XMMatrixAffineTransformation(S, zero, Q, P));
+
 	}
 	m_nCurrentFrame++;
 	if (m_nCurrentFrame == m_pAnimation[0].nTime)
@@ -106,6 +106,6 @@ void AnimationController::AdvanceAnimation(ID3D12GraphicsCommandList* pd3dComman
 		XMMATRIX offset = XMLoadFloat4x4(&m_pBindPoses[i]); // 해당 뼈의 영역으로 점들을 이동시킨다. 
 		XMMATRIX toRoot = XMLoadFloat4x4(&m_pxmf4x4toRootTransforms[i]);
 		XMMATRIX finalTransform = XMMatrixMultiply(offset, toRoot);
-		XMStoreFloat4x4(&m_pBoneTransforms->m_xmf4x4BoneTransform[i], XMMatrixTranspose(offset));
+		XMStoreFloat4x4(&m_pBoneTransforms->m_xmf4x4BoneTransform[i], XMMatrixTranspose(finalTransform));
 	}
 }

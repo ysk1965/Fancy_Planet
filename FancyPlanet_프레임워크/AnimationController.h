@@ -13,13 +13,13 @@ struct BONE_TRANSFORMS
 };
 struct FRAME
 {
-	XMFLOAT3 *Translation;
-	XMFLOAT4 *RotationQuat;
+	XMFLOAT3 Translation;
+	XMFLOAT4 RotationQuat;
 };
 struct ANIMATION
 {
 	UINT nTime; // 전체 프레임 수
-	FRAME* pFrame; // 한프레임에 각 뼈에 대한 변환
+	FRAME* pFrame; // [Frame * BoneIndex]
 };
 class AnimationController
 {

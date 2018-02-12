@@ -417,8 +417,8 @@ void CharacterScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsComman
 	m_nObjects = 1;
 	m_ppObjects = new CGameObject*[m_nObjects];
 
-	m_ppObjects[0] = new CharaterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, 0, L"../Assets/WhaleModel2.dat");
-	m_ppObjects[0]->SetPosition(XMFLOAT3(1500.0f, 300.0f, 1500.0f));
+	m_ppObjects[0] = new CharaterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, 0, L"../Assets/WhaleModel_local.dat");
+	m_ppObjects[0]->SetPosition(XMFLOAT3(1500.0f, 800.0f, 1500.0f));
 }
 void CharacterScene::ReleaseObjects()
 {
@@ -478,7 +478,7 @@ void CharacterScene::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera 
 	for (int i = 0; i < m_nObjects; i++)
 	{
 		m_ppObjects[i]->UpdateTransform(NULL);
-		m_ppObjects[i]->AnimationCharacterRender(pd3dCommandList, 2, pCamera);
+		m_ppObjects[i]->Render(pd3dCommandList, 2, pCamera);
 	}
 }
 ID3D12RootSignature *CharacterScene::CreateGraphicsRootSignature(ID3D12Device *pd3dDevice)

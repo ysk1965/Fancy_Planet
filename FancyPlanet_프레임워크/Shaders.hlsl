@@ -335,7 +335,7 @@ A_VS_OUTPUT ANIMATION_VS(A_VS_INPUT input)
 
 	for (int i = 0; i < 4; i++)
 	{
-		position = fWeight[i]*mul(float4(input.position, 1.0f), gmtxBoneTransforms[input.boneIndices[i]]).xyz;
+		position += fWeight[i] * mul(float4(input.position, 1.0f), gmtxBoneTransforms[input.boneIndices[i]]).xyz;
 		normal += fWeight[i] * mul(input.normal, (float3x3)gmtxBoneTransforms[input.boneIndices[i]]);
 		tangent += fWeight[i] * mul(input.tangent.xyz, (float3x3)gmtxBoneTransforms[input.boneIndices[i]]);
 	}
@@ -345,7 +345,7 @@ A_VS_OUTPUT ANIMATION_VS(A_VS_INPUT input)
 	output.tangentW = mul(tangent, (float3x3)gmtxWorld);
 	matrix mtxWorldViewProjection = mul(gmtxWorld, gmtxView);
 	mtxWorldViewProjection = mul(mtxWorldViewProjection, gmtxProjection);
-	output.position = mul(float4(input.position, 1.0f), mtxWorldViewProjection);
+	output.position = mul(float4(position, 1.0f), mtxWorldViewProjection);
 
 	return output;
 }

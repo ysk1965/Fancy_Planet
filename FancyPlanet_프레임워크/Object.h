@@ -135,7 +135,7 @@ public:
 
 	CMesh							**m_ppMeshes;
 	int								m_nMeshes;
-
+	int							m_nBoneIndex = -1;
 	UINT m_nBindPoses = 0;
 	XMFLOAT4X4* m_pBindPoses = NULL;
 
