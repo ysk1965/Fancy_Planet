@@ -19,7 +19,7 @@ cbuffer cbGameObjectInfo : register(b2)
 
 cbuffer cbSkinned : register(b13)
 {
-	float4x4 gmtxBoneTransforms[96] : packoffset(c0);
+	float4x4 gmtxBoneTransforms[96];
 };
 Texture2D gtxtTerrainBaseTexture : register(t4);
 Texture2D gtxtTerrainDetailTexture : register(t5);
@@ -327,11 +327,12 @@ A_VS_OUTPUT ANIMATION_VS(A_VS_INPUT input)
 	fWeight[0] = input.boneWeights.x;
 	fWeight[1] = input.boneWeights.y;
 	fWeight[2] = input.boneWeights.z;
-	fWeight[3] = 1 - fWeight[0] - fWeight[1] - fWeight[2];
+	fWeight[3] = 1.0f - fWeight[0] - fWeight[1] - fWeight[2];
 
 	float3 position = float3(0.0f, 0.0f, 0.0f);
 	float3 normal = float3(0.0f, 0.0f, 0.0f);
 	float3 tangent = float3(0.0f, 0.0f, 0.0f);
+	float4x4 qwe = float4x4(1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f);
 
 	for (int i = 0; i < 4; i++)
 	{
@@ -339,6 +340,7 @@ A_VS_OUTPUT ANIMATION_VS(A_VS_INPUT input)
 		normal += fWeight[i] * mul(input.normal, (float3x3)gmtxBoneTransforms[input.boneIndices[i]]);
 		tangent += fWeight[i] * mul(input.tangent.xyz, (float3x3)gmtxBoneTransforms[input.boneIndices[i]]);
 	}
+
 	output.uv = input.uv;
 	output.positionW = mul(float4(position, 1.0f), gmtxWorld).xyz;
 	output.normalW = mul(normal, (float3x3)gmtxWorld);

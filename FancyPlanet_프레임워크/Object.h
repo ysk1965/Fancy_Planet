@@ -1,11 +1,6 @@
-//------------------------------------------------------- ----------------------
-// File: Object.h
-//-----------------------------------------------------------------------------
-
 #pragma once
 #include "Mesh.h"
 #include "Camera.h"
-#include "AnimationController.h"
 
 #define DIR_FORWARD					0x01
 #define DIR_BACKWARD				0x02
@@ -21,6 +16,7 @@
 #define RESOURCE_BUFFER				0x05
 
 class CShader;
+class CGameObject;
 
 struct CB_GAMEOBJECT_INFO
 {
@@ -31,6 +27,64 @@ struct SRVROOTARGUMENTINFO
 {
 	UINT							m_nRootParameterIndex = 0;
 	D3D12_GPU_DESCRIPTOR_HANDLE		m_d3dSrvGpuDescriptorHandle;
+};
+
+struct BONE_TRANSFORMS
+{
+	XMFLOAT4X4 m_xmf4x4BoneTransform[96];
+};
+struct FRAME
+{
+	XMFLOAT3 Translation;
+	XMFLOAT4 RotationQuat;
+};
+struct ANIMATION
+{
+	UINT nTime; // 전체 프레임 수
+	FRAME* pFrame; // [Frame * BoneIndex]
+};
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+class AnimationController
+{
+private:
+	UINT m_nAnimation = 0;
+	UINT m_nState = 0;
+	UINT num = 0;
+
+	float m_fCurrentFrame = 0;
+	UINT m_nBindpos = 0;
+	UINT *m_pBoneIndex = NULL;
+
+	ID3D12Resource					*m_pd3dcbBoneTransforms = NULL;
+
+	CGameObject											**m_pBoneObject = NULL;
+	BONE_TRANSFORMS								*m_pBoneTransforms = NULL;
+	BONE_TRANSFORMS								  m_BoneTransforms;
+	ID3D12DescriptorHeap			*m_pd3dBoneTransformsDescriptorHeap = NULL;
+
+	D3D12_CPU_DESCRIPTOR_HANDLE		m_d3dBoneTransformsCPUDescriptorStartHandle;
+	D3D12_GPU_DESCRIPTOR_HANDLE		m_d3dBoneTransformsGPUDescriptorStartHandle;
+
+	CGameObject* m_pRootObject = NULL;
+public:
+	XMFLOAT4X4								*m_pBindPoses;
+
+	UINT GetAnimationCount()
+	{
+		return m_nAnimation;
+	}
+	AnimationController(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, UINT nAnimation,
+		XMFLOAT4X4* pBindPoses, UINT nBindPos, CGameObject* pRootObject);
+	~AnimationController();
+	void Interpolate(float fTime);
+	//해당하는 본인덱스의 오브젝트를 리턴한다.
+	CGameObject* GetFindObject(CGameObject* pFindObject, UINT nBoneIndex);
+	void AdvanceAnimation(ID3D12GraphicsCommandList* pd3dCommandList);
+	// 계층관계로 인덱스를 정렬한다. 
+	void LineUPBoneIndex(CGameObject* pObject);
+
+	ANIMATION *m_pAnimation;
 };
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -128,15 +182,16 @@ public:
 public:
 	TCHAR							m_pstrFrameName[256];
 	bool							m_bActive = true;
+	bool							m_bRoot = false;
 
 	XMFLOAT4X4						m_xmf4x4ToParentTransform;
-	XMFLOAT4X4						m_xmf4x4ToRootTransform;
 	XMFLOAT4X4						m_xmf4x4World;
+	XMFLOAT4X4						m_xmf4x4ToRootTransform;
 
 	CMesh							**m_ppMeshes;
 	int								m_nMeshes;
 	int							m_nBoneIndex = -1;
-	UINT m_nBindPoses = 0;
+	UINT						m_nBindPoses = 0;
 	XMFLOAT4X4* m_pBindPoses = NULL;
 
 	CMaterial						*m_pMaterial = NULL;
@@ -181,10 +236,12 @@ public:
 	void SetWorldPosition(XMFLOAT3 xmf3Position);
 	void SetWorldPosition(float x, float y, float z);
 	void SetPosition(float x, float y, float z);
-	void SetPosition(XMFLOAT3 xmf3Position);
-	void SetLocalPosition(XMFLOAT3 xmf3Position);
+	void SetPosition(XMFLOAT3& xmf3Position);
+	void SetLocalPosition(XMFLOAT3& xmf3Position);
 	void SetScale(float x, float y, float z);
 	void SetLocalScale(float x, float y, float z);
+	void SetRotation(XMFLOAT4& pxmf4Quaternion);
+	void SetLocalRotation(XMFLOAT4& pxmf4Quaternion);
 	void SetChild(CGameObject *pChild);
 
 	void MoveStrafe(float fDistance = 1.0f);
@@ -199,7 +256,7 @@ public:
 		ID3D12RootSignature *pd3dGraphicsRootSignature, ifstream& InFile, UINT nFrame, UINT nSub);
 	void LoadGeometryFromFile(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature, TCHAR *pstrFileName);
 	void UpdateTransform(XMFLOAT4X4 *pxmf4x4Parent = NULL);
-
+	CGameObject* GetRootObject();
 public:
 	CGameObject 					*m_pParent = NULL;
 	CGameObject 					*m_pChild = NULL;
