@@ -36,7 +36,7 @@ struct BONE_TRANSFORMS
 struct FRAME
 {
 	XMFLOAT3 Translation;
-	XMFLOAT4 RotationQuat;
+	XMFLOAT4 RotationQuat; 
 };
 struct ANIMATION
 {
@@ -50,11 +50,9 @@ class AnimationController
 private:
 	UINT m_nAnimation = 0;
 	UINT m_nState = 0;
-	UINT num = 0;
 
 	float m_fCurrentFrame = 0;
 	UINT m_nBindpos = 0;
-	UINT *m_pBoneIndex = NULL;
 
 	ID3D12Resource					*m_pd3dcbBoneTransforms = NULL;
 
@@ -68,6 +66,8 @@ private:
 
 	CGameObject* m_pRootObject = NULL;
 public:
+	UINT m_nFrame = 0;
+
 	XMFLOAT4X4								*m_pBindPoses;
 
 	UINT GetAnimationCount()
@@ -79,10 +79,10 @@ public:
 	~AnimationController();
 	void Interpolate(float fTime);
 	//해당하는 본인덱스의 오브젝트를 리턴한다.
+	void ResetToRootTransforms();
 	CGameObject* GetFindObject(CGameObject* pFindObject, UINT nBoneIndex);
 	void AdvanceAnimation(ID3D12GraphicsCommandList* pd3dCommandList);
 	// 계층관계로 인덱스를 정렬한다. 
-	void LineUPBoneIndex(CGameObject* pObject);
 
 	ANIMATION *m_pAnimation;
 };
@@ -180,7 +180,8 @@ public:
 	void Release() { if (--m_nReferences <= 0) delete this; }
 
 public:
-	TCHAR							m_pstrFrameName[256];
+	TCHAR							m_strFrameName[256] = {'\0'};
+
 	bool							m_bActive = true;
 	bool							m_bRoot = false;
 
@@ -190,7 +191,7 @@ public:
 
 	CMesh							**m_ppMeshes;
 	int								m_nMeshes;
-	int							m_nBoneIndex = -1;
+	int								m_iBoneIndex = -1;
 	UINT						m_nBindPoses = 0;
 	XMFLOAT4X4* m_pBindPoses = NULL;
 

@@ -3,12 +3,14 @@
 #include "Shader.h"
 #include <iostream>
 #include <fstream>
+#include <stack>
 
 using namespace std;
 
 AnimationController::AnimationController(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, UINT nAnimation,
 	XMFLOAT4X4* pBindPoses, UINT nBindPos, CGameObject* pRootObject) : m_nAnimation(nAnimation), m_pBindPoses(pBindPoses), m_nBindpos(nBindPos), m_pRootObject(pRootObject)
 {
+
 	m_pAnimation = new ANIMATION[m_nAnimation];
 
 	UINT ncbElementBytes = ((sizeof(LIGHTS) + 255) & ~255); //256의 배수
@@ -18,15 +20,24 @@ AnimationController::AnimationController(ID3D12Device *pd3dDevice, ID3D12Graphic
 
 	m_pBoneObject = new CGameObject*[m_nBindpos];
 
-	//m_pBoneObject은 본인덱스로 정렬되어 있는 오브젝트로 접근할수 있는 포인터들이다.
 	for (int i = 0; i < m_nBindpos; i++)
 	{
 		m_pBoneObject[i] = GetFindObject(m_pRootObject, i);
 	}
-	m_pBoneIndex = new UINT[m_nBindpos];
-	LineUPBoneIndex(m_pRootObject);
 }
+CGameObject* AnimationController::GetFindObject(CGameObject* pFindObject, UINT nBoneIndex)
+{
+	CGameObject* pResult = NULL;
+	if (pFindObject->m_iBoneIndex == nBoneIndex)
+		return pFindObject;
 
+	if (pFindObject->m_pSibling)
+		pResult = GetFindObject(pFindObject->m_pSibling, nBoneIndex);
+	if (pFindObject->m_pChild && pResult == NULL)
+		pResult = GetFindObject(pFindObject->m_pChild, nBoneIndex);
+
+	return pResult;
+}
 AnimationController::~AnimationController()
 {
 	if (m_pd3dcbBoneTransforms)
@@ -34,8 +45,6 @@ AnimationController::~AnimationController()
 		m_pd3dcbBoneTransforms->Unmap(0, NULL);
 		m_pd3dcbBoneTransforms->Release();
 	}
-	if (m_pBoneIndex)
-		delete[] m_pBoneIndex;
 	if (m_pBoneObject)
 		delete[] m_pBoneObject;
 	if (m_pAnimation)
@@ -43,17 +52,31 @@ AnimationController::~AnimationController()
 }
 void AnimationController::Interpolate(float fTime)
 {
-	for (int i = 0; i < m_nBindpos; i++)
+	stack<CGameObject*> FrameStack;
+	FrameStack.push(m_pRootObject);
+
+	for (int i = 0;; i++)
 	{
+		if (FrameStack.empty())
+			break;
+
+		CGameObject* TargetFrame = FrameStack.top();
+		FrameStack.pop();
+
 		XMFLOAT3 Scale = XMFLOAT3(1.0f, 1.0f, 1.0f);
-		
+
 		XMVECTOR S = XMLoadFloat3(&Scale);
-		XMVECTOR P = XMLoadFloat3(&m_pAnimation[0].pFrame[m_nBindpos*(UINT)m_fCurrentFrame + i].Translation);
-		XMVECTOR Q = XMLoadFloat4(&m_pAnimation[0].pFrame[m_nBindpos*(UINT)m_fCurrentFrame + i].RotationQuat);
-		
+		XMVECTOR P = XMLoadFloat3(&m_pAnimation[0].pFrame[m_nFrame*(UINT)m_fCurrentFrame + i].Translation);
+		XMVECTOR Q = XMLoadFloat4(&m_pAnimation[0].pFrame[m_nFrame*(UINT)m_fCurrentFrame + i].RotationQuat);
+
 		XMVECTOR zero = XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);
 		
-		XMStoreFloat4x4(&m_pBoneObject[i]->m_xmf4x4ToParentTransform, XMMatrixAffineTransformation(S, zero, Q, P));
+		XMStoreFloat4x4(&TargetFrame->m_xmf4x4ToParentTransform, XMMatrixAffineTransformation(S, zero, Q, P));
+
+		if(TargetFrame->m_pSibling)
+			FrameStack.push(TargetFrame->m_pSibling);  
+		if(TargetFrame->m_pChild)
+			FrameStack.push(TargetFrame->m_pChild);
 	}
 	
 	// 5프레임당 애니메이션이 바뀌게 설정
@@ -62,96 +85,43 @@ void AnimationController::Interpolate(float fTime)
 	if ((UINT)m_fCurrentFrame == m_pAnimation[0].nTime)
 		m_fCurrentFrame = 0.0f;
 }
-
-CGameObject* AnimationController::GetFindObject(CGameObject* pFindObject, UINT nBoneIndex)
+void AnimationController::ResetToRootTransforms()
 {
-	CGameObject* pResult = NULL; 
-	if (pFindObject->m_nBoneIndex == nBoneIndex)
-		return pFindObject;
+	stack<CGameObject*> FrameStack;
+	FrameStack.push(m_pRootObject);
 
-	if(pFindObject->m_pSibling)
-		pResult = GetFindObject(pFindObject->m_pSibling, nBoneIndex);
-	if(pFindObject->m_pChild && pResult == NULL)
-		pResult = GetFindObject(pFindObject->m_pChild, nBoneIndex);
-
-	return pResult;
-}
-void AnimationController::LineUPBoneIndex(CGameObject* pObject)
-{
-	if (pObject->m_nBoneIndex >= 0)
+	while (1)
 	{
-		m_pBoneIndex[num] = pObject->m_nBoneIndex;
-		num++;
+		if (FrameStack.empty())
+			break;
+
+		CGameObject* TargetFrame = FrameStack.top();
+		FrameStack.pop();
+
+		if(TargetFrame->m_pParent != NULL)
+			TargetFrame->m_xmf4x4ToRootTransform = Matrix4x4::Multiply(TargetFrame->m_xmf4x4ToParentTransform, TargetFrame->m_pParent->m_xmf4x4ToRootTransform);
+		else
+			TargetFrame->m_xmf4x4ToRootTransform = TargetFrame->m_xmf4x4ToParentTransform;
+
+		if (TargetFrame->m_pChild)
+			FrameStack.push(TargetFrame->m_pChild);
+		if (TargetFrame->m_pSibling)
+			FrameStack.push(TargetFrame->m_pSibling);
 	}
-	
-	if(pObject->m_pSibling)
-		LineUPBoneIndex(pObject->m_pSibling);
-	if(pObject->m_pChild)
-		LineUPBoneIndex(pObject->m_pChild);
 }
 void AnimationController::AdvanceAnimation(ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	Interpolate(0.0f); // 시간에 맞추어 m_xmf4x4ToParentTransform에 맞는 값을 넣어준다. 
 							// 현재 시간에 상관없이 계속 프레임이 진행되게 만들었다.
+	
+	ResetToRootTransforms();
 
-	// m_pBoneIndex는 루트부터 차례로 인덱스 접근할수있게 정렬 되어있는 인덱스다. 
-	// m_pBoneIndex[0]은 루트다. 따라서 루트의 toRoot행렬을 자신의 toParent행렬과 같다.
-	m_pBoneObject[m_pBoneIndex[0]]->m_xmf4x4ToRootTransform = m_pBoneObject[m_pBoneIndex[0]]->m_xmf4x4ToParentTransform;
-
-	for (int i = 1; i < m_nBindpos; i++)
-	{
-		// Interpolate(0.0f);에서 만들어진 ToParent행렬을 로드한다.
-		XMMATRIX toParent = XMLoadFloat4x4(&m_pBoneObject[m_pBoneIndex[i]]->m_xmf4x4ToParentTransform);
-
-		// 자신의 부모의 ToRoot행렬에 자신의  ToParent행렬을 곱해서 자신의 ToParent행렬을 만든다. 
-		XMMATRIX parentToRoot;
-
-		// 부모 행렬의 본인덱스가 -1이면 이 오브젝트는 스키닝애니메이션에 참여하는 오브젝트가 아니다.
-		if (m_pBoneObject[m_pBoneIndex[i]]->m_pParent->m_nBoneIndex >= 0)
-		{
-			parentToRoot = XMLoadFloat4x4(&m_pBoneObject[m_pBoneIndex[i]]->m_pParent->m_xmf4x4ToRootTransform);
-		}
-		else
-		{
-			CGameObject *pObject = m_pBoneObject[m_pBoneIndex[i]]->m_pParent;
-			
-			//이벤트에 참여하지 않는 오브젝트가 부모자식관계 사이에 끼여있을수 있다. 그것을 위해서 while문을 돌려 확인한다.
-			while (1)
-			{
-				// 인덱스가 -1이거나(애니메이션에 참여하지 않는 오브젝트), 오브젝트가 NULL(이 오브젝트가 Root) 
-				if (pObject->m_nBoneIndex >= 0 || pObject == NULL)
-				{
-					break;
-				}
-				else
-				{
-					pObject = pObject->m_pParent;
-				}
-			}
-
-			if (pObject)
-			{
-				parentToRoot = XMLoadFloat4x4(&pObject->m_xmf4x4ToRootTransform);
-			}
-			else
-			{
-				// 현재 오브젝트의 부모에게서 ToRoot행렬이 없다는 것은 이것도 루트행렬이 된다는것을 의미한다. 
-				// 따라서 자신의 ToParent행렬을 ToRoot행렬로 설정한다.
-				parentToRoot = XMLoadFloat4x4(&pObject->m_xmf4x4ToParentTransform);
-			}
-		}
-		// 자신의 ToParent 와 부모의 ToRoot을 곱해서 자신의 ToRoot을 만든다.
-		XMMATRIX toRoot = XMMatrixMultiply(toParent, parentToRoot);
-		// 해당 오브젝트의 ToRoot에 저장한다.
-		XMStoreFloat4x4(&m_pBoneObject[m_pBoneIndex[i]]->m_xmf4x4ToRootTransform, toRoot);
-	}
-
-	for (UINT i = 0; i < m_nBindpos; i++)
+	for (UINT i = 0; i < m_nBindpos ; i++)
 	{
 		XMMATRIX offset = XMLoadFloat4x4(&m_pBindPoses[i]); // 본오프셋 행렬
-		XMMATRIX toRoot = XMLoadFloat4x4(&m_pBoneObject[i]->m_xmf4x4ToRootTransform); 
-		XMMATRIX finalTransform = XMMatrixMultiply((offset), (toRoot));
-		
+		XMMATRIX toRoot = XMLoadFloat4x4(&m_pBoneObject[i]->m_xmf4x4ToRootTransform);
+		XMMATRIX finalTransform = XMMatrixMultiply(XMMatrixTranspose(offset), (toRoot));
+
 		XMStoreFloat4x4(&m_BoneTransforms.m_xmf4x4BoneTransform[i], XMMatrixTranspose(finalTransform));
 	}
 	::memcpy(m_pBoneTransforms, &m_BoneTransforms, sizeof(BONE_TRANSFORMS));
@@ -715,9 +685,10 @@ void CGameObject::LoadAnimation(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandL
 		for (int i = 0; i < pFindObjecct->m_pAnimationController->GetAnimationCount(); i++)
 		{
 			InFile.read((char*)&pFindObjecct->m_pAnimationController->m_pAnimation[i].nTime, sizeof(UINT));
-			pFindObjecct->m_pAnimationController->m_pAnimation[i].pFrame = new FRAME[pFindObjecct->m_pAnimationController->m_pAnimation[i].nTime * pFindObjecct->m_nBindPoses];
-			
-			InFile.read((char*)pFindObjecct->m_pAnimationController->m_pAnimation[i].pFrame, sizeof(FRAME) * pFindObjecct->m_nBindPoses * pFindObjecct->m_pAnimationController->m_pAnimation[i].nTime);
+			InFile.read((char*)&pFindObjecct->m_pAnimationController->m_nFrame, sizeof(UINT));
+			pFindObjecct->m_pAnimationController->m_pAnimation[i].pFrame 
+				= new FRAME[pFindObjecct->m_pAnimationController->m_pAnimation[i].nTime * pFindObjecct->m_pAnimationController->m_nFrame];
+			InFile.read((char*)pFindObjecct->m_pAnimationController->m_pAnimation[i].pFrame, sizeof(FRAME) * pFindObjecct->m_pAnimationController->m_nFrame * pFindObjecct->m_pAnimationController->m_pAnimation[i].nTime);
 		}
 	}
 }
@@ -787,12 +758,13 @@ void CGameObject::LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, ID3D12Gra
 		}
 		InFile.read((char*)pxmf3BoneWeights, sizeof(XMFLOAT3) * nVertices); // 본가중치 받기
 		InFile.read((char*)pxmi4BoneIndices, sizeof(XMINT4) * nVertices); // 본인덱스 받기
-		InFile.read((char*)&m_nBindPoses, sizeof(int));
+		InFile.read((char*)&m_nBindPoses, sizeof(int)); // 본포즈 길이 받기
 
 		m_pBindPoses = new XMFLOAT4X4[m_nBindPoses];
 
-		InFile.read((char*)m_pBindPoses, sizeof(XMFLOAT4X4)*m_nBindPoses);
+		InFile.read((char*)m_pBindPoses, sizeof(XMFLOAT4X4) *m_nBindPoses); // 본포즈 받기
 		int Namesize;
+		
 		InFile.read((char*)&Namesize, sizeof(int)); // 디퓨즈맵이름 받기
 		pstrAlbedoTextureName = new char[Namesize];
 		InFile.read(pstrAlbedoTextureName, sizeof(char)*Namesize);
@@ -889,14 +861,20 @@ void CGameObject::LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, ID3D12Gra
 	{
 		if (nSubMesh <= nSub)
 		{
-			InFile.read((char*)&m_nBoneIndex, sizeof(int));
+			char* pstrFrameName = NULL;
+			UINT nFrameNameSize;
+			InFile.read((char*)&nFrameNameSize, sizeof(UINT));
 
-			pxmf3ParentsPosition = new XMFLOAT3();
-			InFile.read((char*)pxmf3ParentsPosition, sizeof(XMFLOAT3));
-			if(m_nBoneIndex >= 0)
-				SetLocalPosition(*pxmf3ParentsPosition);
+			pstrFrameName = new char[nFrameNameSize];
+			InFile.read(pstrFrameName, sizeof(char)*nFrameNameSize); // 프레임 이름 사이즈 받기
 
-			delete pxmf3ParentsPosition;
+			TCHAR* pstrFileName = char2tchar(pstrFrameName);// 프레임 이름 받기
+			_tcscat_s(m_strFrameName, 128, pstrFileName);
+
+			InFile.read((char*)&m_iBoneIndex, sizeof(int)); // 본 인덱스 받기
+
+			delete[] pstrFrameName;
+
 			bool bChild = false;
 			InFile.read((char*)&bChild, sizeof(bool));
 
@@ -908,17 +886,17 @@ void CGameObject::LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, ID3D12Gra
 				for (int i = 0; i < nChild; i++)
 				{
 					CGameObject *pChild = new CGameObject(0);
-					pChild->LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, InFile, nFrame + 1, 1);
 					SetChild(pChild);
+					pChild->LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, InFile, nFrame + 1, 1);
 				}
 			}
 		}
-		if (nSubMesh > nSub) // 하나의 매쉬가 여러개의 서브매쉬를 가지면 형제로 지정한다. 
+		if (nSubMesh > nSub) 
 		{
 			CGameObject *pSibling = new CGameObject(0);
+			SetChild(pSibling);
 			pSibling->LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, InFile, nFrame + 1, nSub + 1);
 
-			SetChild(pSibling);
 		}
 	}
 }
@@ -927,24 +905,19 @@ void CGameObject::SetChild(CGameObject *pChild)
 {
 	if (m_pChild)
 	{
-		CGameObject* pLinkObject = m_pChild->m_pSibling;
+		CGameObject* pLinkObject = m_pChild;
 		while (1)
 		{
-			if (pLinkObject)
+			if (pLinkObject->m_pSibling)
 			{
 				pLinkObject = pLinkObject->m_pSibling;
 			}
 			else
 			{
-				if (pChild)
-					pChild->m_pSibling = pLinkObject;
-				pLinkObject = pChild;
+				pLinkObject->m_pSibling = pChild;
 				break;
 			}
 		}
-		if (pChild)
-			pChild->m_pSibling = m_pChild->m_pSibling;
-		m_pChild->m_pSibling = pChild;
 	}
 	else
 	{

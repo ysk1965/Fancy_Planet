@@ -417,7 +417,7 @@ void CharacterScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsComman
 	m_nObjects = 1;
 	m_ppObjects = new CGameObject*[m_nObjects];
 
-	m_ppObjects[0] = new CharaterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, 0, L"../Assets/WhaleModel_local.dat");
+	m_ppObjects[0] = new CharaterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, 0, L"../Assets/Test_WhaleModel_local.dat");
 	m_ppObjects[0]->SetPosition(XMFLOAT3(1500, 500, 1500));
 }
 void CharacterScene::ReleaseObjects()
@@ -766,7 +766,7 @@ ID3D12RootSignature *ObjectScene::CreateGraphicsRootSignature(ID3D12Device *pd3d
 	ID3DBlob *pd3dSignatureBlob = NULL;
 	ID3DBlob *pd3dErrorBlob = NULL;
 	D3D12SerializeRootSignature(&d3dRootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &pd3dSignatureBlob, &pd3dErrorBlob);
-	pd3dDevice->CreateRootSignature(0, pd3dSignatureBlob->GetBufferPointer(), pd3dSignatureBlob->GetBufferSize()
+	HRESULT hresult =  pd3dDevice->CreateRootSignature(0, pd3dSignatureBlob->GetBufferPointer(), pd3dSignatureBlob->GetBufferSize()
 		, __uuidof(ID3D12RootSignature), (void **)&pd3dGraphicsRootSignature);
 
 	if (pd3dSignatureBlob)
