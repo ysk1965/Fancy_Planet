@@ -10,15 +10,17 @@ using namespace std;
 AnimationController::AnimationController(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, UINT nAnimation,
 	XMFLOAT4X4* pBindPoses, UINT nBindPos, CGameObject* pRootObject) : m_nAnimation(nAnimation), m_pBindPoses(pBindPoses), m_nBindpos(nBindPos), m_pRootObject(pRootObject)
 {
-
+	
 	m_pAnimation = new ANIMATION[m_nAnimation];
 
-	UINT ncbElementBytes = ((sizeof(LIGHTS) + 255) & ~255); //256의 배수
+	UINT ncbElementBytes = ((sizeof(LIGHTS) + 255) & ~255); 
 	m_pd3dcbBoneTransforms = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
 
 	m_pd3dcbBoneTransforms->Map(0, NULL, (void **)&m_pBoneTransforms);
 
 	m_pBoneObject = new CGameObject*[m_nBindpos];
+
+	m_iState = 0;
 
 	for (int i = 0; i < m_nBindpos; i++)
 	{
@@ -50,10 +52,26 @@ AnimationController::~AnimationController()
 	if (m_pAnimation)
 		delete[] m_pAnimation;
 }
-void AnimationController::Interpolate(float fTime)
+void AnimationController::ChangeAnimation(int iNewState)
+{
+	m_chronoStart = chrono::system_clock::now();
+	m_iState = iNewState;
+	m_fCurrentFrame = 0.0f;
+
+}
+void AnimationController::GetCurrentFrame(const unsigned long& nCurrentFrameRate)
+{
+	ms = std::chrono::duration_cast<std::chrono::milliseconds>(chrono::system_clock::now() - m_chronoStart);
+	float fCurrentTime = ms.count() /1000.0f;
+	float nRelativeFrameRate = nCurrentFrameRate / UNITY_FRAME;
+	m_fCurrentFrame = fCurrentTime / m_pAnimation[m_iState].fTime * nRelativeFrameRate;
+}
+void AnimationController::Interpolate(const unsigned long& nCurrentFrameRate)
 {
 	stack<CGameObject*> FrameStack;
 	FrameStack.push(m_pRootObject);
+
+	GetCurrentFrame(nCurrentFrameRate); // 현재 프레임 계산
 
 	for (int i = 0;; i++)
 	{
@@ -62,17 +80,19 @@ void AnimationController::Interpolate(float fTime)
 
 		CGameObject* TargetFrame = FrameStack.top();
 		FrameStack.pop();
-
-		XMFLOAT3 Scale = XMFLOAT3(1.0f, 1.0f, 1.0f);
-
-		XMVECTOR S = XMLoadFloat3(&Scale);
-		XMVECTOR P = XMLoadFloat3(&m_pAnimation[0].pFrame[m_nFrame*(UINT)m_fCurrentFrame + i].Translation);
-		XMVECTOR Q = XMLoadFloat4(&m_pAnimation[0].pFrame[m_nFrame*(UINT)m_fCurrentFrame + i].RotationQuat);
-
-		XMVECTOR zero = XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);
 		
-		XMStoreFloat4x4(&TargetFrame->m_xmf4x4ToParentTransform, XMMatrixAffineTransformation(S, zero, Q, P));
+		if (TargetFrame != m_pRootObject)
+		{
+			XMFLOAT3 Scale = XMFLOAT3(1.0f, 1.0f, 1.0f);
 
+			XMVECTOR S = XMLoadFloat3(&Scale);
+			XMVECTOR P = XMLoadFloat3(&m_pAnimation[m_iState].pFrame[m_nBone*(UINT)m_fCurrentFrame + i].Translation);
+			XMVECTOR Q = XMLoadFloat4(&m_pAnimation[m_iState].pFrame[m_nBone*(UINT)m_fCurrentFrame + i].RotationQuat);
+
+			XMVECTOR zero = XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);
+
+			XMStoreFloat4x4(&TargetFrame->m_xmf4x4ToParentTransform, XMMatrixAffineTransformation(S, zero, Q, P));
+		}
 		if(TargetFrame->m_pSibling)
 			FrameStack.push(TargetFrame->m_pSibling);  
 		if(TargetFrame->m_pChild)
@@ -80,15 +100,15 @@ void AnimationController::Interpolate(float fTime)
 	}
 	
 	// 5프레임당 애니메이션이 바뀌게 설정
-	m_fCurrentFrame+=0.2f;
+	m_fCurrentFrame+=1.0f;
 
-	if ((UINT)m_fCurrentFrame == m_pAnimation[0].nTime)
+	if ((UINT)m_fCurrentFrame == m_pAnimation[0].nFrame)
 		m_fCurrentFrame = 0.0f;
 }
 void AnimationController::ResetToRootTransforms()
 {
 	stack<CGameObject*> FrameStack;
-	FrameStack.push(m_pRootObject);
+	FrameStack.push(m_pRootObject->m_pChild);
 
 	while (1)
 	{
@@ -98,7 +118,7 @@ void AnimationController::ResetToRootTransforms()
 		CGameObject* TargetFrame = FrameStack.top();
 		FrameStack.pop();
 
-		if(TargetFrame->m_pParent != NULL)
+		if(TargetFrame->m_pParent != NULL && TargetFrame != m_pRootObject->m_pChild)
 			TargetFrame->m_xmf4x4ToRootTransform = Matrix4x4::Multiply(TargetFrame->m_xmf4x4ToParentTransform, TargetFrame->m_pParent->m_xmf4x4ToRootTransform);
 		else
 			TargetFrame->m_xmf4x4ToRootTransform = TargetFrame->m_xmf4x4ToParentTransform;
@@ -109,11 +129,10 @@ void AnimationController::ResetToRootTransforms()
 			FrameStack.push(TargetFrame->m_pSibling);
 	}
 }
-void AnimationController::AdvanceAnimation(ID3D12GraphicsCommandList* pd3dCommandList)
+void AnimationController::AdvanceAnimation(ID3D12GraphicsCommandList* pd3dCommandList, const unsigned long& nCurrentFrameRate)
 {
-	Interpolate(0.0f); // 시간에 맞추어 m_xmf4x4ToParentTransform에 맞는 값을 넣어준다. 
+	Interpolate(nCurrentFrameRate); // 시간에 맞추어 m_xmf4x4ToParentTransform에 맞는 값을 넣어준다. 
 							// 현재 시간에 상관없이 계속 프레임이 진행되게 만들었다.
-	
 	ResetToRootTransforms();
 
 	for (UINT i = 0; i < m_nBindpos ; i++)
@@ -417,7 +436,7 @@ void CGameObject::OnPrepareRender()
 {
 }
 
-void CGameObject::Render(ID3D12GraphicsCommandList *pd3dCommandList, int iRootParameterIndex, CCamera *pCamera)
+void CGameObject::Render(ID3D12GraphicsCommandList *pd3dCommandList, int iRootParameterIndex, const unsigned long& nCurrentFrame, CCamera *pCamera)
 {
 	if (!m_bActive)
 		return;
@@ -440,7 +459,7 @@ void CGameObject::Render(ID3D12GraphicsCommandList *pd3dCommandList, int iRootPa
 	}
 
 	if (m_pAnimationController)
-		m_pAnimationController->AdvanceAnimation(pd3dCommandList);
+		m_pAnimationController->AdvanceAnimation(pd3dCommandList, nCurrentFrame);
 
 	if (m_nMeshes > 0)
 	{
@@ -454,12 +473,12 @@ void CGameObject::Render(ID3D12GraphicsCommandList *pd3dCommandList, int iRootPa
 	}
 
 	if (m_pSibling)
-		m_pSibling->Render(pd3dCommandList, 2, pCamera);
+		m_pSibling->Render(pd3dCommandList, 2, nCurrentFrame, pCamera);
 	if (m_pChild)
-		m_pChild->Render(pd3dCommandList, 2, pCamera);
+		m_pChild->Render(pd3dCommandList, 2, nCurrentFrame, pCamera);
 }
 
-void CGameObject::Render(ID3D12GraphicsCommandList *pd3dCommandList, int iRootParameterIndex, CCamera *pCamera, UINT nInstances)
+void CGameObject::Render(ID3D12GraphicsCommandList *pd3dCommandList, int iRootParameterIndex, const unsigned long& nCurrentFrame, CCamera *pCamera, UINT nInstances)
 {
 	OnPrepareRender();
 
@@ -678,17 +697,20 @@ void CGameObject::LoadAnimation(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandL
 
 	if (pFindObjecct)
 	{
-		InFile.read((char*)&nAnimation, sizeof(UINT));
+		InFile.read((char*)&nAnimation, sizeof(UINT)); // 애니메이션 수
 		pFindObjecct->m_pAnimationController = new AnimationController(pd3dDevice, pd3dCommandList, nAnimation
 			, pFindObjecct->m_pBindPoses, pFindObjecct->m_nBindPoses , GetRootObject());
+		InFile.read((char*)&pFindObjecct->m_pAnimationController->m_nBone, sizeof(UINT)); // 본의 갯수
 
 		for (int i = 0; i < pFindObjecct->m_pAnimationController->GetAnimationCount(); i++)
 		{
-			InFile.read((char*)&pFindObjecct->m_pAnimationController->m_pAnimation[i].nTime, sizeof(UINT));
-			InFile.read((char*)&pFindObjecct->m_pAnimationController->m_nFrame, sizeof(UINT));
+			InFile.read((char*)&pFindObjecct->m_pAnimationController->m_pAnimation[i].nFrame, sizeof(UINT)); // 프레임 수 
+			InFile.read((char*)&pFindObjecct->m_pAnimationController->m_pAnimation[i].fTime, sizeof(float)); // 프레임 수 
 			pFindObjecct->m_pAnimationController->m_pAnimation[i].pFrame 
-				= new FRAME[pFindObjecct->m_pAnimationController->m_pAnimation[i].nTime * pFindObjecct->m_pAnimationController->m_nFrame];
-			InFile.read((char*)pFindObjecct->m_pAnimationController->m_pAnimation[i].pFrame, sizeof(FRAME) * pFindObjecct->m_pAnimationController->m_nFrame * pFindObjecct->m_pAnimationController->m_pAnimation[i].nTime);
+				= new FRAME[pFindObjecct->m_pAnimationController->m_pAnimation[i].nFrame * pFindObjecct->m_pAnimationController->m_nBone];
+			InFile.read((char*)pFindObjecct->m_pAnimationController->m_pAnimation[i].pFrame
+				, sizeof(FRAME) * pFindObjecct->m_pAnimationController->m_nBone * 
+				pFindObjecct->m_pAnimationController->m_pAnimation[i].nFrame); // 
 		}
 	}
 }

@@ -1,6 +1,7 @@
 #pragma once
 #include "Mesh.h"
 #include "Camera.h"
+#include <chrono>
 
 #define DIR_FORWARD					0x01
 #define DIR_BACKWARD				0x02
@@ -14,6 +15,8 @@
 #define RESOURCE_TEXTURE2DARRAY		0x03
 #define RESOURCE_TEXTURE_CUBE		0x04
 #define RESOURCE_BUFFER				0x05
+
+#define UNITY_FRAME 30
 
 class CShader;
 class CGameObject;
@@ -40,7 +43,8 @@ struct FRAME
 };
 struct ANIMATION
 {
-	UINT nTime; // 전체 프레임 수
+	float fTime;  // 애니메이션 시간
+	UINT nFrame; // 전체 프레임 수
 	FRAME* pFrame; // [Frame * BoneIndex]
 };
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -48,8 +52,11 @@ struct ANIMATION
 class AnimationController
 {
 private:
+	std::chrono::system_clock::time_point m_chronoStart;
+	std::chrono::milliseconds ms;
+
 	UINT m_nAnimation = 0;
-	UINT m_nState = 0;
+	int m_iState = 0;
 
 	float m_fCurrentFrame = 0;
 	UINT m_nBindpos = 0;
@@ -66,7 +73,7 @@ private:
 
 	CGameObject* m_pRootObject = NULL;
 public:
-	UINT m_nFrame = 0;
+	UINT m_nBone = 0;
 
 	XMFLOAT4X4								*m_pBindPoses;
 
@@ -74,14 +81,17 @@ public:
 	{
 		return m_nAnimation;
 	}
+
 	AnimationController(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, UINT nAnimation,
 		XMFLOAT4X4* pBindPoses, UINT nBindPos, CGameObject* pRootObject);
 	~AnimationController();
-	void Interpolate(float fTime);
+	void GetCurrentFrame(const unsigned long& nCurrentFrameRate);
+	void Interpolate(const unsigned long& nCurrentFrameRate);
 	//해당하는 본인덱스의 오브젝트를 리턴한다.
 	void ResetToRootTransforms();
 	CGameObject* GetFindObject(CGameObject* pFindObject, UINT nBoneIndex);
-	void AdvanceAnimation(ID3D12GraphicsCommandList* pd3dCommandList);
+	void AdvanceAnimation(ID3D12GraphicsCommandList* pd3dCommandList, const unsigned long& nCurrentFrame);
+	void ChangeAnimation(int iNewState);
 	// 계층관계로 인덱스를 정렬한다. 
 
 	ANIMATION *m_pAnimation;
@@ -223,8 +233,8 @@ public:
 	virtual void SetRootParameter(ID3D12GraphicsCommandList *pd3dCommandList, int iRootParameterIndex);
 	
 	virtual void Animate(float fTimeElapsed);
-	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, int iRootParameterIndex, CCamera *pCamera = NULL);
-	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, int iRootParameterIndex, CCamera *pCamera, UINT nInstances);
+	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, int iRootParameterIndex, const unsigned long& nCurrentFrame, CCamera *pCamera = NULL);
+	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, int iRootParameterIndex, const unsigned long& nCurrentFrame, CCamera *pCamera, UINT nInstances);
 	virtual void BuildMaterials(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList) { }
 	virtual void ReleaseUploadBuffers();
 

@@ -650,7 +650,6 @@ void CGameFramework::ReleaseObjects()
 void CGameFramework::ProcessInput()
 {
 	static UCHAR pKeysBuffer[256];
-	static int num = 0;
 	bool bProcessedByScene = false;
 
 	if (GetKeyboardState(pKeysBuffer) && m_ppScenes) 
@@ -695,7 +694,6 @@ void CGameFramework::ProcessInput()
 			if (dwDirection) m_pPlayer->Move(dwDirection, 100.0f * m_GameTimer.GetTimeElapsed(), true);
 		}
 	}
-	num++;
 	m_pPlayer->Update(m_GameTimer.GetTimeElapsed());
 }
 
@@ -729,7 +727,6 @@ void CGameFramework::WaitForGpuComplete()
 void CGameFramework::MoveToNextFrame()
 {
 	m_nSwapChainBufferIndex = m_pdxgiSwapChain->GetCurrentBackBufferIndex();
-	//m_nSwapChainBufferIndex = (m_nSwapChainBufferIndex + 1) % m_nSwapChainBuffers;
 
 	UINT64 nFenceValue = ++m_nFenceValues[m_nSwapChainBufferIndex];
 	HRESULT hResult = m_pd3dCommandQueue->Signal(m_pd3dFence, nFenceValue);
@@ -747,7 +744,7 @@ void CGameFramework::RenderSubset(int iIndex)
 	{
 		WaitForSingleObject(m_workerBeginRenderFrame[iIndex], INFINITE);
 
-		m_ppScenes[iIndex]->Render(m_ppd3dCommandLists[iIndex], m_pCamera);
+		m_ppScenes[iIndex]->Render(m_ppd3dCommandLists[iIndex], m_pCamera, m_GameTimer.GetFrameRate());
 
 		SetEvent(m_workerFinishedRenderFrame[iIndex]);
 	}

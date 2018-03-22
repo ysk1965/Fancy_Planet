@@ -96,7 +96,7 @@ void TerrainAndSkyBoxScene::AnimateObjects(float fTimeElapsed, CCamera *pCamera)
 {
 
 }
-void TerrainAndSkyBoxScene::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera)
+void TerrainAndSkyBoxScene::Render(ID3D12GraphicsCommandList *pd3dCommandList, unsigned long& nCurrentFrame, CCamera *pCamera)
 {
 	pd3dCommandList->SetGraphicsRootSignature(m_pd3dGraphicsRootSignature);
 
@@ -287,7 +287,7 @@ void EndObjectScene::AnimateObjects(float fTimeElapsed, CCamera *pCamera)
 		m_ppShaders[i]->AnimateObjects(fTimeElapsed);
 	}
 }
-void EndObjectScene::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera)
+void EndObjectScene::Render(ID3D12GraphicsCommandList *pd3dCommandList, unsigned long& nCurrentFrame, CCamera *pCamera)
 {
 	pd3dCommandList->SetGraphicsRootSignature(m_pd3dGraphicsRootSignature);
 
@@ -414,11 +414,14 @@ void CharacterScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsComman
 	m_nShaders = 0;
 	m_ppShaders = new CShader*[m_nShaders];
 
-	m_nObjects = 1;
+	m_nObjects = 100;
 	m_ppObjects = new CGameObject*[m_nObjects];
 
-	m_ppObjects[0] = new CharaterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, 0, L"../Assets/Test_WhaleModel_local.dat");
-	m_ppObjects[0]->SetPosition(XMFLOAT3(1500, 500, 1500));
+	for (int i = 0; i < m_nObjects; i++)
+	{
+		m_ppObjects[i] = new CharaterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, 0, L"../Assets/Test_WhaleModel_local.dat");
+		m_ppObjects[i]->SetPosition(XMFLOAT3(100 * i, 500, 100*i));
+	}
 }
 void CharacterScene::ReleaseObjects()
 {
@@ -461,7 +464,7 @@ void CharacterScene::AnimateObjects(float fTimeElapsed, CCamera *pCamera)
 		m_ppObjects[i]->Animate(fTimeElapsed);
 	}
 }
-void CharacterScene::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera)
+void CharacterScene::Render(ID3D12GraphicsCommandList *pd3dCommandList, unsigned long& nCurrentFrame, CCamera *pCamera)
 {
 	pd3dCommandList->SetGraphicsRootSignature(m_pd3dGraphicsRootSignature);
 
@@ -669,7 +672,7 @@ void ObjectScene::AnimateObjects(float fTimeElapsed, CCamera *pCamera)
 		m_ppShaders[i]->AnimateObjects(fTimeElapsed);
 	}
 }
-void ObjectScene::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera)
+void ObjectScene::Render(ID3D12GraphicsCommandList *pd3dCommandList, unsigned long& nCurrentFrame, CCamera *pCamera)
 {
 	pd3dCommandList->SetGraphicsRootSignature(m_pd3dGraphicsRootSignature);
 
