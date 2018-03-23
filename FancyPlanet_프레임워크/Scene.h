@@ -25,7 +25,7 @@ public:
 	}
 	bool ProcessInput(UCHAR *pKeysBuffer);
 	virtual void AnimateObjects(float fTimeElapsed, CCamera *pCamera) = 0;
-	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, unsigned long& nCurrentFrame, CCamera *pCamera = NULL) = 0;
+	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, const unsigned long& nCurrentFrame, CCamera *pCamera = NULL) = 0;
 	virtual void SkyBoxRender(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera) {}
 	virtual void ReleaseUploadBuffers();
 	void FrustumCulling(CCamera *pCamera);
@@ -49,7 +49,7 @@ public:
 
 	virtual ID3D12RootSignature *CreateGraphicsRootSignature(ID3D12Device *pd3dDevice);
 	virtual void AnimateObjects(float fTimeElapsed, CCamera *pCamera);
-	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, unsigned long& nCurrentFrame, CCamera *pCamera = NULL);
+	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, const unsigned long& nCurrentFrame, CCamera *pCamera = NULL);
 	virtual void ReleaseUploadBuffers();
 
 	TerrainAndSkyBoxScene();
@@ -68,7 +68,7 @@ public:
 
 	virtual ID3D12RootSignature *CreateGraphicsRootSignature(ID3D12Device *pd3dDevice);
 	virtual void AnimateObjects(float fTimeElapsed, CCamera *pCamera);
-	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, unsigned long& nCurrentFrame, CCamera *pCamera = NULL);
+	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, const unsigned long& nCurrentFrame, CCamera *pCamera = NULL);
 	virtual void ReleaseUploadBuffers();
 
 	EndObjectScene();
@@ -85,7 +85,7 @@ public:
 
 	virtual ID3D12RootSignature *CreateGraphicsRootSignature(ID3D12Device *pd3dDevice);
 	virtual void AnimateObjects(float fTimeElapsed, CCamera *pCamera);
-	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, unsigned long& nCurrentFrame, CCamera *pCamera = NULL);
+	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, const unsigned long& nCurrentFrame, CCamera *pCamera = NULL);
 	virtual void ReleaseUploadBuffers();
 
 	CharacterScene();
@@ -103,7 +103,7 @@ public:
 
 	virtual ID3D12RootSignature *CreateGraphicsRootSignature(ID3D12Device *pd3dDevice);
 	virtual void AnimateObjects(float fTimeElapsed, CCamera *pCamera);
-	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, unsigned long& nCurrentFrame, CCamera *pCamera = NULL);
+	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, const unsigned long& nCurrentFrame, CCamera *pCamera = NULL);
 	virtual void ReleaseUploadBuffers();
 
 	ObjectScene();

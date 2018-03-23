@@ -744,7 +744,7 @@ void CGameFramework::RenderSubset(int iIndex)
 	{
 		WaitForSingleObject(m_workerBeginRenderFrame[iIndex], INFINITE);
 
-		m_ppScenes[iIndex]->Render(m_ppd3dCommandLists[iIndex], m_pCamera, m_GameTimer.GetFrameRate());
+		m_ppScenes[iIndex]->Render(m_ppd3dCommandLists[iIndex], m_GameTimer.GetFrameRate(), m_pCamera);
 
 		SetEvent(m_workerFinishedRenderFrame[iIndex]);
 	}
@@ -819,7 +819,7 @@ void CGameFramework::FrameAdvance()
 	m_pd3dScreenCommandList->ClearRenderTargetView(m_pd3dRtvSwapChainBackBufferCPUHandles[m_nSwapChainBufferIndex], Colors::Azure, 0, NULL);
 	m_pd3dScreenCommandList->OMSetRenderTargets(1, &m_pd3dRtvSwapChainBackBufferCPUHandles[m_nSwapChainBufferIndex], TRUE, &m_d3dDsvDepthStencilBufferCPUHandle);
 	//원래대로 백버퍼에 그린다.
-	m_pScreenShader->Render(m_pd3dScreenCommandList, m_pCamera);
+	m_pScreenShader->Render(m_pd3dScreenCommandList, m_GameTimer.GetFrameRate(), m_pCamera);
 
 #ifdef _WITH_PLAYER_TOP
 	m_pd3dCommandList->ClearDepthStencilView(m_d3dDsvDepthStencilBufferCPUHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, NULL);

@@ -56,7 +56,7 @@ private:
 	std::chrono::milliseconds ms;
 
 	UINT m_nAnimation = 0;
-	int m_iState = 0;
+	int m_iState = 1;
 
 	float m_fCurrentFrame = 0;
 	UINT m_nBindpos = 0;
@@ -312,7 +312,7 @@ public:
 	CSkyBox(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature);
 	virtual ~CSkyBox();
 
-	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera = NULL);
+	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, const unsigned long& nCurrentFrame, CCamera *pCamera = NULL);
 };
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 class CharaterObject : public CGameObject

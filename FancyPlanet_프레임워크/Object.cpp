@@ -4,6 +4,7 @@
 #include <iostream>
 #include <fstream>
 #include <stack>
+#include <sstream>
 
 using namespace std;
 
@@ -26,6 +27,8 @@ AnimationController::AnimationController(ID3D12Device *pd3dDevice, ID3D12Graphic
 	{
 		m_pBoneObject[i] = GetFindObject(m_pRootObject, i);
 	}
+
+	m_chronoStart = chrono::system_clock::now();
 }
 CGameObject* AnimationController::GetFindObject(CGameObject* pFindObject, UINT nBoneIndex)
 {
@@ -63,8 +66,16 @@ void AnimationController::GetCurrentFrame(const unsigned long& nCurrentFrameRate
 {
 	ms = std::chrono::duration_cast<std::chrono::milliseconds>(chrono::system_clock::now() - m_chronoStart);
 	float fCurrentTime = ms.count() /1000.0f;
-	float nRelativeFrameRate = nCurrentFrameRate / UNITY_FRAME;
-	m_fCurrentFrame = fCurrentTime / m_pAnimation[m_iState].fTime * nRelativeFrameRate;
+	float fQuotient = fCurrentTime / m_pAnimation[m_iState].fTime;
+	
+	float nRelativeFrameRate = (float)nCurrentFrameRate / UNITY_FRAME;
+ 	m_fCurrentFrame = (fCurrentTime / m_pAnimation[m_iState].fTime - (UINT)fQuotient) * m_pAnimation[m_iState].nFrame;
+
+	ostringstream frame;
+
+	frame << (UINT)fQuotient << "번째 프레임,          " << fCurrentTime / m_pAnimation[m_iState].fTime << std::endl;
+
+	OutputDebugStringA(frame.str().c_str());
 }
 void AnimationController::Interpolate(const unsigned long& nCurrentFrameRate)
 {
@@ -93,6 +104,8 @@ void AnimationController::Interpolate(const unsigned long& nCurrentFrameRate)
 
 			XMStoreFloat4x4(&TargetFrame->m_xmf4x4ToParentTransform, XMMatrixAffineTransformation(S, zero, Q, P));
 		}
+
+
 		if(TargetFrame->m_pSibling)
 			FrameStack.push(TargetFrame->m_pSibling);  
 		if(TargetFrame->m_pChild)
@@ -100,10 +113,10 @@ void AnimationController::Interpolate(const unsigned long& nCurrentFrameRate)
 	}
 	
 	// 5프레임당 애니메이션이 바뀌게 설정
-	m_fCurrentFrame+=1.0f;
+	//m_fCurrentFrame+=1.0f;
 
-	if ((UINT)m_fCurrentFrame == m_pAnimation[0].nFrame)
-		m_fCurrentFrame = 0.0f;
+	//if ((UINT)m_fCurrentFrame == m_pAnimation[0].nFrame)
+	//	m_fCurrentFrame = 0.0f;
 }
 void AnimationController::ResetToRootTransforms()
 {
@@ -447,7 +460,7 @@ void CGameObject::Render(ID3D12GraphicsCommandList *pd3dCommandList, int iRootPa
 	{
 		if (m_pMaterial->m_pShader)
 		{
-			m_pMaterial->m_pShader->Render(pd3dCommandList, pCamera);
+			m_pMaterial->m_pShader->Render(pd3dCommandList, nCurrentFrame, pCamera);
 			m_pMaterial->m_pShader->UpdateShaderVariables(pd3dCommandList);
 
 			UpdateShaderVariables(pd3dCommandList);
@@ -705,12 +718,12 @@ void CGameObject::LoadAnimation(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandL
 		for (int i = 0; i < pFindObjecct->m_pAnimationController->GetAnimationCount(); i++)
 		{
 			InFile.read((char*)&pFindObjecct->m_pAnimationController->m_pAnimation[i].nFrame, sizeof(UINT)); // 프레임 수 
-			InFile.read((char*)&pFindObjecct->m_pAnimationController->m_pAnimation[i].fTime, sizeof(float)); // 프레임 수 
-			pFindObjecct->m_pAnimationController->m_pAnimation[i].pFrame 
-				= new FRAME[pFindObjecct->m_pAnimationController->m_pAnimation[i].nFrame * pFindObjecct->m_pAnimationController->m_nBone];
+			InFile.read((char*)&pFindObjecct->m_pAnimationController->m_pAnimation[i].fTime, sizeof(float)); // 애니메이션 시간 (30fps 기준)
+ 			pFindObjecct->m_pAnimationController->m_pAnimation[i].pFrame 
+				= new FRAME[(pFindObjecct->m_pAnimationController->m_pAnimation[i].nFrame + 1) * pFindObjecct->m_pAnimationController->m_nBone];
 			InFile.read((char*)pFindObjecct->m_pAnimationController->m_pAnimation[i].pFrame
 				, sizeof(FRAME) * pFindObjecct->m_pAnimationController->m_nBone * 
-				pFindObjecct->m_pAnimationController->m_pAnimation[i].nFrame); // 
+				(pFindObjecct->m_pAnimationController->m_pAnimation[i].nFrame + 1)); 
 		}
 	}
 }
@@ -1064,7 +1077,7 @@ CSkyBox::~CSkyBox()
 {
 }
 
-void CSkyBox::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera)
+void CSkyBox::Render(ID3D12GraphicsCommandList *pd3dCommandList, const unsigned long& nCurrentFrame, CCamera *pCamera)
 {
 	XMFLOAT3 xmf3CameraPos = pCamera->GetPosition();
 	SetWorldPosition(xmf3CameraPos.x, xmf3CameraPos.y, xmf3CameraPos.z);
@@ -1075,7 +1088,7 @@ void CSkyBox::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamer
 	{
 		if (m_pMaterial->m_pShader)
 		{
-			m_pMaterial->m_pShader->Render(pd3dCommandList, pCamera);
+			m_pMaterial->m_pShader->Render(pd3dCommandList, nCurrentFrame, pCamera);
 			m_pMaterial->m_pShader->UpdateShaderVariables(pd3dCommandList);
 
 			UpdateShaderVariables(pd3dCommandList);

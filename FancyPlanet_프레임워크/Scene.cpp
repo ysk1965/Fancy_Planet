@@ -96,19 +96,19 @@ void TerrainAndSkyBoxScene::AnimateObjects(float fTimeElapsed, CCamera *pCamera)
 {
 
 }
-void TerrainAndSkyBoxScene::Render(ID3D12GraphicsCommandList *pd3dCommandList, unsigned long& nCurrentFrame, CCamera *pCamera)
+void TerrainAndSkyBoxScene::Render(ID3D12GraphicsCommandList *pd3dCommandList, const unsigned long& nCurrentFrame, CCamera *pCamera)
 {
 	pd3dCommandList->SetGraphicsRootSignature(m_pd3dGraphicsRootSignature);
 
 	pCamera->SetViewportsAndScissorRects(pd3dCommandList);
 	pCamera->UpdateShaderVariables(pd3dCommandList);
 	if (m_pSkyBox)
-		m_pSkyBox->Render(pd3dCommandList, pCamera);
+		m_pSkyBox->Render(pd3dCommandList, nCurrentFrame, pCamera);
 
 	if (m_pTerrain)
 	{
 		m_pTerrain->m_pMaterial->m_pShader->OnPrepareRender(pd3dCommandList);
-		m_pTerrain->Render(pd3dCommandList, 2, pCamera);
+		m_pTerrain->Render(pd3dCommandList, 2, nCurrentFrame, pCamera);
 	}
 }
 ID3D12RootSignature *TerrainAndSkyBoxScene::CreateGraphicsRootSignature(ID3D12Device *pd3dDevice)
@@ -287,7 +287,7 @@ void EndObjectScene::AnimateObjects(float fTimeElapsed, CCamera *pCamera)
 		m_ppShaders[i]->AnimateObjects(fTimeElapsed);
 	}
 }
-void EndObjectScene::Render(ID3D12GraphicsCommandList *pd3dCommandList, unsigned long& nCurrentFrame, CCamera *pCamera)
+void EndObjectScene::Render(ID3D12GraphicsCommandList *pd3dCommandList, const unsigned long& nCurrentFrame, CCamera *pCamera)
 {
 	pd3dCommandList->SetGraphicsRootSignature(m_pd3dGraphicsRootSignature);
 
@@ -414,7 +414,7 @@ void CharacterScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsComman
 	m_nShaders = 0;
 	m_ppShaders = new CShader*[m_nShaders];
 
-	m_nObjects = 100;
+	m_nObjects = 1;
 	m_ppObjects = new CGameObject*[m_nObjects];
 
 	for (int i = 0; i < m_nObjects; i++)
@@ -464,7 +464,7 @@ void CharacterScene::AnimateObjects(float fTimeElapsed, CCamera *pCamera)
 		m_ppObjects[i]->Animate(fTimeElapsed);
 	}
 }
-void CharacterScene::Render(ID3D12GraphicsCommandList *pd3dCommandList, unsigned long& nCurrentFrame, CCamera *pCamera)
+void CharacterScene::Render(ID3D12GraphicsCommandList *pd3dCommandList, const unsigned long& nCurrentFrame, CCamera *pCamera)
 {
 	pd3dCommandList->SetGraphicsRootSignature(m_pd3dGraphicsRootSignature);
 
@@ -476,12 +476,12 @@ void CharacterScene::Render(ID3D12GraphicsCommandList *pd3dCommandList, unsigned
 	for (int i = 0; i < m_nShaders; i++)
 	{
 		if (m_ppShaders[i])
-			m_ppShaders[i]->Render(pd3dCommandList, pCamera);
+			m_ppShaders[i]->Render(pd3dCommandList, nCurrentFrame, pCamera);
 	}                                                                        
 	for (int i = 0; i < m_nObjects; i++)
 	{
 		m_ppObjects[i]->UpdateTransform(NULL);
-		m_ppObjects[i]->Render(pd3dCommandList, 2, pCamera);
+		m_ppObjects[i]->Render(pd3dCommandList, 2, nCurrentFrame, pCamera);
 	}
 }
 ID3D12RootSignature *CharacterScene::CreateGraphicsRootSignature(ID3D12Device *pd3dDevice)
@@ -672,7 +672,7 @@ void ObjectScene::AnimateObjects(float fTimeElapsed, CCamera *pCamera)
 		m_ppShaders[i]->AnimateObjects(fTimeElapsed);
 	}
 }
-void ObjectScene::Render(ID3D12GraphicsCommandList *pd3dCommandList, unsigned long& nCurrentFrame, CCamera *pCamera)
+void ObjectScene::Render(ID3D12GraphicsCommandList *pd3dCommandList, const unsigned long& nCurrentFrame, CCamera *pCamera)
 {
 	pd3dCommandList->SetGraphicsRootSignature(m_pd3dGraphicsRootSignature);
 

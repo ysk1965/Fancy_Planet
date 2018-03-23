@@ -7,21 +7,28 @@ static class Constants
 {
     public const int MESH = 0;
     public const int LAYER = 1;
-    public const int END = -1;
+    public const int END = 3;
 }
 
 public class FBX_Exporter : MonoBehaviour
 {
-
+    private static FileStream fs = new FileStream("Test_WhaleModel_local.dat", FileMode.Create);
+    private BinaryWriter bw = new BinaryWriter(fs);
+    private Animation ani;
+    private int num = new int();
+	private int aninum = new int();
+	SkinnedMeshRenderer[] smr;
     void Start()
     {
-        FileStream fs = new FileStream("SoldierModel.dat", FileMode.Create);
-        BinaryWriter bw = new BinaryWriter(fs);
+        smr = GetComponentsInChildren<SkinnedMeshRenderer>();
+        num = 0;
+        ani = GetComponent<Animation>();
         Transform t = GetComponent<Transform>();
         Made(t, bw);
-        bw.Write(Constants.END);
-        bw.Close();
-    }
+
+		aninum = -2;
+
+	}
     private void Made(Transform mt, BinaryWriter bw)
     {
         Write(mt, bw);
@@ -64,7 +71,6 @@ public class FBX_Exporter : MonoBehaviour
             {
                 if (strNme[nStr] == SkinnedMesh.material.shader.name)
                 {
-
                     if (nStr == 0)
                     {
                         num = 1;
@@ -156,10 +162,70 @@ public class FBX_Exporter : MonoBehaviour
                         bw.Write(objMesh.tangents[p3].z);
                     }
                 }
+                for (int i = 0; i < indices.Length; i += 3)
+                {// 뼈 가중치
+                    p1 = indices[i + 0];
+                    p2 = indices[i + 1];
+                    p3 = indices[i + 2];
+                    bw.Write(objMesh.boneWeights[p1].weight0);
+                    bw.Write(objMesh.boneWeights[p1].weight1);
+                    bw.Write(objMesh.boneWeights[p1].weight2);
+					
+					bw.Write(objMesh.boneWeights[p2].weight0);
+                    bw.Write(objMesh.boneWeights[p2].weight1);
+                    bw.Write(objMesh.boneWeights[p2].weight2);
+
+                    bw.Write(objMesh.boneWeights[p3].weight0);
+                    bw.Write(objMesh.boneWeights[p3].weight1);
+                    bw.Write(objMesh.boneWeights[p3].weight2);
+                }
+                for (int i = 0; i < indices.Length; i += 3)
+                {// 뼈 인덱스
+                    p1 = indices[i + 0];
+                    p2 = indices[i + 1];
+                    p3 = indices[i + 2];
+                    bw.Write(objMesh.boneWeights[p1].boneIndex0);
+                    bw.Write(objMesh.boneWeights[p1].boneIndex1);
+                    bw.Write(objMesh.boneWeights[p1].boneIndex2);
+                    bw.Write(objMesh.boneWeights[p1].boneIndex3);
+
+                    bw.Write(objMesh.boneWeights[p2].boneIndex0);
+                    bw.Write(objMesh.boneWeights[p2].boneIndex1);
+                    bw.Write(objMesh.boneWeights[p2].boneIndex2);
+                    bw.Write(objMesh.boneWeights[p2].boneIndex3);
+
+                    bw.Write(objMesh.boneWeights[p3].boneIndex0);
+                    bw.Write(objMesh.boneWeights[p3].boneIndex1);
+                    bw.Write(objMesh.boneWeights[p3].boneIndex2);
+                    bw.Write(objMesh.boneWeights[p3].boneIndex3);
+                }
+                bw.Write(objMesh.bindposes.Length); // 본 포즈 길이
+                for (int i = 0; i < objMesh.bindposes.Length; i++)
+                {
+                    bw.Write(objMesh.bindposes[i].m00);
+                    bw.Write(objMesh.bindposes[i].m01);
+                    bw.Write(objMesh.bindposes[i].m02);
+                    bw.Write(objMesh.bindposes[i].m03);
+
+                    bw.Write(objMesh.bindposes[i].m10);
+                    bw.Write(objMesh.bindposes[i].m11);
+                    bw.Write(objMesh.bindposes[i].m12);
+                    bw.Write(objMesh.bindposes[i].m13);
+
+                    bw.Write(objMesh.bindposes[i].m20);
+                    bw.Write(objMesh.bindposes[i].m21);
+                    bw.Write(objMesh.bindposes[i].m22);
+                    bw.Write(objMesh.bindposes[i].m23);
+
+                    bw.Write(objMesh.bindposes[i].m30);
+                    bw.Write(objMesh.bindposes[i].m31);
+                    bw.Write(objMesh.bindposes[i].m32);
+                    bw.Write(objMesh.bindposes[i].m33);
+                }
                 // 텍스쳐 파일 이름
 
                 string str = SkinnedMesh.materials[sub].mainTexture.name;
-                Debug.Log(sub + " : " + str);
+                
                 str += '\0';
                 bw.Write(str.Length);
                 for (int i = 0; i < str.Length; i++)
@@ -183,15 +249,84 @@ public class FBX_Exporter : MonoBehaviour
         {
             bw.Write(Constants.LAYER);
         }
+		
+		string objectName = mt.name;
+		objectName += '\0';
 
-        Vector3 po = mt.position;
-        bw.Write(po.x);
-        bw.Write(po.y);
-        bw.Write(po.z);
-    }
+		bw.Write(objectName.Length); //본 이름 길이
+		for(int i=0;i< objectName.Length; i++)
+			bw.Write(objectName[i]); // 본 이름
+
+		for (int boneNum = 0; boneNum < smr[0].bones.Length; boneNum++)
+		{
+			if (mt.name == smr[0].bones[boneNum].name)
+			{
+				bw.Write(boneNum); // 본 인덱스 
+				break;
+			}
+			else if (boneNum == smr[0].bones.Length - 1)
+				bw.Write(-1);
+		}
+	}
+    private void AnimationWrite(Transform mt)
+    {
+        bw.Write(mt.localPosition.x);
+        bw.Write(mt.localPosition.y);
+        bw.Write(mt.localPosition.z);
+
+		bw.Write(mt.localRotation.x);
+        bw.Write(mt.localRotation.y);
+        bw.Write(mt.localRotation.z);
+        bw.Write(mt.localRotation.w);
+
+		for (int i = 0; i < mt.childCount; i++)
+		{
+			Transform ct = mt.GetChild(i);
+			AnimationWrite(ct);
+		}
+	}
     // Update is called once per frame
     void Update()
     {
+		Transform tr = GetComponent<Transform>();
+		string[] aniName = { "death", "swim", "fastswim2", "dive" }; // 애니메이션 이름
+		float[] aniLength = {2.7f ,23.333f, 5.367f, 2.7f, 9.33f }; // 시간
+		if (aninum == -2)
+		{
+			aninum++;
+			bw.Write(ani.GetClipCount()); // 애니메이션 수
+			Transform[] sub = GetComponentsInChildren<Transform>();
+			bw.Write(sub.Length);
+		}
+		
+		if (num < ani.clip.frameRate * aniLength[aninum + 1] + 1 && num > 0)
+		{
+			if (num == 1)
+			{
+				bw.Write((int)(ani.clip.frameRate * aniLength[aninum + 1])); // 애니메이션 길이(프레임)
+				bw.Write(aniLength[aninum + 1]); //시간
+			}
 
-    }
+			AnimationWrite(tr);
+		}
+		else if (num >= ani.clip.frameRate * ani.clip.length + 1)
+		{
+			Debug.Log(aninum + "완료");
+			
+			aninum++;
+
+			if (aninum == ani.GetClipCount() - 1)
+			{
+				bw.Close();
+				return;
+			}
+			if (aninum < ani.GetClipCount() - 1)
+				ani.PlayQueued(aniName[aninum], QueueMode.PlayNow);
+			
+			num = 0;
+		}
+		if (aninum < ani.GetClipCount() - 1)
+			num++;
+		
+	}
 }
