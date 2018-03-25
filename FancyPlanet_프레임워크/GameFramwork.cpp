@@ -5,7 +5,7 @@
 #include "stdafx.h"
 #include "GameFramework.h"
 #include <process.h>
-
+enum { TERRAIN, END, CHARACTER, OBEJECT };
 CGameFramework* CGameFramework::m_pGFforMultiThreads = NULL;
 
 CGameFramework::CGameFramework()
@@ -651,7 +651,9 @@ void CGameFramework::ProcessInput()
 {
 	static UCHAR pKeysBuffer[256];
 	bool bProcessedByScene = false;
+	static int qwe = 0;
 
+	qwe++;
 	if (GetKeyboardState(pKeysBuffer) && m_ppScenes) 
 		bProcessedByScene = m_ppScenes[0]->ProcessInput(pKeysBuffer);
 	if (!bProcessedByScene)
@@ -669,8 +671,14 @@ void CGameFramework::ProcessInput()
 			dwDirection |= DIR_UP;
 		if (pKeysBuffer[VK_NEXT] & 0xF0) 
 			dwDirection |= DIR_DOWN;
-		
-
+		if (pKeysBuffer[VK_SPACE] & 0xF0)
+		{
+			if (qwe > 100)
+			{
+				m_ppScenes[CHARACTER]->ChangeAnimation();
+				qwe = 0;
+			}
+		}
 		float cxDelta = 0.0f, cyDelta = 0.0f;
 		POINT ptCursorPos;
 		if (GetCapture() == m_hWnd)
@@ -744,7 +752,7 @@ void CGameFramework::RenderSubset(int iIndex)
 	{
 		WaitForSingleObject(m_workerBeginRenderFrame[iIndex], INFINITE);
 
-		m_ppScenes[iIndex]->Render(m_ppd3dCommandLists[iIndex], m_GameTimer.GetFrameRate(), m_pCamera);
+		m_ppScenes[iIndex]->Render(m_ppd3dCommandLists[iIndex], m_pCamera);
 
 		SetEvent(m_workerFinishedRenderFrame[iIndex]);
 	}
@@ -819,7 +827,7 @@ void CGameFramework::FrameAdvance()
 	m_pd3dScreenCommandList->ClearRenderTargetView(m_pd3dRtvSwapChainBackBufferCPUHandles[m_nSwapChainBufferIndex], Colors::Azure, 0, NULL);
 	m_pd3dScreenCommandList->OMSetRenderTargets(1, &m_pd3dRtvSwapChainBackBufferCPUHandles[m_nSwapChainBufferIndex], TRUE, &m_d3dDsvDepthStencilBufferCPUHandle);
 	//원래대로 백버퍼에 그린다.
-	m_pScreenShader->Render(m_pd3dScreenCommandList, m_GameTimer.GetFrameRate(), m_pCamera);
+	m_pScreenShader->Render(m_pd3dScreenCommandList,  m_pCamera);
 
 #ifdef _WITH_PLAYER_TOP
 	m_pd3dCommandList->ClearDepthStencilView(m_d3dDsvDepthStencilBufferCPUHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, NULL);

@@ -55,34 +55,33 @@ AnimationController::~AnimationController()
 	if (m_pAnimation)
 		delete[] m_pAnimation;
 }
-void AnimationController::ChangeAnimation(int iNewState)
+void AnimationController::ChangeAnimation()
 {
 	m_chronoStart = chrono::system_clock::now();
-	m_iState = iNewState;
 	m_fCurrentFrame = 0.0f;
 
+	m_iState++;
+	if (m_iState > m_nAnimation - 1)
+		m_iState = 0;
 }
-void AnimationController::GetCurrentFrame(const unsigned long& nCurrentFrameRate)
+void AnimationController::GetCurrentFrame()
 {
 	ms = std::chrono::duration_cast<std::chrono::milliseconds>(chrono::system_clock::now() - m_chronoStart);
 	float fCurrentTime = ms.count() /1000.0f;
 	float fQuotient = fCurrentTime / m_pAnimation[m_iState].fTime;
 	
-	float nRelativeFrameRate = (float)nCurrentFrameRate / UNITY_FRAME;
  	m_fCurrentFrame = (fCurrentTime / m_pAnimation[m_iState].fTime - (UINT)fQuotient) * m_pAnimation[m_iState].nFrame;
 
-	ostringstream frame;
-
-	frame << (UINT)fQuotient << "번째 프레임,          " << fCurrentTime / m_pAnimation[m_iState].fTime << std::endl;
-
-	OutputDebugStringA(frame.str().c_str());
+	//ostringstream frame;
+	//frame << (UINT)fQuotient << "번째 프레임,          " << fCurrentTime / m_pAnimation[m_iState].fTime << std::endl;
+	//OutputDebugStringA(frame.str().c_str());
 }
-void AnimationController::Interpolate(const unsigned long& nCurrentFrameRate)
+void AnimationController::Interpolate()
 {
 	stack<CGameObject*> FrameStack;
 	FrameStack.push(m_pRootObject);
 
-	GetCurrentFrame(nCurrentFrameRate); // 현재 프레임 계산
+	GetCurrentFrame(); // 현재 프레임 계산
 
 	for (int i = 0;; i++)
 	{
@@ -142,9 +141,9 @@ void AnimationController::ResetToRootTransforms()
 			FrameStack.push(TargetFrame->m_pSibling);
 	}
 }
-void AnimationController::AdvanceAnimation(ID3D12GraphicsCommandList* pd3dCommandList, const unsigned long& nCurrentFrameRate)
+void AnimationController::AdvanceAnimation(ID3D12GraphicsCommandList* pd3dCommandList)
 {
-	Interpolate(nCurrentFrameRate); // 시간에 맞추어 m_xmf4x4ToParentTransform에 맞는 값을 넣어준다. 
+	Interpolate(); // 시간에 맞추어 m_xmf4x4ToParentTransform에 맞는 값을 넣어준다. 
 							// 현재 시간에 상관없이 계속 프레임이 진행되게 만들었다.
 	ResetToRootTransforms();
 
@@ -434,10 +433,17 @@ void CGameObject::UpdateAnimationVariables(ID3D12GraphicsCommandList *pd3dComman
 
 void CGameObject::Animate(float fTimeElapsed)
 {
-	if (m_pSibling) 
-		m_pSibling->Animate(fTimeElapsed);
-	if (m_pChild) 
-		m_pChild->Animate(fTimeElapsed);
+}
+
+void CGameObject::ChangeAnimation()
+{
+	if (m_pAnimationController)
+		m_pAnimationController->ChangeAnimation();
+
+	if (m_pSibling)
+		m_pSibling->ChangeAnimation();
+	if (m_pChild)
+		m_pChild->ChangeAnimation();
 }
 
 void CGameObject::SetRootParameter(ID3D12GraphicsCommandList *pd3dCommandList, int iRootParameterIndex)
@@ -449,7 +455,7 @@ void CGameObject::OnPrepareRender()
 {
 }
 
-void CGameObject::Render(ID3D12GraphicsCommandList *pd3dCommandList, int iRootParameterIndex, const unsigned long& nCurrentFrame, CCamera *pCamera)
+void CGameObject::Render(ID3D12GraphicsCommandList *pd3dCommandList, int iRootParameterIndex, CCamera *pCamera)
 {
 	if (!m_bActive)
 		return;
@@ -460,7 +466,7 @@ void CGameObject::Render(ID3D12GraphicsCommandList *pd3dCommandList, int iRootPa
 	{
 		if (m_pMaterial->m_pShader)
 		{
-			m_pMaterial->m_pShader->Render(pd3dCommandList, nCurrentFrame, pCamera);
+			m_pMaterial->m_pShader->Render(pd3dCommandList, pCamera);
 			m_pMaterial->m_pShader->UpdateShaderVariables(pd3dCommandList);
 
 			UpdateShaderVariables(pd3dCommandList);
@@ -472,7 +478,7 @@ void CGameObject::Render(ID3D12GraphicsCommandList *pd3dCommandList, int iRootPa
 	}
 
 	if (m_pAnimationController)
-		m_pAnimationController->AdvanceAnimation(pd3dCommandList, nCurrentFrame);
+		m_pAnimationController->AdvanceAnimation(pd3dCommandList);
 
 	if (m_nMeshes > 0)
 	{
@@ -486,12 +492,12 @@ void CGameObject::Render(ID3D12GraphicsCommandList *pd3dCommandList, int iRootPa
 	}
 
 	if (m_pSibling)
-		m_pSibling->Render(pd3dCommandList, 2, nCurrentFrame, pCamera);
+		m_pSibling->Render(pd3dCommandList, 2, pCamera);
 	if (m_pChild)
-		m_pChild->Render(pd3dCommandList, 2, nCurrentFrame, pCamera);
+		m_pChild->Render(pd3dCommandList, 2, pCamera);
 }
 
-void CGameObject::Render(ID3D12GraphicsCommandList *pd3dCommandList, int iRootParameterIndex, const unsigned long& nCurrentFrame, CCamera *pCamera, UINT nInstances)
+void CGameObject::Render(ID3D12GraphicsCommandList *pd3dCommandList, int iRootParameterIndex, CCamera *pCamera, UINT nInstances)
 {
 	OnPrepareRender();
 
@@ -1077,7 +1083,7 @@ CSkyBox::~CSkyBox()
 {
 }
 
-void CSkyBox::Render(ID3D12GraphicsCommandList *pd3dCommandList, const unsigned long& nCurrentFrame, CCamera *pCamera)
+void CSkyBox::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera)
 {
 	XMFLOAT3 xmf3CameraPos = pCamera->GetPosition();
 	SetWorldPosition(xmf3CameraPos.x, xmf3CameraPos.y, xmf3CameraPos.z);
@@ -1088,7 +1094,7 @@ void CSkyBox::Render(ID3D12GraphicsCommandList *pd3dCommandList, const unsigned 
 	{
 		if (m_pMaterial->m_pShader)
 		{
-			m_pMaterial->m_pShader->Render(pd3dCommandList, nCurrentFrame, pCamera);
+			m_pMaterial->m_pShader->Render(pd3dCommandList, pCamera);
 			m_pMaterial->m_pShader->UpdateShaderVariables(pd3dCommandList);
 
 			UpdateShaderVariables(pd3dCommandList);

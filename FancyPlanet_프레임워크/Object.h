@@ -85,13 +85,13 @@ public:
 	AnimationController(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, UINT nAnimation,
 		XMFLOAT4X4* pBindPoses, UINT nBindPos, CGameObject* pRootObject);
 	~AnimationController();
-	void GetCurrentFrame(const unsigned long& nCurrentFrameRate);
-	void Interpolate(const unsigned long& nCurrentFrameRate);
+	void GetCurrentFrame();
+	void Interpolate();
 	//해당하는 본인덱스의 오브젝트를 리턴한다.
 	void ResetToRootTransforms();
 	CGameObject* GetFindObject(CGameObject* pFindObject, UINT nBoneIndex);
-	void AdvanceAnimation(ID3D12GraphicsCommandList* pd3dCommandList, const unsigned long& nCurrentFrame);
-	void ChangeAnimation(int iNewState);
+	void AdvanceAnimation(ID3D12GraphicsCommandList* pd3dCommandList);
+	void ChangeAnimation();
 	// 계층관계로 인덱스를 정렬한다. 
 
 	ANIMATION *m_pAnimation;
@@ -186,8 +186,15 @@ private:
 	int								m_nReferences = 0;
 
 public:
-	void AddRef() { m_nReferences++; }
-	void Release() { if (--m_nReferences <= 0) delete this; }
+	void AddRef() 
+	{
+		m_nReferences++; 
+	}
+	void Release() 
+	{
+		if (--m_nReferences <= 0) 
+			delete this; 
+	}
 
 public:
 	TCHAR							m_strFrameName[256] = {'\0'};
@@ -218,7 +225,7 @@ public:
 	void SetMesh(int nIndex, CMesh *pMesh);
 	void SetShader(CShader *pShader);
 	void SetMaterial(CMaterial *pMaterial);
-
+	void ChangeAnimation();
 	void ResizeMeshes(int nMeshes);
 
 	void SetCbvGPUDescriptorHandle(D3D12_GPU_DESCRIPTOR_HANDLE d3dCbvGPUDescriptorHandle) { m_d3dCbvGPUDescriptorHandle = d3dCbvGPUDescriptorHandle; }
@@ -233,10 +240,11 @@ public:
 	virtual void SetRootParameter(ID3D12GraphicsCommandList *pd3dCommandList, int iRootParameterIndex);
 	
 	virtual void Animate(float fTimeElapsed);
-	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, int iRootParameterIndex, const unsigned long& nCurrentFrame, CCamera *pCamera = NULL);
-	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, int iRootParameterIndex, const unsigned long& nCurrentFrame, CCamera *pCamera, UINT nInstances);
+	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, int iRootParameterIndex, CCamera *pCamera = NULL);
+	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, int iRootParameterIndex, CCamera *pCamera, UINT nInstances);
 	virtual void BuildMaterials(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList) { }
 	virtual void ReleaseUploadBuffers();
+
 
 	XMFLOAT3 GetPosition();
 	XMFLOAT3 GetLook();
@@ -312,7 +320,7 @@ public:
 	CSkyBox(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature);
 	virtual ~CSkyBox();
 
-	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, const unsigned long& nCurrentFrame, CCamera *pCamera = NULL);
+	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera = NULL);
 };
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 class CharaterObject : public CGameObject

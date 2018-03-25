@@ -49,7 +49,7 @@ public:
 	virtual void ReleaseUploadBuffers();
 
 	virtual void OnPrepareRender(ID3D12GraphicsCommandList *pd3dCommandList);
-	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, const unsigned long& nCurrentFrame, CCamera *pCamera);
+	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera);
 
 	D3D12_CPU_DESCRIPTOR_HANDLE GetCPUDescriptorHandleForHeapStart() 
 	{
@@ -135,7 +135,7 @@ public:
 	virtual void UpdateShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList);
 	virtual void ReleaseShaderVariables(); 
 	virtual void ReleaseUploadBuffers();
-	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, const unsigned long& nCurrentFrame, CCamera *pCamera);
+	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera);
 
 	virtual void FrustumCulling(CCamera* pCamera);
 private:
@@ -218,7 +218,7 @@ public:
 
 	virtual void BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, CPlayer* pPlayer, void *pContext = NULL);
 	virtual void ReleaseObjects();
-	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, const unsigned long& nCurrentFrame, CCamera *pCamera);
+	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera);
 
 	void UpdateShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList);
 	void UpdateMaterial(CGameObject *pObject);

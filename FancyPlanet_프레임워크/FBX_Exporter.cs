@@ -297,19 +297,20 @@ public class FBX_Exporter : MonoBehaviour
 			bw.Write(ani.GetClipCount()); // 애니메이션 수
 			Transform[] sub = GetComponentsInChildren<Transform>();
 			bw.Write(sub.Length);
+			num = -9;
 		}
 		
-		if (num < ani.clip.frameRate * aniLength[aninum + 1] + 1 && num > 0)
+		if (num < 2 * ani.clip.frameRate * aniLength[aninum + 1] + 1 && num > 0)
 		{
 			if (num == 1)
 			{
-				bw.Write((int)(ani.clip.frameRate * aniLength[aninum + 1])); // 애니메이션 길이(프레임)
+				bw.Write((int)(2 * ani.clip.frameRate * aniLength[aninum + 1])); // 애니메이션 길이(프레임)
 				bw.Write(aniLength[aninum + 1]); //시간
 			}
 
 			AnimationWrite(tr);
 		}
-		else if (num >= ani.clip.frameRate * ani.clip.length + 1)
+		else if (num >= 2 * ani.clip.frameRate * ani.clip.length + 1)
 		{
 			Debug.Log(aninum + "완료");
 			

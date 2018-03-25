@@ -292,7 +292,7 @@ void CShader::OnPrepareRender(ID3D12GraphicsCommandList *pd3dCommandList)
 	UpdateShaderVariables(pd3dCommandList);
 }
 
-void CShader::Render(ID3D12GraphicsCommandList *pd3dCommandList, const unsigned long& nCurrentFrame, CCamera *pCamera)
+void CShader::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera)
 {
 	OnPrepareRender(pd3dCommandList);
 }
@@ -557,9 +557,9 @@ void CTestShader::FrustumCulling(CCamera* pCamera)
 		m_ppTestObjects[i]->m_bActive = bActive;
 	}
 }
-void CTestShader::Render(ID3D12GraphicsCommandList *pd3dCommandList, const unsigned long& nCurrentFrame, CCamera *pCamera)
+void CTestShader::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera)
 {
-	CShader::Render(pd3dCommandList, nCurrentFrame, pCamera);
+	CShader::Render(pd3dCommandList, pCamera);
 
 	if (m_pMaterial)
 		m_pMaterial->UpdateShaderVariables(pd3dCommandList);
@@ -567,7 +567,7 @@ void CTestShader::Render(ID3D12GraphicsCommandList *pd3dCommandList, const unsig
 	for (int j = 0; j < m_nTestObject; j++)
 	{
 		if (m_ppTestObjects[j]->m_bActive)
-			m_ppTestObjects[j]->Render(pd3dCommandList, 2, nCurrentFrame, pCamera);
+			m_ppTestObjects[j]->Render(pd3dCommandList, 2, pCamera);
 	}
 }
 
@@ -853,9 +853,9 @@ void CTextureToFullScreenShader::UpdateShaderVariables(ID3D12GraphicsCommandList
 
 }
 
-void CTextureToFullScreenShader::Render(ID3D12GraphicsCommandList *pd3dCommandList, const unsigned long& nCurrentFrame, CCamera *pCamera)
+void CTextureToFullScreenShader::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera)
 {
-	CShader::Render(pd3dCommandList, nCurrentFrame, pCamera);
+	CShader::Render(pd3dCommandList, pCamera);
 
 	pCamera->SetViewportsAndScissorRects(pd3dCommandList);
 	pCamera->UpdateShaderVariables(pd3dCommandList);
