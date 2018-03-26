@@ -414,7 +414,7 @@ void CharacterScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsComman
 	m_nShaders = 0;
 	m_ppShaders = new CShader*[m_nShaders];
 
-	m_nObjects = 1;
+	m_nObjects = 10;
 	m_ppObjects = new CGameObject*[m_nObjects];
 
 	for (int i = 0; i < m_nObjects; i++)

@@ -8,6 +8,8 @@
 
 using namespace std;
 
+
+
 AnimationController::AnimationController(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, UINT nAnimation,
 	XMFLOAT4X4* pBindPoses, UINT nBindPos, CGameObject* pRootObject) : m_nAnimation(nAnimation), m_pBindPoses(pBindPoses), m_nBindpos(nBindPos), m_pRootObject(pRootObject)
 {
@@ -21,7 +23,7 @@ AnimationController::AnimationController(ID3D12Device *pd3dDevice, ID3D12Graphic
 
 	m_pBoneObject = new CGameObject*[m_nBindpos];
 
-	m_iState = 0;
+	m_iState = rand()%5;
 
 	for (int i = 0; i < m_nBindpos; i++)
 	{
@@ -76,7 +78,57 @@ void AnimationController::GetCurrentFrame()
 	//frame << (UINT)fQuotient << "번째 프레임,          " << fCurrentTime / m_pAnimation[m_iState].fTime << std::endl;
 	//OutputDebugStringA(frame.str().c_str());
 }
-void AnimationController::Interpolate()
+SRT* AnimationController::Interpolate(int iBoneNum)
+{
+	SRT result;
+	float prev = (UINT)m_fCurrentFrame;
+	float next = (UINT)(m_fCurrentFrame + 1);
+
+	result.S = XMFLOAT3(1.0f, 1.0f, 1.0f);
+
+	if (prev == m_fCurrentFrame)
+	{
+		result.R = m_pAnimation[m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].RotationQuat;
+		result.T = m_pAnimation[m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].Translation;
+	}
+	else
+	{
+		float m;
+		float b;
+		float x = m_fCurrentFrame - prev;
+		
+		m = m_pAnimation[m_iState].pFrame[m_nBone*(UINT)next + iBoneNum].RotationQuat.x - m_pAnimation[m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].RotationQuat.x;
+		b = m_pAnimation[m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].RotationQuat.x;
+		result.R.x = m * x + b;
+
+		m = m_pAnimation[m_iState].pFrame[m_nBone*(UINT)next + iBoneNum].RotationQuat.y - m_pAnimation[m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].RotationQuat.y;
+		b = m_pAnimation[m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].RotationQuat.y;
+		result.R.y = m * x + b;
+
+		m = m_pAnimation[m_iState].pFrame[m_nBone*(UINT)next + iBoneNum].RotationQuat.z - m_pAnimation[m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].RotationQuat.z;
+		b = m_pAnimation[m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].RotationQuat.z;
+		result.R.z = m * x + b;
+
+		m = m_pAnimation[m_iState].pFrame[m_nBone*(UINT)next + iBoneNum].RotationQuat.w - m_pAnimation[m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].RotationQuat.w;
+		b = m_pAnimation[m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].RotationQuat.w;
+		result.R.w = m * x + b;
+
+		m = m_pAnimation[m_iState].pFrame[m_nBone*(UINT)next + iBoneNum].Translation.x - m_pAnimation[m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].Translation.x;
+		b = m_pAnimation[m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].Translation.x;
+		result.T.x = m * x + b;
+
+		m = m_pAnimation[m_iState].pFrame[m_nBone*(UINT)next + iBoneNum].Translation.y - m_pAnimation[m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].Translation.y;
+		b = m_pAnimation[m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].Translation.y;
+		result.T.y = m * x + b;
+
+		m = m_pAnimation[m_iState].pFrame[m_nBone*(UINT)next + iBoneNum].Translation.z - m_pAnimation[m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].Translation.z;
+		b = m_pAnimation[m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].Translation.z;
+		result.T.z = m * x + b;
+	}
+
+	return &result;
+}
+void AnimationController::SetToParentTransforms()
 {
 	stack<CGameObject*> FrameStack;
 	FrameStack.push(m_pRootObject);
@@ -93,11 +145,11 @@ void AnimationController::Interpolate()
 		
 		if (TargetFrame != m_pRootObject)
 		{
-			XMFLOAT3 Scale = XMFLOAT3(1.0f, 1.0f, 1.0f);
+			SRT srt = *Interpolate(i);
 
-			XMVECTOR S = XMLoadFloat3(&Scale);
-			XMVECTOR P = XMLoadFloat3(&m_pAnimation[m_iState].pFrame[m_nBone*(UINT)m_fCurrentFrame + i].Translation);
-			XMVECTOR Q = XMLoadFloat4(&m_pAnimation[m_iState].pFrame[m_nBone*(UINT)m_fCurrentFrame + i].RotationQuat);
+			XMVECTOR S = XMLoadFloat3(&srt.S);
+			XMVECTOR P = XMLoadFloat3(&srt.T);
+			XMVECTOR Q = XMLoadFloat4(&srt.R);
 
 			XMVECTOR zero = XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);
 
@@ -117,7 +169,7 @@ void AnimationController::Interpolate()
 	//if ((UINT)m_fCurrentFrame == m_pAnimation[0].nFrame)
 	//	m_fCurrentFrame = 0.0f;
 }
-void AnimationController::ResetToRootTransforms()
+void AnimationController::SetToRootTransforms()
 {
 	stack<CGameObject*> FrameStack;
 	FrameStack.push(m_pRootObject->m_pChild);
@@ -143,9 +195,9 @@ void AnimationController::ResetToRootTransforms()
 }
 void AnimationController::AdvanceAnimation(ID3D12GraphicsCommandList* pd3dCommandList)
 {
-	Interpolate(); // 시간에 맞추어 m_xmf4x4ToParentTransform에 맞는 값을 넣어준다. 
+	SetToParentTransforms(); // 시간에 맞추어 m_xmf4x4ToParentTransform에 맞는 값을 넣어준다. 
 							// 현재 시간에 상관없이 계속 프레임이 진행되게 만들었다.
-	ResetToRootTransforms();
+	SetToRootTransforms();
 
 	for (UINT i = 0; i < m_nBindpos ; i++)
 	{

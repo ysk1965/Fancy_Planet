@@ -47,6 +47,13 @@ struct ANIMATION
 	UINT nFrame; // 전체 프레임 수
 	FRAME* pFrame; // [Frame * BoneIndex]
 };
+
+typedef struct SRT
+{
+	XMFLOAT3 S;
+	XMFLOAT4 R;
+	XMFLOAT3 T;
+}SRT;
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 class AnimationController
@@ -86,9 +93,10 @@ public:
 		XMFLOAT4X4* pBindPoses, UINT nBindPos, CGameObject* pRootObject);
 	~AnimationController();
 	void GetCurrentFrame();
-	void Interpolate();
+	SRT* Interpolate(int iBoneNum);
+	void SetToParentTransforms();
 	//해당하는 본인덱스의 오브젝트를 리턴한다.
-	void ResetToRootTransforms();
+	void SetToRootTransforms();
 	CGameObject* GetFindObject(CGameObject* pFindObject, UINT nBoneIndex);
 	void AdvanceAnimation(ID3D12GraphicsCommandList* pd3dCommandList);
 	void ChangeAnimation();
