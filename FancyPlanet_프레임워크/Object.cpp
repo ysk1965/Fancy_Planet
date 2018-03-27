@@ -22,8 +22,8 @@ AnimationController::AnimationController(ID3D12Device *pd3dDevice, ID3D12Graphic
 	m_pd3dcbBoneTransforms->Map(0, NULL, (void **)&m_pBoneTransforms);
 
 	m_pBoneObject = new CGameObject*[m_nBindpos];
-
-	m_iState = rand()%5;
+	
+	m_iState = rand() % 5;
 
 	for (int i = 0; i < m_nBindpos; i++)
 	{
@@ -57,14 +57,22 @@ AnimationController::~AnimationController()
 	if (m_pAnimation)
 		delete[] m_pAnimation;
 }
-void AnimationController::ChangeAnimation()
+void AnimationController::ChangeAnimation(int iNewState)
 {
+	if (iNewState >= 0)
+	{
+		m_fSaveLastFrame = m_fCurrentFrame;
+		m_iNewState = iNewState;
+		m_iSaveState = m_iState;
+		m_iState = -1;
+	}
+	else
+	{
+		m_iState = m_iNewState;
+	}
+
 	m_chronoStart = chrono::system_clock::now();
 	m_fCurrentFrame = 0.0f;
-
-	m_iState++;
-	if (m_iState > m_nAnimation - 1)
-		m_iState = 0;
 }
 void AnimationController::GetCurrentFrame()
 {
@@ -78,7 +86,7 @@ void AnimationController::GetCurrentFrame()
 	//frame << (UINT)fQuotient << "번째 프레임,          " << fCurrentTime / m_pAnimation[m_iState].fTime << std::endl;
 	//OutputDebugStringA(frame.str().c_str());
 }
-SRT* AnimationController::Interpolate(int iBoneNum)
+SRT AnimationController::Interpolate(int iBoneNum)
 {
 	SRT result;
 	float prev = (UINT)m_fCurrentFrame;
@@ -126,15 +134,60 @@ SRT* AnimationController::Interpolate(int iBoneNum)
 		result.T.z = m * x + b;
 	}
 
-	return &result;
+	return result;
+}
+SRT AnimationController::Interpolate(int iBoneNum, float fTime)
+{
+	SRT result;
+	float fTimeRate = fTime / CHANGE_TIME;
+
+	float m;
+	float b;
+
+	result.S = XMFLOAT3(1.0f, 1.0f, 1.0f);
+
+	m = m_pAnimation[m_iNewState].pFrame[iBoneNum].RotationQuat.x - m_pAnimation[m_iSaveState].pFrame[m_nBone*(UINT)m_fSaveLastFrame + iBoneNum].RotationQuat.x;
+	b = m_pAnimation[m_iSaveState].pFrame[m_nBone*(UINT)m_fSaveLastFrame + iBoneNum].RotationQuat.x;
+	result.R.x = m * fTimeRate + b;
+
+	m = m_pAnimation[m_iNewState].pFrame[iBoneNum].RotationQuat.y - m_pAnimation[m_iSaveState].pFrame[m_nBone*(UINT)m_fSaveLastFrame + iBoneNum].RotationQuat.y;
+	b = m_pAnimation[m_iSaveState].pFrame[m_nBone*(UINT)m_fSaveLastFrame + iBoneNum].RotationQuat.y;
+	result.R.y = m * fTimeRate + b;
+
+	m = m_pAnimation[m_iNewState].pFrame[iBoneNum].RotationQuat.z - m_pAnimation[m_iSaveState].pFrame[m_nBone*(UINT)m_fSaveLastFrame + iBoneNum].RotationQuat.z;
+	b = m_pAnimation[m_iSaveState].pFrame[m_nBone*(UINT)m_fSaveLastFrame + iBoneNum].RotationQuat.z;
+	result.R.z = m * fTimeRate + b;
+
+	m = m_pAnimation[m_iNewState].pFrame[iBoneNum].RotationQuat.w - m_pAnimation[m_iSaveState].pFrame[m_nBone*(UINT)m_fSaveLastFrame + iBoneNum].RotationQuat.w;
+	b = m_pAnimation[m_iSaveState].pFrame[m_nBone*(UINT)m_fSaveLastFrame + iBoneNum].RotationQuat.w;
+	result.R.w = m * fTimeRate + b;
+
+	m = m_pAnimation[m_iNewState].pFrame[iBoneNum].Translation.x - m_pAnimation[m_iSaveState].pFrame[m_nBone*(UINT)m_fSaveLastFrame + iBoneNum].Translation.x;
+	b = m_pAnimation[m_iSaveState].pFrame[m_nBone*(UINT)m_fSaveLastFrame + iBoneNum].Translation.x;
+	result.T.x = m * fTimeRate + b;
+
+	m = m_pAnimation[m_iNewState].pFrame[iBoneNum].Translation.y - m_pAnimation[m_iSaveState].pFrame[m_nBone*(UINT)m_fSaveLastFrame + iBoneNum].Translation.y;
+	b = m_pAnimation[m_iSaveState].pFrame[m_nBone*(UINT)m_fSaveLastFrame + iBoneNum].Translation.y;
+	result.T.y = m * fTimeRate + b;
+
+	m = m_pAnimation[m_iNewState].pFrame[iBoneNum].Translation.z - m_pAnimation[m_iSaveState].pFrame[m_nBone*(UINT)m_fSaveLastFrame + iBoneNum].Translation.z;
+	b = m_pAnimation[m_iSaveState].pFrame[m_nBone*(UINT)m_fSaveLastFrame + iBoneNum].Translation.z;
+	result.T.z = m * fTimeRate + b;
+
+	return result;
 }
 void AnimationController::SetToParentTransforms()
 {
 	stack<CGameObject*> FrameStack;
 	FrameStack.push(m_pRootObject);
 
-	GetCurrentFrame(); // 현재 프레임 계산
+	float fTime = std::chrono::duration_cast<std::chrono::milliseconds>(chrono::system_clock::now() - m_chronoStart).count() / 1000.0f;
 
+	if (m_iState == -1 && (fTime > CHANGE_TIME))
+		ChangeAnimation(-1);
+
+	GetCurrentFrame(); // 현재 프레임 계산
+	
 	for (int i = 0;; i++)
 	{
 		if (FrameStack.empty())
@@ -145,7 +198,12 @@ void AnimationController::SetToParentTransforms()
 		
 		if (TargetFrame != m_pRootObject)
 		{
-			SRT srt = *Interpolate(i);
+			SRT srt;
+
+			if(m_iState != -1)
+				srt = Interpolate(i);
+			else
+				srt = Interpolate(i, fTime);
 
 			XMVECTOR S = XMLoadFloat3(&srt.S);
 			XMVECTOR P = XMLoadFloat3(&srt.T);
@@ -156,18 +214,11 @@ void AnimationController::SetToParentTransforms()
 			XMStoreFloat4x4(&TargetFrame->m_xmf4x4ToParentTransform, XMMatrixAffineTransformation(S, zero, Q, P));
 		}
 
-
 		if(TargetFrame->m_pSibling)
 			FrameStack.push(TargetFrame->m_pSibling);  
 		if(TargetFrame->m_pChild)
 			FrameStack.push(TargetFrame->m_pChild);
-	}
-	
-	// 5프레임당 애니메이션이 바뀌게 설정
-	//m_fCurrentFrame+=1.0f;
-
-	//if ((UINT)m_fCurrentFrame == m_pAnimation[0].nFrame)
-	//	m_fCurrentFrame = 0.0f;
+	}	
 }
 void AnimationController::SetToRootTransforms()
 {
@@ -489,9 +540,11 @@ void CGameObject::Animate(float fTimeElapsed)
 
 void CGameObject::ChangeAnimation()
 {
-	if (m_pAnimationController)
-		m_pAnimationController->ChangeAnimation();
 
+	if (m_pAnimationController)
+	{		
+		m_pAnimationController->ChangeAnimation(rand()%5);
+	}
 	if (m_pSibling)
 		m_pSibling->ChangeAnimation();
 	if (m_pChild)

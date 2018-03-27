@@ -16,7 +16,7 @@
 #define RESOURCE_TEXTURE_CUBE		0x04
 #define RESOURCE_BUFFER				0x05
 
-#define UNITY_FRAME 30
+#define CHANGE_TIME 0.35f
 
 class CShader;
 class CGameObject;
@@ -64,8 +64,12 @@ private:
 
 	UINT m_nAnimation = 0;
 	int m_iState = 1;
+	int m_iNewState = 0;
+	int m_iSaveState = 0;
 
 	float m_fCurrentFrame = 0;
+	float m_fSaveLastFrame = 0;
+
 	UINT m_nBindpos = 0;
 
 	ID3D12Resource					*m_pd3dcbBoneTransforms = NULL;
@@ -93,13 +97,14 @@ public:
 		XMFLOAT4X4* pBindPoses, UINT nBindPos, CGameObject* pRootObject);
 	~AnimationController();
 	void GetCurrentFrame();
-	SRT* Interpolate(int iBoneNum);
+	SRT Interpolate(int iBoneNum);
+	SRT Interpolate(int iBoneNum, float fTime);
 	void SetToParentTransforms();
 	//해당하는 본인덱스의 오브젝트를 리턴한다.
 	void SetToRootTransforms();
 	CGameObject* GetFindObject(CGameObject* pFindObject, UINT nBoneIndex);
 	void AdvanceAnimation(ID3D12GraphicsCommandList* pd3dCommandList);
-	void ChangeAnimation();
+	void ChangeAnimation(int iNewState);
 	// 계층관계로 인덱스를 정렬한다. 
 
 	ANIMATION *m_pAnimation;
