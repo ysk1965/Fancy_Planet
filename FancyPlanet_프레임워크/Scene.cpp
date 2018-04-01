@@ -413,14 +413,14 @@ void CharacterScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsComman
 
 	m_nShaders = 0;
 	m_ppShaders = new CShader*[m_nShaders];
-
-	m_nObjects = 10;
+	
+	m_nObjects = 5;
 	m_ppObjects = new CGameObject*[m_nObjects];
 
 	for (int i = 0; i < m_nObjects; i++)
 	{
-		m_ppObjects[i] = new CharaterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, 0, L"../Assets/Test_WhaleModel_local.dat");
-		m_ppObjects[i]->SetPosition(XMFLOAT3(100 * i, 500, 100*i));
+		m_ppObjects[i] = new CharaterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, 0, L"../Assets/Soldier.bss");
+		m_ppObjects[i]->SetPosition(XMFLOAT3(100 * (rand()%20), 500, 100*(rand() % 20)));
 	}
 }
 void CharacterScene::ReleaseObjects()

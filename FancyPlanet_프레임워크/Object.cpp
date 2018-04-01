@@ -23,7 +23,7 @@ AnimationController::AnimationController(ID3D12Device *pd3dDevice, ID3D12Graphic
 
 	m_pBoneObject = new CGameObject*[m_nBindpos];
 	
-	m_iState = rand() % 5;
+	m_iState = 1;
 
 	for (int i = 0; i < m_nBindpos; i++)
 	{
@@ -82,9 +82,6 @@ void AnimationController::GetCurrentFrame()
 	
  	m_fCurrentFrame = (fCurrentTime / m_pAnimation[m_iState].fTime - (UINT)fQuotient) * m_pAnimation[m_iState].nFrame;
 
-	//ostringstream frame;
-	//frame << (UINT)fQuotient << "번째 프레임,          " << fCurrentTime / m_pAnimation[m_iState].fTime << std::endl;
-	//OutputDebugStringA(frame.str().c_str());
 }
 SRT AnimationController::Interpolate(int iBoneNum)
 {
@@ -543,7 +540,7 @@ void CGameObject::ChangeAnimation()
 
 	if (m_pAnimationController)
 	{		
-		m_pAnimationController->ChangeAnimation(rand()%5);
+		m_pAnimationController->ChangeAnimation(rand()%4);
 	}
 	if (m_pSibling)
 		m_pSibling->ChangeAnimation();

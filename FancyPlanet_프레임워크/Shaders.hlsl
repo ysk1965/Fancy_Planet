@@ -262,6 +262,13 @@ struct VS_TEXTURED_INPUT
 	float3 position : POSITION;
 	float2 uv : TEXCOORD;
 };
+struct VS_ANIMATION_INPUT
+{
+	float3 position : POSITION;
+	float2 uv : TEXCOORD;
+	float3 boneWeights:WEIGHTS;
+	uint4 boneIndices : BONEINDICES;
+};
 struct VS_TEXTURED_OUTPUT
 {
 	float4 position : SV_POSITION;
@@ -279,6 +286,32 @@ VS_TEXTURED_OUTPUT VSTextured(VS_TEXTURED_INPUT input)
 	output.uv = input.uv;
 
 	return(output);
+}
+
+VS_TEXTURED_OUTPUT VSTexturedAnimation(VS_ANIMATION_INPUT input)
+{
+	VS_TEXTURED_OUTPUT output;
+
+	float4 fWeight = { 0.0f, 0.0f, 0.0f, 0.0f };
+	fWeight[0] = input.boneWeights.x;
+	fWeight[1] = input.boneWeights.y;
+	fWeight[2] = input.boneWeights.z;
+	fWeight[3] = 1.0f - fWeight[0] - fWeight[1] - fWeight[2];
+
+	float3 position = float3(0.0f, 0.0f, 0.0f);
+
+	for (int i = 0; i < 4; i++)
+	{
+		position += fWeight[i] * mul(float4(input.position, 1.0f), gmtxBoneTransforms[input.boneIndices[i]]).xyz;
+	}
+
+	output.uv = input.uv;
+	output.positionW = mul(float4(position, 1.0f), gmtxWorld).xyz;
+	matrix mtxWorldViewProjection = mul(gmtxWorld, gmtxView);
+	mtxWorldViewProjection = mul(mtxWorldViewProjection, gmtxProjection);
+	output.position = mul(float4(position, 1.0f), mtxWorldViewProjection);
+
+	return output;
 }
 [earlydepthstencil]
 PS_TEXTURED_DEFFERREDLIGHTING_OUTPUT PSTextured(VS_TEXTURED_OUTPUT input) : SV_Target

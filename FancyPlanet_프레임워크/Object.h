@@ -16,7 +16,7 @@
 #define RESOURCE_TEXTURE_CUBE		0x04
 #define RESOURCE_BUFFER				0x05
 
-#define CHANGE_TIME 0.35f
+#define CHANGE_TIME 1.0f
 
 class CShader;
 class CGameObject;

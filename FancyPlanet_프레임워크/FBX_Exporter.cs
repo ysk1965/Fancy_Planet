@@ -3,6 +3,12 @@ using System.Collections.Generic;
 using UnityEngine;
 using System.IO;
 
+static class AnimationType
+{
+	public const int ANIMATOR = 0;
+	public const int ANIMATION = 1;
+}
+
 static class Constants
 {
     public const int MESH = 0;
@@ -10,24 +16,41 @@ static class Constants
     public const int END = 3;
 }
 
+static class AnimationState
+{
+	public const int IDLE = 0;
+	public const int JUMP = 1;
+	public const int RUN = 2;
+	public const int LOAD = 3;
+	public const int SHOT = 4;
+	public const int DEATH = 5;
+}
+
 public class FBX_Exporter : MonoBehaviour
 {
-    private static FileStream fs = new FileStream("Test_WhaleModel_local.dat", FileMode.Create);
+    private static FileStream fs = new FileStream("Soldier.bss", FileMode.Create);
     private BinaryWriter bw = new BinaryWriter(fs);
     private Animation ani;
-    private int num = new int();
+    private Animator ani_T;
+	private int num = new int();
 	private int aninum = new int();
 	SkinnedMeshRenderer[] smr;
+	private int aniType = new int();
+	
     void Start()
     {
         smr = GetComponentsInChildren<SkinnedMeshRenderer>();
         num = 0;
-        ani = GetComponent<Animation>();
         Transform t = GetComponent<Transform>();
         Made(t, bw);
-
+		aniType = AnimationType.ANIMATOR;
+		
 		aninum = -2;
-
+		
+		if(aniType == AnimationType.ANIMATION)
+			ani = GetComponent<Animation>();
+		else
+			ani_T = GetComponent<Animator>();
 	}
     private void Made(Transform mt, BinaryWriter bw)
     {
@@ -285,49 +308,86 @@ public class FBX_Exporter : MonoBehaviour
 			AnimationWrite(ct);
 		}
 	}
-    // Update is called once per frame
-    void Update()
-    {
+	// Update is called once per frame
+	void Update()
+	{
 		Transform tr = GetComponent<Transform>();
-		string[] aniName = { "death", "swim", "fastswim2", "dive" }; // 애니메이션 이름
-		float[] aniLength = {2.7f ,23.333f, 5.367f, 2.7f, 9.33f }; // 시간
-		if (aninum == -2)
+		string[] aniName = { "infantry_combat_idle", "infantry_combat_run", "infantry_combat_shoot", "infantry_guard_idle" }; // 애니메이션 이름
+		float[] aniLength = { 3.01f, 0.24f, 0.29f, 10.2f}; // 시간
+
+		if (aniType == AnimationType.ANIMATION)
 		{
-			aninum++;
-			bw.Write(ani.GetClipCount()); // 애니메이션 수
-			Transform[] sub = GetComponentsInChildren<Transform>();
-			bw.Write(sub.Length);
-			num = -9;
-		}
-		
-		if (num < 2 * ani.clip.frameRate * aniLength[aninum + 1] + 1 && num > 0)
-		{
-			if (num == 1)
+			if (aninum == -2)
 			{
-				bw.Write((int)(2 * ani.clip.frameRate * aniLength[aninum + 1])); // 애니메이션 길이(프레임)
-				bw.Write(aniLength[aninum + 1]); //시간
+				aninum++;
+				bw.Write(ani.GetClipCount()); // 애니메이션 수
+				Transform[] sub = GetComponentsInChildren<Transform>();
+				bw.Write(sub.Length);
+				num = -9;
 			}
-
-			AnimationWrite(tr);
-		}
-		else if (num >= 2 * ani.clip.frameRate * ani.clip.length + 1)
-		{
-			Debug.Log(aninum + "완료");
-			
-			aninum++;
-
-			if (aninum == ani.GetClipCount() - 1)
+			if (num < 2 * ani.clip.frameRate * aniLength[aninum + 1] + 1 && num > 0)
 			{
-				bw.Close();
-				return;
+				if (num == 1)
+				{
+					bw.Write((int)(2 * ani.clip.frameRate * aniLength[aninum + 1])); // 애니메이션 길이(프레임)
+					bw.Write(aniLength[aninum + 1]); //시간
+				}
+
+				AnimationWrite(tr);
+			}
+			else if (num >= 2 * ani.clip.frameRate * aniLength[aninum + 1] + 1)
+			{
+				Debug.Log(aninum + "완료");
+
+				aninum++;
+
+				if (aninum == ani.GetClipCount() - 1)
+				{
+					bw.Close();
+					return;
+				}
+				if (aninum < ani.GetClipCount() - 1)
+					ani.PlayQueued(aniName[aninum], QueueMode.PlayNow);
+
+				num = 0;
 			}
 			if (aninum < ani.GetClipCount() - 1)
-				ani.PlayQueued(aniName[aninum], QueueMode.PlayNow);
-			
-			num = 0;
+				num++;
 		}
-		if (aninum < ani.GetClipCount() - 1)
+		else
+		{
+			if (aninum == -2)
+			{
+				aninum++;
+				bw.Write(aniName.Length); // 애니메이션 수
+				Transform[] sub = GetComponentsInChildren<Transform>();
+				bw.Write(sub.Length);
+				num = -9;
+			}
+			if (num < 2 * 30 * aniLength[aninum + 1] + 1 && num > 0)
+			{
+				if (num == 1)
+				{
+					Debug.Log("시작");
+					bw.Write((int)(2 * 30 * aniLength[aninum + 1])); // 애니메이션 길이(프레임)
+					bw.Write(aniLength[aninum + 1]); //시간
+				}
+
+				AnimationWrite(tr);
+			}
+			else if (num >= 2 * 30 * aniLength[aninum + 1] + 1)
+			{
+				aninum++;
+				num = 0;
+				int c = ani_T.GetInteger("c");
+				ani_T.SetInteger("c", ++c);
+			}
+			if (ani_T.GetInteger("c") == aniLength.Length)
+			{
+				Debug.Log("완료");
+				bw.Close();
+			}
 			num++;
-		
+		}
 	}
 }
