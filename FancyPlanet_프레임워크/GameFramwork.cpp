@@ -305,6 +305,11 @@ void CGameFramework::CreateRenderTargetViews()
 	m_pScreenShader->CreateGraphicsRootSignature(m_pd3dDevice);
 	m_pScreenShader->CreateShader(m_pd3dDevice, m_pScreenShader->GetGraphicsRootSignature(), 4);
 	m_pScreenShader->BuildObjects(m_pd3dDevice, m_pd3dScreenCommandList, m_pPlayer ,pTexture);
+
+	m_pUIShader = new UIShader();
+	m_pUIShader->CreateGraphicsRootSignature(m_pd3dDevice);
+	m_pUIShader->CreateShader(m_pd3dDevice, m_pUIShader->GetGraphicsRootSignature(), 4);
+	m_pUIShader->BuildObjects(m_pd3dDevice, m_pd3dScreenCommandList);
 }
 
 void CGameFramework::CreateSwapChainRenderTargetViews()
@@ -645,6 +650,12 @@ void CGameFramework::ReleaseObjects()
 
 	if (m_pScreenShader)
 		delete m_pScreenShader;
+
+	if (m_pUIShader)
+		m_pUIShader->ReleaseObjects();
+
+	if (m_pUIShader)
+		delete m_pUIShader;
 }
 
 void CGameFramework::ProcessInput()
@@ -827,8 +838,8 @@ void CGameFramework::FrameAdvance()
 	m_pd3dScreenCommandList->ClearRenderTargetView(m_pd3dRtvSwapChainBackBufferCPUHandles[m_nSwapChainBufferIndex], Colors::Azure, 0, NULL);
 	m_pd3dScreenCommandList->OMSetRenderTargets(1, &m_pd3dRtvSwapChainBackBufferCPUHandles[m_nSwapChainBufferIndex], TRUE, &m_d3dDsvDepthStencilBufferCPUHandle);
 	//원래대로 백버퍼에 그린다.
+	m_pUIShader->Render(m_pd3dScreenCommandList, m_pCamera);
 	m_pScreenShader->Render(m_pd3dScreenCommandList,  m_pCamera);
-
 #ifdef _WITH_PLAYER_TOP
 	m_pd3dCommandList->ClearDepthStencilView(m_d3dDsvDepthStencilBufferCPUHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, NULL);
 #endif

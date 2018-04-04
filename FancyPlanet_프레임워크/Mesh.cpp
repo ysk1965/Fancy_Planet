@@ -96,7 +96,8 @@ CMeshTextured::CMeshTextured(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList
 	m_nVertices = nVertices;
 
 	CTexturedVertex *pVertices = new CTexturedVertex[m_nVertices];
-	for (UINT i = 0; i < m_nVertices; i++) pVertices[i] = CTexturedVertex(pxmf3Positions[i], pxmf2UVs[i]);
+	for (UINT i = 0; i < m_nVertices; i++) 
+		pVertices[i] = CTexturedVertex(pxmf3Positions[i], pxmf2UVs[i]);
 
 	m_pd3dVertexBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, pVertices, m_nStride * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dVertexUploadBuffer);
 

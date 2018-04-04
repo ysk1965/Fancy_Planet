@@ -221,7 +221,6 @@ public:
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera);
 
 	void UpdateShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList);
-	void UpdateMaterial(CGameObject *pObject);
 	void SetMaterial(int nIndex, MATERIAL *pMaterial);
 	void BuildLightsAndMaterials();
 	virtual void ReleaseShaderVariables();
@@ -240,4 +239,30 @@ private:
 
 	MATERIALS					*m_pMaterials = NULL;
 	int							m_nMaterials = 0;
+};
+class UIShader : public CShader
+{
+public:
+	UIShader();
+	virtual ~UIShader();
+
+	virtual D3D12_INPUT_LAYOUT_DESC CreateInputLayout();
+
+	virtual D3D12_SHADER_BYTECODE CreateVertexShader(ID3DBlob **ppd3dShaderBlob);
+	virtual D3D12_SHADER_BYTECODE CreatePixelShader(ID3DBlob **ppd3dShaderBlob);
+
+	virtual void CreateGraphicsRootSignature(ID3D12Device *pd3dDevice);
+
+	virtual void CreateShader(ID3D12Device *pd3dDevice, ID3D12RootSignature *pd3dGraphicsRootSignature, UINT nRenderTargets = 1);
+
+	virtual void BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList);
+	virtual void ReleaseObjects();
+	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera);
+
+	void UpdateShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList);
+	virtual void ReleaseShaderVariables();
+	void CreateShaderVariables(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList);
+
+private:
+	CTexture * m_pTexture;
 };

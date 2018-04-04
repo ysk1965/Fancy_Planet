@@ -22,7 +22,7 @@ AnimationController::AnimationController(ID3D12Device *pd3dDevice, ID3D12Graphic
 	m_pd3dcbBoneTransforms->Map(0, NULL, (void **)&m_pBoneTransforms);
 
 	m_pBoneObject = new CGameObject*[m_nBindpos];
-	
+	 
 	m_iState = 1;
 
 	for (int i = 0; i < m_nBindpos; i++)
@@ -101,7 +101,7 @@ SRT AnimationController::Interpolate(int iBoneNum)
 		float m;
 		float b;
 		float x = m_fCurrentFrame - prev;
-		
+				
 		m = m_pAnimation[m_iState].pFrame[m_nBone*(UINT)next + iBoneNum].RotationQuat.x - m_pAnimation[m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].RotationQuat.x;
 		b = m_pAnimation[m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].RotationQuat.x;
 		result.R.x = m * x + b;
@@ -117,6 +117,8 @@ SRT AnimationController::Interpolate(int iBoneNum)
 		m = m_pAnimation[m_iState].pFrame[m_nBone*(UINT)next + iBoneNum].RotationQuat.w - m_pAnimation[m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].RotationQuat.w;
 		b = m_pAnimation[m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].RotationQuat.w;
 		result.R.w = m * x + b;
+
+		result.R = Vector4::Normalize(result.R);
 
 		m = m_pAnimation[m_iState].pFrame[m_nBone*(UINT)next + iBoneNum].Translation.x - m_pAnimation[m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].Translation.x;
 		b = m_pAnimation[m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].Translation.x;
@@ -136,28 +138,14 @@ SRT AnimationController::Interpolate(int iBoneNum)
 SRT AnimationController::Interpolate(int iBoneNum, float fTime)
 {
 	SRT result;
-	float fTimeRate = fTime / CHANGE_TIME;
-
+	float fTimeRate = fTime / CHANGE_TIME; // 0 ~ 1»çÀÌ°ª
+	 
 	float m;
 	float b;
 
-	result.S = XMFLOAT3(1.0f, 1.0f, 1.0f);
-
-	m = m_pAnimation[m_iNewState].pFrame[iBoneNum].RotationQuat.x - m_pAnimation[m_iSaveState].pFrame[m_nBone*(UINT)m_fSaveLastFrame + iBoneNum].RotationQuat.x;
-	b = m_pAnimation[m_iSaveState].pFrame[m_nBone*(UINT)m_fSaveLastFrame + iBoneNum].RotationQuat.x;
-	result.R.x = m * fTimeRate + b;
-
-	m = m_pAnimation[m_iNewState].pFrame[iBoneNum].RotationQuat.y - m_pAnimation[m_iSaveState].pFrame[m_nBone*(UINT)m_fSaveLastFrame + iBoneNum].RotationQuat.y;
-	b = m_pAnimation[m_iSaveState].pFrame[m_nBone*(UINT)m_fSaveLastFrame + iBoneNum].RotationQuat.y;
-	result.R.y = m * fTimeRate + b;
-
-	m = m_pAnimation[m_iNewState].pFrame[iBoneNum].RotationQuat.z - m_pAnimation[m_iSaveState].pFrame[m_nBone*(UINT)m_fSaveLastFrame + iBoneNum].RotationQuat.z;
-	b = m_pAnimation[m_iSaveState].pFrame[m_nBone*(UINT)m_fSaveLastFrame + iBoneNum].RotationQuat.z;
-	result.R.z = m * fTimeRate + b;
-
-	m = m_pAnimation[m_iNewState].pFrame[iBoneNum].RotationQuat.w - m_pAnimation[m_iSaveState].pFrame[m_nBone*(UINT)m_fSaveLastFrame + iBoneNum].RotationQuat.w;
-	b = m_pAnimation[m_iSaveState].pFrame[m_nBone*(UINT)m_fSaveLastFrame + iBoneNum].RotationQuat.w;
-	result.R.w = m * fTimeRate + b;
+	result.S = XMFLOAT3(1.0f, 1.0f, 1.0f);  
+	XMStoreFloat4(&result.R, XMQuaternionSlerp(XMLoadFloat4(&m_pAnimation[m_iSaveState].pFrame[m_nBone*(UINT)m_fSaveLastFrame + iBoneNum].RotationQuat)
+		, XMLoadFloat4(&m_pAnimation[m_iNewState].pFrame[iBoneNum].RotationQuat), fTimeRate));
 
 	m = m_pAnimation[m_iNewState].pFrame[iBoneNum].Translation.x - m_pAnimation[m_iSaveState].pFrame[m_nBone*(UINT)m_fSaveLastFrame + iBoneNum].Translation.x;
 	b = m_pAnimation[m_iSaveState].pFrame[m_nBone*(UINT)m_fSaveLastFrame + iBoneNum].Translation.x;
@@ -170,7 +158,6 @@ SRT AnimationController::Interpolate(int iBoneNum, float fTime)
 	m = m_pAnimation[m_iNewState].pFrame[iBoneNum].Translation.z - m_pAnimation[m_iSaveState].pFrame[m_nBone*(UINT)m_fSaveLastFrame + iBoneNum].Translation.z;
 	b = m_pAnimation[m_iSaveState].pFrame[m_nBone*(UINT)m_fSaveLastFrame + iBoneNum].Translation.z;
 	result.T.z = m * fTimeRate + b;
-
 	return result;
 }
 void AnimationController::SetToParentTransforms()
@@ -989,7 +976,6 @@ void CGameObject::LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, ID3D12Gra
 			pShader = new CDefferredLightingTexturedShader();
 
 		pShader->CreateShader(pd3dDevice, pd3dGraphicsRootSignature, 4);
-		pShader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 		pShader->CreateCbvAndSrvDescriptorHeaps(pd3dDevice, pd3dCommandList, 1, nDrawType);
 		pShader->CreateConstantBufferViews(pd3dDevice, pd3dCommandList, 1, pd3dcbResource, ncbElementBytes);
 		pShader->CreateShaderResourceViews(pd3dDevice, pd3dCommandList, pTexture, 5, true);

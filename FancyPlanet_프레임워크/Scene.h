@@ -96,6 +96,7 @@ public:
 private:
 	CGameObject					**m_ppObjects = NULL;
 	int							m_nObjects = 0;
+	AnimationController *m_pAnimationController = NULL;
 };
 
 class ObjectScene : public CScene

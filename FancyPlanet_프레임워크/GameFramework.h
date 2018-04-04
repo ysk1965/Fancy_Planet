@@ -6,7 +6,6 @@
 #include "Timer.h"
 #include "Player.h"
 #include "Scene.h"
-#include <vector>
 
 enum
 {
@@ -56,7 +55,8 @@ public:
 	void PrepareFrame();
 private:
 	ID3D12GraphicsCommandList *m_pd3dScreenCommandList;
-	CTextureToFullScreenShader *m_pScreenShader;
+	CTextureToFullScreenShader *m_pScreenShader = NULL;
+	UIShader * m_pUIShader = NULL;
 	ID3D12CommandAllocator		*m_pd3dScreenCommandAllocator;
 
 	HINSTANCE					m_hInstance;

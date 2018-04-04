@@ -252,7 +252,7 @@ float4 PSTextureToFullScreen(float4 position : SV_POSITION) : SV_Target
 	float3 diffuse = gtxtDiffuse.Load(uvm).xyz;
 	float4 specular = gtxtSpecular.Load(uvm);
 
-	float4 cllumination = Lighting(pos, normal, diffuse, specular.x, specular.a*255.0f);
+	float4 cllumination = Lighting(pos, normal, diffuse*1.5f, specular.x, specular.a*255.0f);
 
 	return (cllumination);
 }
@@ -332,6 +332,86 @@ PS_TEXTURED_DEFFERREDLIGHTING_OUTPUT PSTextured(VS_TEXTURED_OUTPUT input) : SV_T
 }
 
 Texture2D<float4> gtxtSkyBox : register(t9);
+Texture2D<float4> gtxUI : register(t13);
+static float fSize = -0.5f;
+
+struct VS_UI_OUTPUT
+{
+	float4 position : SV_POSITION;
+	uint nVertexID : ID;
+};
+
+VS_UI_OUTPUT UIVS(uint nVertexID : SV_VertexID)
+{
+	VS_UI_OUTPUT output;
+	
+	output.nVertexID = nVertexID;
+
+	//사각형을 그린다.
+	if (nVertexID == 0)
+	{
+		output.position = float4(-1.0f, fSize, 0.0f, 1.0f);
+	}
+	else if (nVertexID == 1)
+	{
+		output.position = float4(fSize, fSize, 0.0f, 1.0f);
+	}
+	else if (nVertexID == 2)
+	{
+		output.position = float4(fSize, -1.0f, 0.0f, 1.0f);
+	}
+	else if (nVertexID == 3)
+	{
+		output.position = float4(-1.0f, fSize, 0.0f, 1.0f);
+	}
+	else if (nVertexID == 4)
+	{
+		output.position = float4(fSize, -1.0f, 0.0f, 1.0f);
+	}
+	else if (nVertexID == 5)
+	{
+		output.position = float4(-1.0f, -1.0f, 0.0f, 1.0f);
+	}
+	else
+	{
+		output.position = float4(0, 0, 0, 0);
+	}
+	
+	return output;
+}
+
+float4 UIPS(VS_UI_OUTPUT input) : SV_TARGET
+{
+	if (input.nVertexID == 0)
+	{
+		input.position = float4(-1.0f, +1.0f, 0.0f, 1.0f);
+	}
+	else if (input.nVertexID == 1)
+	{
+		input.position = float4(+1.0f, +1.0f, 0.0f, 1.0f);
+	}
+	else if (input.nVertexID == 2)
+	{
+		input.position = float4(+1.0f, -1.0f, 0.0f, 1.0f);
+	}
+	else if (input.nVertexID == 3)
+	{
+		input.position = float4(-1.0f, +1.0f, 0.0f, 1.0f);
+	}
+	else if (input.nVertexID == 4)
+	{
+		input.position = float4(+1.0f, -1.0f, 0.0f, 1.0f);
+	}
+	else if (input.nVertexID == 5)
+	{
+		input.position = float4(-1.0f, -1.0f, 0.0f, 1.0f);
+	}
+
+	int3 uvm = int3(input.position.xy, 0);
+	float3 color = gtxUI.Load(uvm).xyz;
+
+	return float4(color, 1.0f);
+}
 
 float4 PSSkyBox(VS_TEXTURED_OUTPUT input) : SV_TARGET
 {
@@ -365,7 +445,6 @@ A_VS_OUTPUT ANIMATION_VS(A_VS_INPUT input)
 	float3 position = float3(0.0f, 0.0f, 0.0f);
 	float3 normal = float3(0.0f, 0.0f, 0.0f);
 	float3 tangent = float3(0.0f, 0.0f, 0.0f);
-	float4x4 qwe = float4x4(1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f);
 
 	for (int i = 0; i < 4; i++)
 	{
