@@ -401,7 +401,8 @@ ID3D12RootSignature *EndObjectScene::CreateGraphicsRootSignature(ID3D12Device *p
 
 CharacterScene::CharacterScene()
 {
-
+	m_ppMeshes = new CMesh*[MESH_NUM];
+	m_ppAnimationController = new AnimationController*[MESH_NUM];
 }
 CharacterScene::~CharacterScene()
 {
@@ -414,14 +415,11 @@ void CharacterScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsComman
 	m_nShaders = 0;
 	m_ppShaders = new CShader*[m_nShaders];
 	
-	m_nObjects = 5;
+	m_nObjects = 1;
 	m_ppObjects = new CGameObject*[m_nObjects];
 
-	for (int i = 0; i < m_nObjects; i++)
-	{
-		m_ppObjects[i] = new CharaterObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, 0, L"../Assets/Soldier.bss");
-		m_ppObjects[i]->SetPosition(XMFLOAT3(100 * (rand()%20), 500, 100*(rand() % 20)));
-	}
+	m_ppObjects[0] = new CAnimationObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, 0, L"../Assets/Soldier.bss", m_ppMeshes[0], m_ppAnimationController[0]);
+	m_ppObjects[0]->SetPosition(XMFLOAT3(100 * (rand()%20), 500, 100*(rand() % 20)));
 }
 void CharacterScene::ReleaseObjects()
 {

@@ -19,7 +19,8 @@
 #define CHANGE_TIME 0.2f
 
 class CShader;
-class CGameObject;
+class CAnimationObject;
+class AnimationFactors;
 
 struct CB_GAMEOBJECT_INFO
 {
@@ -54,27 +55,17 @@ typedef struct SRT
 	XMFLOAT4 R;
 	XMFLOAT3 T;
 }SRT;
+
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 class AnimationController
 {
 private:
-	std::chrono::system_clock::time_point m_chronoStart;
-	std::chrono::milliseconds ms;
-
 	UINT m_nAnimation = 0;
-	int m_iState = 1;
-	int m_iNewState = 0;
-	int m_iSaveState = 0;
-
-	float m_fCurrentFrame = 0;
-	float m_fSaveLastFrame = 0;
-
-	UINT m_nBindpos = 0;
 
 	ID3D12Resource					*m_pd3dcbBoneTransforms = NULL;
 
-	CGameObject											**m_pBoneObject = NULL;
 	BONE_TRANSFORMS								*m_pBoneTransforms = NULL;
 	BONE_TRANSFORMS								  m_BoneTransforms;
 	ID3D12DescriptorHeap			*m_pd3dBoneTransformsDescriptorHeap = NULL;
@@ -82,7 +73,9 @@ private:
 	D3D12_CPU_DESCRIPTOR_HANDLE		m_d3dBoneTransformsCPUDescriptorStartHandle;
 	D3D12_GPU_DESCRIPTOR_HANDLE		m_d3dBoneTransformsGPUDescriptorStartHandle;
 
-	CGameObject* m_pRootObject = NULL;
+	CAnimationObject* m_pRootObject = NULL;
+	CAnimationObject **m_ppBoneObject = NULL;
+
 public:
 	UINT m_nBone = 0;
 
@@ -94,7 +87,7 @@ public:
 	}
 
 	AnimationController(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, UINT nAnimation,
-		XMFLOAT4X4* pBindPoses, UINT nBindPos, CGameObject* pRootObject);
+		XMFLOAT4X4* pBindPoses);
 	~AnimationController();
 	void GetCurrentFrame();
 	SRT Interpolate(int iBoneNum);
@@ -102,10 +95,10 @@ public:
 	void SetToParentTransforms();
 	//해당하는 본인덱스의 오브젝트를 리턴한다.
 	void SetToRootTransforms();
-	CGameObject* GetFindObject(CGameObject* pFindObject, UINT nBoneIndex);
 	void AdvanceAnimation(ID3D12GraphicsCommandList* pd3dCommandList);
 	void ChangeAnimation(int iNewState);
-	// 계층관계로 인덱스를 정렬한다. 
+	void SetObject(CAnimationObject* pObject);
+
 
 	ANIMATION *m_pAnimation;
 };
@@ -210,25 +203,17 @@ public:
 	}
 
 public:
-	TCHAR							m_strFrameName[256] = {'\0'};
 
 	bool							m_bActive = true;
-	bool							m_bRoot = false;
 
-	XMFLOAT4X4						m_xmf4x4ToParentTransform;
 	XMFLOAT4X4						m_xmf4x4World;
-	XMFLOAT4X4						m_xmf4x4ToRootTransform;
 
 	CMesh							**m_ppMeshes;
 	int								m_nMeshes;
-	int								m_iBoneIndex = -1;
-	UINT						m_nBindPoses = 0;
-	XMFLOAT4X4* m_pBindPoses = NULL;
 
 	CMaterial						*m_pMaterial = NULL;
 
 	D3D12_GPU_DESCRIPTOR_HANDLE		m_d3dCbvGPUDescriptorHandle;
-	AnimationController				*m_pAnimationController;
 
 protected:
 	ID3D12Resource					*m_pd3dcbGameObject = NULL;
@@ -238,7 +223,6 @@ public:
 	void SetMesh(int nIndex, CMesh *pMesh);
 	void SetShader(CShader *pShader);
 	void SetMaterial(CMaterial *pMaterial);
-	void ChangeAnimation();
 	void ResizeMeshes(int nMeshes);
 
 	void SetCbvGPUDescriptorHandle(D3D12_GPU_DESCRIPTOR_HANDLE d3dCbvGPUDescriptorHandle) { m_d3dCbvGPUDescriptorHandle = d3dCbvGPUDescriptorHandle; }
@@ -257,59 +241,119 @@ public:
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, int iRootParameterIndex, CCamera *pCamera, UINT nInstances);
 	virtual void BuildMaterials(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList) { }
 	virtual void ReleaseUploadBuffers();
-
+	virtual void ChangeAnimation() {};
+	virtual void UpdateTransform(XMFLOAT4X4 *pxmf4x4Parent = NULL){};
 
 	XMFLOAT3 GetPosition();
 	XMFLOAT3 GetLook();
 	XMFLOAT3 GetUp();
 	XMFLOAT3 GetRight();
-
-
-	void SetWorldPosition(XMFLOAT3 xmf3Position);
-	void SetWorldPosition(float x, float y, float z);
-	void SetPosition(float x, float y, float z);
-	void SetPosition(XMFLOAT3& xmf3Position);
-	void SetLocalPosition(XMFLOAT3& xmf3Position);
-	void SetScale(float x, float y, float z);
-	void SetLocalScale(float x, float y, float z);
-	void SetRotation(XMFLOAT4& pxmf4Quaternion);
-	void SetLocalRotation(XMFLOAT4& pxmf4Quaternion);
-	void SetChild(CGameObject *pChild);
-
-	void MoveStrafe(float fDistance = 1.0f);
+	
+	virtual void SetPosition(float x, float y, float z);
+	virtual void SetPosition(XMFLOAT3& xmf3Position);
+	virtual void SetScale(float x, float y, float z);
+	virtual void SetRotation(XMFLOAT4& pxmf4Quaternion);
+	
+	virtual void MoveStrafe(float fDistance = 1.0f);
 	void MoveUp(float fDistance = 1.0f);
 	void MoveForward(float fDistance = 1.0f);
 
-	void Rotate(float fPitch = 10.0f, float fYaw = 10.0f, float fRoll = 10.0f);
-	void Rotate(XMFLOAT3 *pxmf3Axis, float fAngle);
-	void Rotate(XMFLOAT4 *pxmf4Quaternion);
-	void LoadAnimation(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ifstream& InFile);
-	void LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, 
-		ID3D12RootSignature *pd3dGraphicsRootSignature, ifstream& InFile, UINT nFrame, UINT nSub);
-	void LoadGeometryFromFile(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature, TCHAR *pstrFileName);
-	void UpdateTransform(XMFLOAT4X4 *pxmf4x4Parent = NULL);
-	CGameObject* GetRootObject();
+	virtual void Rotate(float fPitch = 10.0f, float fYaw = 10.0f, float fRoll = 10.0f);
+	virtual void Rotate(XMFLOAT3 *pxmf3Axis, float fAngle);
+	virtual void Rotate(XMFLOAT4 *pxmf4Quaternion);
+	
+};
+
+class CAnimationObject : public CGameObject
+{
 public:
-	CGameObject 					*m_pParent = NULL;
-	CGameObject 					*m_pChild = NULL;
-	CGameObject 					*m_pSibling = NULL;
+	CAnimationObject(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature,
+		UINT nMeshes, TCHAR *pstrFileName, CMesh* pMesh, AnimationController* pAnimationController);
+	CAnimationObject(int nMeshes) : CGameObject(nMeshes)
+	{
+	};
+	~CAnimationObject();
+	void ReleaseUploadBuffers();
+	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, int iRootParameterIndex, CCamera *pCamera = NULL);
+	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, int iRootParameterIndex, CCamera *pCamera, UINT nInstances);
+	void LoadAnimation(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ifstream& InFile, AnimationController* pAnimationController);
+	void LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList,
+		ID3D12RootSignature *pd3dGraphicsRootSignature, ifstream& InFile, UINT nFrame, UINT nSub);
+	void LoadGeometryFromFile(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature
+		, TCHAR *pstrFileName, AnimationController* pAnimationController);
+	virtual void UpdateTransform(XMFLOAT4X4 *pxmf4x4Parent = NULL);
+	CAnimationObject* GetRootObject();
+	CAnimationObject *FindObject();
+	TCHAR* CharToTCHAR(char * asc);
+	void SetChild(CAnimationObject *pChild);
+	virtual void ChangeAnimation();
 
-	CGameObject *GetParent() { return(m_pParent); }
-	CGameObject *FindObject();
+	virtual void SetPosition(float x, float y, float z);
+	virtual void SetPosition(XMFLOAT3& xmf3Position);
+	virtual void SetScale(float x, float y, float z);
+	virtual void SetRotation(XMFLOAT4& pxmf4Quaternion);
+	virtual void Rotate(float fPitch = 10.0f, float fYaw = 10.0f, float fRoll = 10.0f);
+	virtual void Rotate(XMFLOAT3 *pxmf3Axis, float fAngle);
+	virtual void Rotate(XMFLOAT4 *pxmf4Quaternion);
+
+	CAnimationObject 					*m_pParent = NULL;
+	CAnimationObject 					*m_pChild = NULL;
+	CAnimationObject 					*m_pSibling = NULL;
+
+	XMFLOAT4X4						m_xmf4x4ToRootTransform;
+	XMFLOAT4X4						m_xmf4x4ToParentTransform;
+	TCHAR							m_strFrameName[256] = { '\0' };
+
+	bool							m_bRoot = false;
+	int								m_iBoneIndex = -1;
+	XMFLOAT4X4* m_pBindPoses = NULL;
+
+	AnimationController				*m_pAnimationController = NULL;
+	AnimationFactors				*m_pAnimationFactors = NULL;
+private:
 };
-
-class AnimationObject : public CGameObject
+class AnimationFactors
 {
-	AnimationObject();
-	~AnimationObject();
-};
+public:
+	AnimationFactors(UINT nBindpos)
+	{
+		m_nBindpos = nBindpos;
+		m_chronoStart = chrono::system_clock::now();
+		m_ppBoneObject = new CAnimationObject*[m_nBindpos];
+	}
+	CAnimationObject* GetFindObject(CAnimationObject* pFindObject, UINT nBoneIndex)
+	{
+		CAnimationObject* pResult = NULL;
+		if (pFindObject->m_iBoneIndex == nBoneIndex)
+			return pFindObject;
 
-class NonAnimationObject : public CGameObject
-{
-	NonAnimationObject();
-	~NonAnimationObject();
-};
+		if (pFindObject->m_pSibling)
+			pResult = GetFindObject(pFindObject->m_pSibling, nBoneIndex);
+		if (pFindObject->m_pChild && pResult == NULL)
+			pResult = GetFindObject(pFindObject->m_pChild, nBoneIndex);
 
+		return pResult;
+	}
+	void SetBoneObject(CAnimationObject* pRoot)
+	{
+		for (int i = 0; i < m_nBindpos; i++)
+		{
+			m_ppBoneObject[i] = GetFindObject(pRoot, i);
+		}
+	}
+	std::chrono::system_clock::time_point m_chronoStart;
+	std::chrono::milliseconds ms;
+
+	CAnimationObject **m_ppBoneObject = NULL;
+	int m_iState = 1;
+	int m_iNewState = 0;
+	int m_iSaveState = 0;
+
+	float m_fCurrentFrame = 0;
+	float m_fSaveLastFrame = 0;
+
+	UINT m_nBindpos = 0;
+};
 class CHeightMapTerrain : public CGameObject
 {
 public:
@@ -334,6 +378,7 @@ public:
 	XMFLOAT3 GetScale() { return(m_xmf3Scale); }
 	float GetWidth() { return(m_nWidth * m_xmf3Scale.x); }
 	float GetLength() { return(m_nLength * m_xmf3Scale.z); }
+
 };
 
 
@@ -346,11 +391,7 @@ public:
 	virtual ~CSkyBox();
 
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera = NULL);
+
 };
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-class CharaterObject : public CGameObject
-{
-public:
-	CharaterObject(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature, UINT nMeshes, TCHAR *pstrFileName);
-	~CharaterObject();
-};
+

@@ -384,7 +384,7 @@ float4 UIPS(VS_UI_OUTPUT input) : SV_TARGET
 {
 	if (input.nVertexID == 0)
 	{
-		input.position = float4(-1.0f, +1.0f, 0.0f, 1.0f);
+		input.position = float4(0.0f, +1.0f, 0.0f, 1.0f);
 	}
 	else if (input.nVertexID == 1)
 	{
@@ -392,23 +392,22 @@ float4 UIPS(VS_UI_OUTPUT input) : SV_TARGET
 	}
 	else if (input.nVertexID == 2)
 	{
-		input.position = float4(+1.0f, -1.0f, 0.0f, 1.0f);
+		input.position = float4(+1.0f, 0.0f, 0.0f, 1.0f);
 	}
 	else if (input.nVertexID == 3)
 	{
-		input.position = float4(-1.0f, +1.0f, 0.0f, 1.0f);
+		input.position = float4(0.0f, +1.0f, 0.0f, 1.0f);
 	}
 	else if (input.nVertexID == 4)
 	{
-		input.position = float4(+1.0f, -1.0f, 0.0f, 1.0f);
+		input.position = float4(+1.0f, 0.0f, 0.0f, 1.0f);
 	}
 	else if (input.nVertexID == 5)
 	{
-		input.position = float4(-1.0f, -1.0f, 0.0f, 1.0f);
+		input.position = float4(0.0f, 0.0f, 0.0f, 1.0f);
 	}
 
-	int3 uvm = int3(input.position.xy, 0);
-	float3 color = gtxUI.Load(uvm).xyz;
+	float3 color = gtxUI.Sample(gWrapSamplerState, input.position.xy).rgb;
 
 	return float4(color, 1.0f);
 }

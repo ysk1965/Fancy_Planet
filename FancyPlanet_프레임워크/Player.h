@@ -92,6 +92,8 @@ public:
 	virtual void ReleaseShaderVariables();
 	virtual void UpdateShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList);
 
+	virtual void ChangeAnimation() {};
+	virtual void UpdateTransform(XMFLOAT4X4 *pxmf4x4Parent = NULL) {};
 	CCamera *OnChangeCamera(DWORD nNewCameraMode, DWORD nCurrentCameraMode);
 
 	virtual CCamera *ChangeCamera(DWORD nNewCameraMode, float fTimeElapsed);

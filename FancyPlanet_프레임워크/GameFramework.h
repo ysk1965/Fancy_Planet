@@ -74,7 +74,7 @@ private:
 	bool						**m_ppbDivision = NULL;
 	bool						m_bMsaa4xEnable = false;
 	UINT						m_nMsaa4xQualityLevels = 0;
-
+	
 	static const UINT				m_nSwapChainBuffers = 2;
 	UINT							m_nSwapChainBufferIndex;
 

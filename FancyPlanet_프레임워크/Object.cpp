@@ -11,40 +11,21 @@ using namespace std;
 
 
 AnimationController::AnimationController(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, UINT nAnimation,
-	XMFLOAT4X4* pBindPoses, UINT nBindPos, CGameObject* pRootObject) : m_nAnimation(nAnimation), m_pBindPoses(pBindPoses), m_nBindpos(nBindPos), m_pRootObject(pRootObject)
+	XMFLOAT4X4* pBindPoses) : m_nAnimation(nAnimation), m_pBindPoses(pBindPoses)
 {
-	
 	m_pAnimation = new ANIMATION[m_nAnimation];
 
 	UINT ncbElementBytes = ((sizeof(LIGHTS) + 255) & ~255); 
 	m_pd3dcbBoneTransforms = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
 
 	m_pd3dcbBoneTransforms->Map(0, NULL, (void **)&m_pBoneTransforms);
-
-	m_pBoneObject = new CGameObject*[m_nBindpos];
-	 
-	m_iState = 1;
-
-	for (int i = 0; i < m_nBindpos; i++)
-	{
-		m_pBoneObject[i] = GetFindObject(m_pRootObject, i);
-	}
-
-	m_chronoStart = chrono::system_clock::now();
 }
-CGameObject* AnimationController::GetFindObject(CGameObject* pFindObject, UINT nBoneIndex)
+void AnimationController::SetObject(CAnimationObject* pObject)
 {
-	CGameObject* pResult = NULL;
-	if (pFindObject->m_iBoneIndex == nBoneIndex)
-		return pFindObject;
-
-	if (pFindObject->m_pSibling)
-		pResult = GetFindObject(pFindObject->m_pSibling, nBoneIndex);
-	if (pFindObject->m_pChild && pResult == NULL)
-		pResult = GetFindObject(pFindObject->m_pChild, nBoneIndex);
-
-	return pResult;
+	m_pRootObject = pObject;
+	m_ppBoneObject = pObject->m_pAnimationFactors->m_ppBoneObject;
 }
+
 AnimationController::~AnimationController()
 {
 	if (m_pd3dcbBoneTransforms)
@@ -52,8 +33,8 @@ AnimationController::~AnimationController()
 		m_pd3dcbBoneTransforms->Unmap(0, NULL);
 		m_pd3dcbBoneTransforms->Release();
 	}
-	if (m_pBoneObject)
-		delete[] m_pBoneObject;
+	if (m_ppBoneObject)
+		delete[] m_ppBoneObject;
 	if (m_pAnimation)
 		delete[] m_pAnimation;
 }
@@ -61,75 +42,75 @@ void AnimationController::ChangeAnimation(int iNewState)
 {
 	if (iNewState >= 0)
 	{
-		m_fSaveLastFrame = m_fCurrentFrame;
-		m_iNewState = iNewState;
-		m_iSaveState = m_iState;
-		m_iState = -1;
+		m_pRootObject->m_pAnimationFactors->m_fSaveLastFrame = m_pRootObject->m_pAnimationFactors->m_fCurrentFrame;
+		m_pRootObject->m_pAnimationFactors->m_iNewState = iNewState;
+		m_pRootObject->m_pAnimationFactors->m_iSaveState = m_pRootObject->m_pAnimationFactors->m_iState;
+		m_pRootObject->m_pAnimationFactors->m_iState = -1;
 	}
 	else
 	{
-		m_iState = m_iNewState;
+		m_pRootObject->m_pAnimationFactors->m_iState = m_pRootObject->m_pAnimationFactors->m_iNewState;
 	}
 
-	m_chronoStart = chrono::system_clock::now();
-	m_fCurrentFrame = 0.0f;
+	m_pRootObject->m_pAnimationFactors->m_chronoStart = chrono::system_clock::now();
+	m_pRootObject->m_pAnimationFactors->m_fCurrentFrame = 0.0f;
 }
 void AnimationController::GetCurrentFrame()
 {
-	ms = std::chrono::duration_cast<std::chrono::milliseconds>(chrono::system_clock::now() - m_chronoStart);
-	float fCurrentTime = ms.count() /1000.0f;
-	float fQuotient = fCurrentTime / m_pAnimation[m_iState].fTime;
+	m_pRootObject->m_pAnimationFactors->ms = std::chrono::duration_cast<std::chrono::milliseconds>(chrono::system_clock::now() - m_pRootObject->m_pAnimationFactors->m_chronoStart);
+	float fCurrentTime = m_pRootObject->m_pAnimationFactors->ms.count() /1000.0f;
+	float fQuotient = fCurrentTime / m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].fTime;
 	
- 	m_fCurrentFrame = (fCurrentTime / m_pAnimation[m_iState].fTime - (UINT)fQuotient) * m_pAnimation[m_iState].nFrame;
+	m_pRootObject->m_pAnimationFactors->m_fCurrentFrame = (fCurrentTime / m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].fTime - (UINT)fQuotient) * m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].nFrame;
 
 }
 SRT AnimationController::Interpolate(int iBoneNum)
 {
 	SRT result;
-	float prev = (UINT)m_fCurrentFrame;
-	float next = (UINT)(m_fCurrentFrame + 1);
+	float prev = (UINT)m_pRootObject->m_pAnimationFactors->m_fCurrentFrame;
+	float next = (UINT)(m_pRootObject->m_pAnimationFactors->m_fCurrentFrame + 1);
 
 	result.S = XMFLOAT3(1.0f, 1.0f, 1.0f);
 
-	if (prev == m_fCurrentFrame)
+	if (prev == m_pRootObject->m_pAnimationFactors->m_fCurrentFrame)
 	{
-		result.R = m_pAnimation[m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].RotationQuat;
-		result.T = m_pAnimation[m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].Translation;
+		result.R = m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].RotationQuat;
+		result.T = m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].Translation;
 	}
 	else
 	{
 		float m;
 		float b;
-		float x = m_fCurrentFrame - prev;
+		float x = m_pRootObject->m_pAnimationFactors->m_fCurrentFrame - prev;
 				
-		m = m_pAnimation[m_iState].pFrame[m_nBone*(UINT)next + iBoneNum].RotationQuat.x - m_pAnimation[m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].RotationQuat.x;
-		b = m_pAnimation[m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].RotationQuat.x;
+		m = m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].pFrame[m_nBone*(UINT)next + iBoneNum].RotationQuat.x - m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].RotationQuat.x;
+		b = m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].RotationQuat.x;
 		result.R.x = m * x + b;
 
-		m = m_pAnimation[m_iState].pFrame[m_nBone*(UINT)next + iBoneNum].RotationQuat.y - m_pAnimation[m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].RotationQuat.y;
-		b = m_pAnimation[m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].RotationQuat.y;
+		m = m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].pFrame[m_nBone*(UINT)next + iBoneNum].RotationQuat.y - m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].RotationQuat.y;
+		b = m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].RotationQuat.y;
 		result.R.y = m * x + b;
 
-		m = m_pAnimation[m_iState].pFrame[m_nBone*(UINT)next + iBoneNum].RotationQuat.z - m_pAnimation[m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].RotationQuat.z;
-		b = m_pAnimation[m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].RotationQuat.z;
+		m = m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].pFrame[m_nBone*(UINT)next + iBoneNum].RotationQuat.z - m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].RotationQuat.z;
+		b = m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].RotationQuat.z;
 		result.R.z = m * x + b;
 
-		m = m_pAnimation[m_iState].pFrame[m_nBone*(UINT)next + iBoneNum].RotationQuat.w - m_pAnimation[m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].RotationQuat.w;
-		b = m_pAnimation[m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].RotationQuat.w;
+		m = m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].pFrame[m_nBone*(UINT)next + iBoneNum].RotationQuat.w - m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].RotationQuat.w;
+		b = m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].RotationQuat.w;
 		result.R.w = m * x + b;
 
 		result.R = Vector4::Normalize(result.R);
 
-		m = m_pAnimation[m_iState].pFrame[m_nBone*(UINT)next + iBoneNum].Translation.x - m_pAnimation[m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].Translation.x;
-		b = m_pAnimation[m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].Translation.x;
+		m = m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].pFrame[m_nBone*(UINT)next + iBoneNum].Translation.x - m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].Translation.x;
+		b = m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].Translation.x;
 		result.T.x = m * x + b;
 
-		m = m_pAnimation[m_iState].pFrame[m_nBone*(UINT)next + iBoneNum].Translation.y - m_pAnimation[m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].Translation.y;
-		b = m_pAnimation[m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].Translation.y;
+		m = m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].pFrame[m_nBone*(UINT)next + iBoneNum].Translation.y - m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].Translation.y;
+		b = m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].Translation.y;
 		result.T.y = m * x + b;
 
-		m = m_pAnimation[m_iState].pFrame[m_nBone*(UINT)next + iBoneNum].Translation.z - m_pAnimation[m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].Translation.z;
-		b = m_pAnimation[m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].Translation.z;
+		m = m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].pFrame[m_nBone*(UINT)next + iBoneNum].Translation.z - m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].Translation.z;
+		b = m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].Translation.z;
 		result.T.z = m * x + b;
 	}
 
@@ -144,30 +125,30 @@ SRT AnimationController::Interpolate(int iBoneNum, float fTime)
 	float b;
 
 	result.S = XMFLOAT3(1.0f, 1.0f, 1.0f);  
-	XMStoreFloat4(&result.R, XMQuaternionSlerp(XMLoadFloat4(&m_pAnimation[m_iSaveState].pFrame[m_nBone*(UINT)m_fSaveLastFrame + iBoneNum].RotationQuat)
-		, XMLoadFloat4(&m_pAnimation[m_iNewState].pFrame[iBoneNum].RotationQuat), fTimeRate));
+	XMStoreFloat4(&result.R, XMQuaternionSlerp(XMLoadFloat4(&m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iSaveState].pFrame[m_nBone*(UINT)m_pRootObject->m_pAnimationFactors->m_fSaveLastFrame + iBoneNum].RotationQuat)
+		, XMLoadFloat4(&m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iNewState].pFrame[iBoneNum].RotationQuat), fTimeRate));
 
-	m = m_pAnimation[m_iNewState].pFrame[iBoneNum].Translation.x - m_pAnimation[m_iSaveState].pFrame[m_nBone*(UINT)m_fSaveLastFrame + iBoneNum].Translation.x;
-	b = m_pAnimation[m_iSaveState].pFrame[m_nBone*(UINT)m_fSaveLastFrame + iBoneNum].Translation.x;
+	m = m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iNewState].pFrame[iBoneNum].Translation.x - m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iSaveState].pFrame[m_nBone*(UINT)m_pRootObject->m_pAnimationFactors->m_fSaveLastFrame + iBoneNum].Translation.x;
+	b = m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iSaveState].pFrame[m_nBone*(UINT)m_pRootObject->m_pAnimationFactors->m_fSaveLastFrame + iBoneNum].Translation.x;
 	result.T.x = m * fTimeRate + b;
 
-	m = m_pAnimation[m_iNewState].pFrame[iBoneNum].Translation.y - m_pAnimation[m_iSaveState].pFrame[m_nBone*(UINT)m_fSaveLastFrame + iBoneNum].Translation.y;
-	b = m_pAnimation[m_iSaveState].pFrame[m_nBone*(UINT)m_fSaveLastFrame + iBoneNum].Translation.y;
+	m = m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iNewState].pFrame[iBoneNum].Translation.y - m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iSaveState].pFrame[m_nBone*(UINT)m_pRootObject->m_pAnimationFactors->m_fSaveLastFrame + iBoneNum].Translation.y;
+	b = m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iSaveState].pFrame[m_nBone*(UINT)m_pRootObject->m_pAnimationFactors->m_fSaveLastFrame + iBoneNum].Translation.y;
 	result.T.y = m * fTimeRate + b;
 
-	m = m_pAnimation[m_iNewState].pFrame[iBoneNum].Translation.z - m_pAnimation[m_iSaveState].pFrame[m_nBone*(UINT)m_fSaveLastFrame + iBoneNum].Translation.z;
-	b = m_pAnimation[m_iSaveState].pFrame[m_nBone*(UINT)m_fSaveLastFrame + iBoneNum].Translation.z;
+	m = m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iNewState].pFrame[iBoneNum].Translation.z - m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iSaveState].pFrame[m_nBone*(UINT)m_pRootObject->m_pAnimationFactors->m_fSaveLastFrame + iBoneNum].Translation.z;
+	b = m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iSaveState].pFrame[m_nBone*(UINT)m_pRootObject->m_pAnimationFactors->m_fSaveLastFrame + iBoneNum].Translation.z;
 	result.T.z = m * fTimeRate + b;
 	return result;
 }
 void AnimationController::SetToParentTransforms()
 {
-	stack<CGameObject*> FrameStack;
+	stack<CAnimationObject*> FrameStack;
 	FrameStack.push(m_pRootObject);
 
-	float fTime = std::chrono::duration_cast<std::chrono::milliseconds>(chrono::system_clock::now() - m_chronoStart).count() / 1000.0f;
+	float fTime = std::chrono::duration_cast<std::chrono::milliseconds>(chrono::system_clock::now() - m_pRootObject->m_pAnimationFactors->m_chronoStart).count() / 1000.0f;
 
-	if (m_iState == -1 && (fTime > CHANGE_TIME))
+	if (m_pRootObject->m_pAnimationFactors->m_iState == -1 && (fTime > CHANGE_TIME))
 		ChangeAnimation(-1);
 
 	GetCurrentFrame(); // 현재 프레임 계산
@@ -177,14 +158,14 @@ void AnimationController::SetToParentTransforms()
 		if (FrameStack.empty())
 			break;
 
-		CGameObject* TargetFrame = FrameStack.top();
+		CAnimationObject* TargetFrame = FrameStack.top();
 		FrameStack.pop();
 		
 		if (TargetFrame != m_pRootObject)
 		{
 			SRT srt;
 
-			if(m_iState != -1)
+			if(m_pRootObject->m_pAnimationFactors->m_iState != -1)
 				srt = Interpolate(i);
 			else
 				srt = Interpolate(i, fTime);
@@ -206,7 +187,7 @@ void AnimationController::SetToParentTransforms()
 }
 void AnimationController::SetToRootTransforms()
 {
-	stack<CGameObject*> FrameStack;
+	stack<CAnimationObject*> FrameStack;
 	FrameStack.push(m_pRootObject->m_pChild);
 
 	while (1)
@@ -214,7 +195,7 @@ void AnimationController::SetToRootTransforms()
 		if (FrameStack.empty())
 			break;
 
-		CGameObject* TargetFrame = FrameStack.top();
+		CAnimationObject* TargetFrame = FrameStack.top();
 		FrameStack.pop();
 
 		if(TargetFrame->m_pParent != NULL && TargetFrame != m_pRootObject->m_pChild)
@@ -234,10 +215,10 @@ void AnimationController::AdvanceAnimation(ID3D12GraphicsCommandList* pd3dComman
 							// 현재 시간에 상관없이 계속 프레임이 진행되게 만들었다.
 	SetToRootTransforms();
 
-	for (UINT i = 0; i < m_nBindpos ; i++)
+	for (UINT i = 0; i < m_pRootObject->m_pAnimationFactors->m_nBindpos ; i++)
 	{
 		XMMATRIX offset = XMLoadFloat4x4(&m_pBindPoses[i]); // 본오프셋 행렬
-		XMMATRIX toRoot = XMLoadFloat4x4(&m_pBoneObject[i]->m_xmf4x4ToRootTransform);
+		XMMATRIX toRoot = XMLoadFloat4x4(&m_ppBoneObject[i]->m_xmf4x4ToRootTransform);
 		XMMATRIX finalTransform = XMMatrixMultiply(XMMatrixTranspose(offset), (toRoot));
 
 		XMStoreFloat4x4(&m_BoneTransforms.m_xmf4x4BoneTransform[i], XMMatrixTranspose(finalTransform));
@@ -396,7 +377,6 @@ void CMaterial::ReleaseUploadBuffers()
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 CGameObject::CGameObject(int nMeshes)
 {
-	m_xmf4x4ToParentTransform = Matrix4x4::Identity();
 	m_xmf4x4World = Matrix4x4::Identity();
 
 	m_nMeshes = nMeshes;
@@ -425,10 +405,6 @@ CGameObject::~CGameObject()
 	}
 	if (m_pMaterial) m_pMaterial->Release();
 
-	if (m_pSibling) 
-		delete m_pSibling;
-	if (m_pChild) 
-		delete m_pChild;
 }
 
 void CGameObject::ResizeMeshes(int nMeshes)
@@ -522,18 +498,6 @@ void CGameObject::Animate(float fTimeElapsed)
 {
 }
 
-void CGameObject::ChangeAnimation()
-{
-
-	if (m_pAnimationController)
-	{		
-		m_pAnimationController->ChangeAnimation(rand()%4);
-	}
-	if (m_pSibling)
-		m_pSibling->ChangeAnimation();
-	if (m_pChild)
-		m_pChild->ChangeAnimation();
-}
 
 void CGameObject::SetRootParameter(ID3D12GraphicsCommandList *pd3dCommandList, int iRootParameterIndex)
 {
@@ -566,9 +530,6 @@ void CGameObject::Render(ID3D12GraphicsCommandList *pd3dCommandList, int iRootPa
 		}
 	}
 
-	if (m_pAnimationController)
-		m_pAnimationController->AdvanceAnimation(pd3dCommandList);
-
 	if (m_nMeshes > 0)
 	{
 		SetRootParameter(pd3dCommandList, iRootParameterIndex);
@@ -580,10 +541,6 @@ void CGameObject::Render(ID3D12GraphicsCommandList *pd3dCommandList, int iRootPa
 		}
 	}
 
-	if (m_pSibling)
-		m_pSibling->Render(pd3dCommandList, 2, pCamera);
-	if (m_pChild)
-		m_pChild->Render(pd3dCommandList, 2, pCamera);
 }
 
 void CGameObject::Render(ID3D12GraphicsCommandList *pd3dCommandList, int iRootParameterIndex, CCamera *pCamera, UINT nInstances)
@@ -615,61 +572,20 @@ void CGameObject::ReleaseUploadBuffers()
 	{
 		for (int i = 0; i < m_nMeshes; i++)
 		{
-			if (m_ppMeshes[i]) m_ppMeshes[i]->ReleaseUploadBuffers();
+			if (m_ppMeshes[i]) 
+				m_ppMeshes[i]->ReleaseUploadBuffers();
 		}
 	}
 
 	if (m_pMaterial) 
 		m_pMaterial->ReleaseUploadBuffers();
-
-	if (m_pSibling) 
-		m_pSibling->ReleaseUploadBuffers();
-	if (m_pChild) 
-		m_pChild->ReleaseUploadBuffers();
 }
 
-void CGameObject::UpdateTransform(XMFLOAT4X4 *pxmf4x4Parent)
-{
-	m_xmf4x4World = (pxmf4x4Parent) ? Matrix4x4::Multiply(m_xmf4x4ToParentTransform, *pxmf4x4Parent) : m_xmf4x4ToParentTransform;
-
-	if (m_pSibling) 
-		m_pSibling->UpdateTransform(pxmf4x4Parent);
-	if (m_pChild) 
-		m_pChild->UpdateTransform(&m_xmf4x4World);
-}
-
-CGameObject *CGameObject::FindObject()
-{
-	CGameObject *pFrameObject = NULL;
-	if (m_nMeshes > 0) 
-		return(this);
-
-	if (m_pSibling) 
-		if (pFrameObject = m_pSibling->FindObject())
-			return(pFrameObject);
-	if (m_pChild) 
-		if (pFrameObject = m_pChild->FindObject())
-			return(pFrameObject);
-
-	return(NULL);
-}
-
-void CGameObject::SetWorldPosition(float x, float y, float z)
+void CGameObject::SetPosition(float x, float y, float z)
 {
 	m_xmf4x4World._41 = x;
 	m_xmf4x4World._42 = y;
 	m_xmf4x4World._43 = z;
-}
-
-void CGameObject::SetWorldPosition(XMFLOAT3 xmf3Position)
-{
-	SetWorldPosition(xmf3Position.x, xmf3Position.y, xmf3Position.z);
-}
-void CGameObject::SetPosition(float x, float y, float z)
-{
-	m_xmf4x4ToParentTransform._41 = x;
-	m_xmf4x4ToParentTransform._42 = y;
-	m_xmf4x4ToParentTransform._43 = z;
 }
 
 void CGameObject::SetPosition(XMFLOAT3& xmf3Position)
@@ -677,31 +593,17 @@ void CGameObject::SetPosition(XMFLOAT3& xmf3Position)
 	SetPosition(xmf3Position.x, xmf3Position.y, xmf3Position.z);
 }
 
-void CGameObject::SetLocalPosition(XMFLOAT3& xmf3Position)
-{
-	XMMATRIX mtxTranslation = XMMatrixTranslation(xmf3Position.x, xmf3Position.y, xmf3Position.z);
-	m_xmf4x4ToParentTransform = Matrix4x4::Multiply(m_xmf4x4ToParentTransform, mtxTranslation);
-}
-
 void CGameObject::SetScale(float x, float y, float z)
 {
 	XMMATRIX mtxScale = XMMatrixScaling(x, y, z);
-	m_xmf4x4ToParentTransform = Matrix4x4::Multiply(mtxScale, m_xmf4x4ToParentTransform);
-
+	m_xmf4x4World = Matrix4x4::Multiply(mtxScale, m_xmf4x4World);
 }
 void CGameObject::SetRotation(XMFLOAT4& pxmf4Quaternion)
 {
-	m_xmf4x4ToParentTransform._11 = pxmf4Quaternion.x;
-	m_xmf4x4ToParentTransform._13 = pxmf4Quaternion.y;
-	m_xmf4x4ToParentTransform._31 = pxmf4Quaternion.z;
-	m_xmf4x4ToParentTransform._33 = pxmf4Quaternion.z;
-}
-void CGameObject::SetLocalRotation(XMFLOAT4& pxmf4Quaternion)
-{
-
-}
-void CGameObject::SetLocalScale(float x, float y, float z)
-{
+	m_xmf4x4World._11 = pxmf4Quaternion.x;
+	m_xmf4x4World._13 = pxmf4Quaternion.y;
+	m_xmf4x4World._31 = pxmf4Quaternion.z;
+	m_xmf4x4World._33 = pxmf4Quaternion.z;
 }
 
 XMFLOAT3 CGameObject::GetPosition()
@@ -751,77 +653,24 @@ void CGameObject::MoveForward(float fDistance)
 void CGameObject::Rotate(float fPitch, float fYaw, float fRoll)
 {
 	XMMATRIX mtxRotate = XMMatrixRotationRollPitchYaw(XMConvertToRadians(fPitch), XMConvertToRadians(fYaw), XMConvertToRadians(fRoll));
-	m_xmf4x4ToParentTransform = Matrix4x4::Multiply(mtxRotate, m_xmf4x4ToParentTransform);
+	m_xmf4x4World = Matrix4x4::Multiply(mtxRotate, m_xmf4x4World);
 }
 
 void CGameObject::Rotate(XMFLOAT3 *pxmf3Axis, float fAngle)
 {
 	XMMATRIX mtxRotate = XMMatrixRotationAxis(XMLoadFloat3(pxmf3Axis), XMConvertToRadians(fAngle));
-	m_xmf4x4ToParentTransform = Matrix4x4::Multiply(mtxRotate, m_xmf4x4ToParentTransform);
+	m_xmf4x4World = Matrix4x4::Multiply(mtxRotate, m_xmf4x4World);
 }
 
 void CGameObject::Rotate(XMFLOAT4 *pxmf4Quaternion)
 {
 	XMMATRIX mtxRotate = XMMatrixRotationQuaternion(XMLoadFloat4(pxmf4Quaternion));
-	m_xmf4x4ToParentTransform = Matrix4x4::Multiply(mtxRotate, m_xmf4x4ToParentTransform);
+	m_xmf4x4World = Matrix4x4::Multiply(mtxRotate, m_xmf4x4World);
 }
 
 
-void CGameObject::LoadGeometryFromFile(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList
-	, ID3D12RootSignature *pd3dGraphicsRootSignature, TCHAR *pstrFileName)
-{
-	ifstream fi;
 
-	fi.open(pstrFileName, ostream::binary);
 
-	if (!fi) 
-	{ 
-		exit(1);
-	}
-	m_bRoot = true;
-	LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, fi, 0, 1);
-	LoadAnimation(pd3dDevice, pd3dCommandList, fi);
-	fi.close(); // 파일 닫기
-}
-CGameObject* CGameObject::GetRootObject()
-{
-	CGameObject* pRootObject = this;
-
-	while (1)
-	{
-		if (pRootObject->m_pParent == NULL)
-			break;
-		else
-			pRootObject = pRootObject->m_pParent;
-	}
-
-	return pRootObject;
-}
-void CGameObject::LoadAnimation(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ifstream& InFile)
-{
-	UINT nAnimation = 0;
-
-	CGameObject* pFindObjecct = FindObject();
-
-	if (pFindObjecct)
-	{
-		InFile.read((char*)&nAnimation, sizeof(UINT)); // 애니메이션 수
-		pFindObjecct->m_pAnimationController = new AnimationController(pd3dDevice, pd3dCommandList, nAnimation
-			, pFindObjecct->m_pBindPoses, pFindObjecct->m_nBindPoses , GetRootObject());
-		InFile.read((char*)&pFindObjecct->m_pAnimationController->m_nBone, sizeof(UINT)); // 본의 갯수
-
-		for (int i = 0; i < pFindObjecct->m_pAnimationController->GetAnimationCount(); i++)
-		{
-			InFile.read((char*)&pFindObjecct->m_pAnimationController->m_pAnimation[i].nFrame, sizeof(UINT)); // 프레임 수 
-			InFile.read((char*)&pFindObjecct->m_pAnimationController->m_pAnimation[i].fTime, sizeof(float)); // 애니메이션 시간 (30fps 기준)
- 			pFindObjecct->m_pAnimationController->m_pAnimation[i].pFrame 
-				= new FRAME[(pFindObjecct->m_pAnimationController->m_pAnimation[i].nFrame + 1) * pFindObjecct->m_pAnimationController->m_nBone];
-			InFile.read((char*)pFindObjecct->m_pAnimationController->m_pAnimation[i].pFrame
-				, sizeof(FRAME) * pFindObjecct->m_pAnimationController->m_nBone * 
-				(pFindObjecct->m_pAnimationController->m_pAnimation[i].nFrame + 1)); 
-		}
-	}
-}
 TCHAR* char2tchar(char * asc)
 {
 	TCHAR* ptszUni = NULL;
@@ -831,232 +680,6 @@ TCHAR* char2tchar(char * asc)
 	ptszUni[nLen] = '\0';
 	return ptszUni;
 }
-void CGameObject::LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, 
-	ID3D12RootSignature *pd3dGraphicsRootSignature, ifstream& InFile, UINT nFrame, UINT nSub)
-{
-	int nType = -1;
-	int nSubMesh = 0;
-
-	if(nSub == 1)
-		InFile.read((char*)&nType, sizeof(int)); // 타입 받기
-	else
-	{
-		nType = 0;
-	}
-	XMFLOAT3 *pxmf3ParentsPosition = NULL;
-
-	if (nType == 0)
-	{
-		ResizeMeshes(1);
-
-		XMFLOAT3 *pxmf3Positions = NULL;
-		XMFLOAT2 *pxmf2TextureCoords0 = NULL;
-		XMFLOAT3 *pxmf3Normals = NULL;
-		XMFLOAT3 *pxmf3Tangents = NULL;
-		XMFLOAT3 *pxmf3BoneWeights = NULL;
-		XMINT4 *pxmi4BoneIndices = NULL;
-
-		char* pstrAlbedoTextureName = NULL;
-		char* pstrNormalTextureName = NULL;
-		UINT *pnIndices = NULL;
-
-		int nVertices = 0, nIndices = 0;
-
-		CMesh *pMesh = NULL;
-		CMaterial *pMaterial = NULL;
-
-		int nDrawType = 0;
-		InFile.read((char*)&nSubMesh, sizeof(int)); // 서브매쉬 갯수 받기
-
-		InFile.read((char*)&nDrawType, sizeof(int)); // 그리기 타입 받기
-
-		InFile.read((char*)&nVertices, sizeof(int)); // 정점 갯수 받기
-		pxmf3Positions = new XMFLOAT3[nVertices];
-		pxmf2TextureCoords0 = new XMFLOAT2[nVertices];
-		pxmf3Normals = new XMFLOAT3[nVertices];
-		pxmf3Tangents = new XMFLOAT3[nVertices];
-		pxmf3BoneWeights = new XMFLOAT3[nVertices];
-		pxmi4BoneIndices = new XMINT4[nVertices];
-
-		InFile.read((char*)pxmf3Positions, sizeof(XMFLOAT3) * nVertices); // 정점 받기
-		InFile.read((char*)pxmf2TextureCoords0, sizeof(XMFLOAT2) * nVertices); // uv 받기
-
-		if (nDrawType > 1)
-		{
-			InFile.read((char*)pxmf3Normals, sizeof(XMFLOAT3) * nVertices); // 법선 받기
-			InFile.read((char*)pxmf3Tangents, sizeof(XMFLOAT3) * nVertices); // 탄젠트 받기
-		}
-		InFile.read((char*)pxmf3BoneWeights, sizeof(XMFLOAT3) * nVertices); // 본가중치 받기
-		InFile.read((char*)pxmi4BoneIndices, sizeof(XMINT4) * nVertices); // 본인덱스 받기
-		InFile.read((char*)&m_nBindPoses, sizeof(int)); // 본포즈 길이 받기
-
-		m_pBindPoses = new XMFLOAT4X4[m_nBindPoses];
-
-		InFile.read((char*)m_pBindPoses, sizeof(XMFLOAT4X4) *m_nBindPoses); // 본포즈 받기
-		int Namesize;
-		
-		InFile.read((char*)&Namesize, sizeof(int)); // 디퓨즈맵이름 받기
-		pstrAlbedoTextureName = new char[Namesize];
-		InFile.read(pstrAlbedoTextureName, sizeof(char)*Namesize);
-
-		if (nDrawType > 1)
-		{
-			InFile.read((char*)&Namesize, sizeof(int)); // 노말맵이름 받기
-			pstrNormalTextureName = new char[Namesize];
-			InFile.read(pstrNormalTextureName, sizeof(char)*Namesize);
-		}
-
-		if (nVertices > 0 && nDrawType > 1)
-			pMesh = new CAnimationMesh(pd3dDevice, pd3dCommandList, nVertices, pxmf3Positions, pxmf3Tangents
-				, pxmf3Normals, pxmf2TextureCoords0, pxmf3BoneWeights, pxmi4BoneIndices, nIndices, pnIndices);
-		else if (nVertices > 0)
-			pMesh = new CMeshAnimationTextured(pd3dDevice, pd3dCommandList, nVertices, pxmf3Positions, pxmf2TextureCoords0, pxmf3BoneWeights, pxmi4BoneIndices, nIndices, pnIndices);
-
-		if (pMesh)
-			SetMesh(0, pMesh);
-		else
-			ResizeMeshes(0);
-
-		if (pxmf3Positions)
-			delete[] pxmf3Positions;
-
-		if (pxmf2TextureCoords0)
-			delete[] pxmf2TextureCoords0;
-
-		if (pxmf3Normals)
-			delete[] pxmf3Normals;
-
-		if (pxmf3Tangents)
-			delete[] pxmf3Tangents;
-
-		if (pnIndices)
-			delete[] pnIndices;
-
-		pMaterial = new CMaterial();
-
-		TCHAR pstrPathName[128] = { '\0' };
-		TCHAR* pstrFileName = char2tchar(pstrAlbedoTextureName);
-		_tcscpy_s(pstrPathName, 128, _T("../Assets/"));
-		_tcscat_s(pstrPathName, 128, pstrFileName);
-		_tcscat_s(pstrPathName, 128, _T(".dds"));
-
-		CTexture *pTexture = new CTexture(nDrawType, RESOURCE_TEXTURE2D, 0);
-		pTexture->LoadTextureFromFile(pd3dDevice, pd3dCommandList, pstrPathName, 0);
-
-		if (pstrFileName)
-			delete[] pstrFileName;
-
-		if (nDrawType > 1)
-		{
-			pstrFileName = char2tchar(pstrNormalTextureName);
-			_tcscpy_s(pstrPathName, 128, _T("../Assets/"));
-			_tcscat_s(pstrPathName, 128, pstrFileName);
-			_tcscat_s(pstrPathName, 128, _T(".dds"));
-
-			pTexture->LoadTextureFromFile(pd3dDevice, pd3dCommandList, pstrPathName, 1);
-		}
-
-		if (pstrAlbedoTextureName)
-			delete[] pstrAlbedoTextureName;
-
-		if (pstrNormalTextureName)
-			delete[] pstrNormalTextureName;
-
-		pMaterial->SetTexture(pTexture);
-
-		UINT ncbElementBytes = ((sizeof(CB_GAMEOBJECT_INFO) + 255) & ~255);
-
-		ID3D12Resource *pd3dcbResource = CreateShaderVariables(pd3dDevice, pd3dCommandList);
-		
-		CShader* pShader = NULL;
-
-		if (nDrawType == 1)
-			pShader = new CDefferredTexturedShader();
-		else if (nDrawType == 2)
-			pShader = new CDefferredLightingTexturedShader();
-
-		pShader->CreateShader(pd3dDevice, pd3dGraphicsRootSignature, 4);
-		pShader->CreateCbvAndSrvDescriptorHeaps(pd3dDevice, pd3dCommandList, 1, nDrawType);
-		pShader->CreateConstantBufferViews(pd3dDevice, pd3dCommandList, 1, pd3dcbResource, ncbElementBytes);
-		pShader->CreateShaderResourceViews(pd3dDevice, pd3dCommandList, pTexture, 5, true);
-		SetCbvGPUDescriptorHandle(pShader->GetGPUCbvDescriptorStartHandle());
-
-		pMaterial->SetShader(pShader);
-
-		if (pMaterial)
-			SetMaterial(pMaterial);
-	}
-	if (nType <= 1)
-	{
-		if (nSubMesh <= nSub)
-		{
-			char* pstrFrameName = NULL;
-			UINT nFrameNameSize;
-			InFile.read((char*)&nFrameNameSize, sizeof(UINT));
-
-			pstrFrameName = new char[nFrameNameSize];
-			InFile.read(pstrFrameName, sizeof(char)*nFrameNameSize); // 프레임 이름 사이즈 받기
-
-			TCHAR* pstrFileName = char2tchar(pstrFrameName);// 프레임 이름 받기
-			_tcscat_s(m_strFrameName, 128, pstrFileName);
-
-			InFile.read((char*)&m_iBoneIndex, sizeof(int)); // 본 인덱스 받기
-
-			delete[] pstrFrameName;
-
-			bool bChild = false;
-			InFile.read((char*)&bChild, sizeof(bool));
-
-			if (bChild)
-			{
-				int nChild = 0;
-				InFile.read((char*)&nChild, sizeof(int));
-
-				for (int i = 0; i < nChild; i++)
-				{
-					CGameObject *pChild = new CGameObject(0);
-					SetChild(pChild);
-					pChild->LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, InFile, nFrame + 1, 1);
-				}
-			}
-		}
-		if (nSubMesh > nSub) 
-		{
-			CGameObject *pSibling = new CGameObject(0);
-			SetChild(pSibling);
-			pSibling->LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, InFile, nFrame + 1, nSub + 1);
-
-		}
-	}
-}
-
-void CGameObject::SetChild(CGameObject *pChild)
-{
-	if (m_pChild)
-	{
-		CGameObject* pLinkObject = m_pChild;
-		while (1)
-		{
-			if (pLinkObject->m_pSibling)
-			{
-				pLinkObject = pLinkObject->m_pSibling;
-			}
-			else
-			{
-				pLinkObject->m_pSibling = pChild;
-				break;
-			}
-		}
-	}
-	else
-	{
-		m_pChild = pChild;
-	}
-	if (pChild) 
-		pChild->m_pParent = this;
-}
-
-
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1174,7 +797,7 @@ CSkyBox::~CSkyBox()
 void CSkyBox::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera)
 {
 	XMFLOAT3 xmf3CameraPos = pCamera->GetPosition();
-	SetWorldPosition(xmf3CameraPos.x, xmf3CameraPos.y, xmf3CameraPos.z);
+	SetPosition(xmf3CameraPos.x, xmf3CameraPos.y, xmf3CameraPos.z);
 
 	OnPrepareRender();
 
@@ -1206,12 +829,488 @@ void CSkyBox::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamer
 	}
 }
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-CharaterObject::CharaterObject(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature, UINT nMeshes, TCHAR *pstrFileName) : CGameObject(nMeshes)
+CAnimationObject::CAnimationObject(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList
+	, ID3D12RootSignature *pd3dGraphicsRootSignature, UINT nMeshes, TCHAR *pstrFileName, CMesh* pMesh, AnimationController* pAnimationController) : CGameObject(nMeshes)
 {
-	LoadGeometryFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, pstrFileName);
+	m_xmf4x4ToParentTransform = Matrix4x4::Identity();
 
-	SetScale(100.0f, 100.0f, 100.0f);
+	LoadGeometryFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, pstrFileName, pAnimationController);
+
+	SetScale(50.0f, 50.0f, 50.0f);
 }
-CharaterObject::~CharaterObject()
+CAnimationObject::~CAnimationObject()
 {
+	if (m_pSibling)
+		delete m_pSibling;
+	if (m_pChild)
+		delete m_pChild;
 }
+void CAnimationObject::ReleaseUploadBuffers()
+{
+	if (m_ppMeshes)
+	{
+		for (int i = 0; i < m_nMeshes; i++)
+		{
+			if (m_ppMeshes[i])
+				m_ppMeshes[i]->ReleaseUploadBuffers();
+		}
+	}
+
+	if (m_pMaterial)
+		m_pMaterial->ReleaseUploadBuffers();
+
+	if (m_pSibling)
+		m_pSibling->ReleaseUploadBuffers();
+	if (m_pChild)
+		m_pChild->ReleaseUploadBuffers();
+}
+void CAnimationObject::Render(ID3D12GraphicsCommandList *pd3dCommandList, int iRootParameterIndex, CCamera *pCamera)
+{
+	if (!m_bActive)
+		return;
+
+	OnPrepareRender();
+
+	if (m_pMaterial)
+	{
+		if (m_pMaterial->m_pShader)
+		{
+			m_pMaterial->m_pShader->Render(pd3dCommandList, pCamera);
+			m_pMaterial->m_pShader->UpdateShaderVariables(pd3dCommandList);
+
+			UpdateShaderVariables(pd3dCommandList);
+		}
+		if (m_pMaterial->m_pTexture)
+		{
+			m_pMaterial->m_pTexture->UpdateShaderVariables(pd3dCommandList);
+		}
+	}
+
+	if (m_pAnimationController)
+	{
+		m_pAnimationController->SetObject(this);
+		m_pAnimationController->AdvanceAnimation(pd3dCommandList);
+	}
+
+	if (m_nMeshes > 0)
+	{
+		SetRootParameter(pd3dCommandList, iRootParameterIndex);
+
+		for (int i = 0; i < m_nMeshes; i++)
+		{
+			if (m_ppMeshes[i])
+				m_ppMeshes[i]->Render(pd3dCommandList);
+		}
+	}
+
+	if (m_pSibling)
+		m_pSibling->Render(pd3dCommandList, 2, pCamera);
+	if (m_pChild)
+		m_pChild->Render(pd3dCommandList, 2, pCamera);
+}
+void CAnimationObject::Render(ID3D12GraphicsCommandList *pd3dCommandList, int iRootParameterIndex, CCamera *pCamera, UINT nInstances)
+{
+	OnPrepareRender();
+
+	if (m_pMaterial)
+	{
+		if (m_pMaterial->m_pTexture)
+		{
+			m_pMaterial->m_pTexture->UpdateShaderVariables(pd3dCommandList);
+		}
+	}
+
+	SetRootParameter(pd3dCommandList, iRootParameterIndex);
+
+	if (m_ppMeshes)
+	{
+		for (int i = 0; i < m_nMeshes; i++)
+		{
+			if (m_ppMeshes[i])
+				m_ppMeshes[i]->Render(pd3dCommandList, nInstances);
+		}
+	}
+
+	if (m_pSibling)
+		m_pSibling->Render(pd3dCommandList, 2, pCamera, nInstances);
+	if (m_pChild)
+		m_pChild->Render(pd3dCommandList, 2, pCamera, nInstances);
+}
+TCHAR* CAnimationObject::CharToTCHAR(char * asc)
+{
+	TCHAR* ptszUni = NULL;
+	int nLen = MultiByteToWideChar(CP_ACP, 0, asc, strlen(asc), NULL, NULL);
+	ptszUni = new TCHAR[nLen + 1];
+	MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, asc, strlen(asc), ptszUni, nLen);
+	ptszUni[nLen] = '\0';
+	return ptszUni;
+}
+void CAnimationObject::LoadAnimation(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ifstream& InFile, AnimationController* pAnimationController)
+{
+	UINT nAnimation = 0;
+
+	CAnimationObject* pFindObjecct = FindObject();
+
+	if (pFindObjecct)
+	{
+		InFile.read((char*)&nAnimation, sizeof(UINT)); // 애니메이션 수
+		pAnimationController = new AnimationController(pd3dDevice, pd3dCommandList, nAnimation
+			, pFindObjecct->m_pBindPoses);
+		InFile.read((char*)&pAnimationController->m_nBone, sizeof(UINT)); // 본의 갯수
+
+		pFindObjecct->m_pAnimationFactors->SetBoneObject(pFindObjecct);
+
+		for (int i = 0; i < pAnimationController->GetAnimationCount(); i++)
+		{
+			InFile.read((char*)&pAnimationController->m_pAnimation[i].nFrame, sizeof(UINT)); // 프레임 수 
+			InFile.read((char*)&pAnimationController->m_pAnimation[i].fTime, sizeof(float)); // 애니메이션 시간 (30fps 기준)
+			pAnimationController->m_pAnimation[i].pFrame
+				= new FRAME[(pAnimationController->m_pAnimation[i].nFrame + 1) * pAnimationController->m_nBone];
+			InFile.read((char*)pAnimationController->m_pAnimation[i].pFrame
+				, sizeof(FRAME) * pAnimationController->m_nBone *
+				(pAnimationController->m_pAnimation[i].nFrame + 1));
+		}
+		pFindObjecct->m_pAnimationController = pAnimationController;
+	}
+}
+void CAnimationObject::LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList,
+	ID3D12RootSignature *pd3dGraphicsRootSignature, ifstream& InFile, UINT nFrame, UINT nSub)
+{
+	int nType = -1;
+	int nSubMesh = 0;
+
+	if (nSub == 1)
+		InFile.read((char*)&nType, sizeof(int)); // 타입 받기
+	else
+	{
+		nType = 0;
+	}
+	XMFLOAT3 *pxmf3ParentsPosition = NULL;
+
+	if (nType == 0)
+	{
+		ResizeMeshes(1);
+
+		XMFLOAT3 *pxmf3Positions = NULL;
+		XMFLOAT2 *pxmf2TextureCoords0 = NULL;
+		XMFLOAT3 *pxmf3Normals = NULL;
+		XMFLOAT3 *pxmf3Tangents = NULL;
+		XMFLOAT3 *pxmf3BoneWeights = NULL;
+		XMINT4 *pxmi4BoneIndices = NULL;
+
+		char* pstrAlbedoTextureName = NULL;
+		char* pstrNormalTextureName = NULL;
+		UINT *pnIndices = NULL;
+
+		int nVertices = 0, nIndices = 0;
+
+		CMesh *pMesh = NULL;
+		CMaterial *pMaterial = NULL;
+
+		int nDrawType = 0;
+		InFile.read((char*)&nSubMesh, sizeof(int)); // 서브매쉬 갯수 받기
+
+		InFile.read((char*)&nDrawType, sizeof(int)); // 그리기 타입 받기
+
+		InFile.read((char*)&nVertices, sizeof(int)); // 정점 갯수 받기
+		pxmf3Positions = new XMFLOAT3[nVertices];
+		pxmf2TextureCoords0 = new XMFLOAT2[nVertices];
+		pxmf3Normals = new XMFLOAT3[nVertices];
+		pxmf3Tangents = new XMFLOAT3[nVertices];
+		pxmf3BoneWeights = new XMFLOAT3[nVertices];
+		pxmi4BoneIndices = new XMINT4[nVertices];
+
+		InFile.read((char*)pxmf3Positions, sizeof(XMFLOAT3) * nVertices); // 정점 받기
+		InFile.read((char*)pxmf2TextureCoords0, sizeof(XMFLOAT2) * nVertices); // uv 받기
+
+		if (nDrawType > 1)
+		{
+			InFile.read((char*)pxmf3Normals, sizeof(XMFLOAT3) * nVertices); // 법선 받기
+			InFile.read((char*)pxmf3Tangents, sizeof(XMFLOAT3) * nVertices); // 탄젠트 받기
+		}
+		InFile.read((char*)pxmf3BoneWeights, sizeof(XMFLOAT3) * nVertices); // 본가중치 받기
+		InFile.read((char*)pxmi4BoneIndices, sizeof(XMINT4) * nVertices); // 본인덱스 받기
+
+		int nBindPoses;
+
+		InFile.read((char*)&nBindPoses, sizeof(int)); // 본포즈 길이 받기
+
+		GetRootObject()->m_pAnimationFactors = new AnimationFactors(nBindPoses);
+
+		GetRootObject()->m_pBindPoses = new XMFLOAT4X4[nBindPoses];
+
+		InFile.read((char*)GetRootObject()->m_pBindPoses, sizeof(XMFLOAT4X4) *nBindPoses); // 본포즈 받기
+		int Namesize;
+
+		InFile.read((char*)&Namesize, sizeof(int)); // 디퓨즈맵이름 받기
+		pstrAlbedoTextureName = new char[Namesize];
+		InFile.read(pstrAlbedoTextureName, sizeof(char)*Namesize);
+
+		if (nDrawType > 1)
+		{
+			InFile.read((char*)&Namesize, sizeof(int)); // 노말맵이름 받기
+			pstrNormalTextureName = new char[Namesize];
+			InFile.read(pstrNormalTextureName, sizeof(char)*Namesize);
+		}
+
+		if (nVertices > 0 && nDrawType > 1)
+			pMesh = new CAnimationMesh(pd3dDevice, pd3dCommandList, nVertices, pxmf3Positions, pxmf3Tangents
+				, pxmf3Normals, pxmf2TextureCoords0, pxmf3BoneWeights, pxmi4BoneIndices, nIndices, pnIndices);
+		else if (nVertices > 0)
+			pMesh = new CMeshAnimationTextured(pd3dDevice, pd3dCommandList, nVertices, pxmf3Positions, pxmf2TextureCoords0, pxmf3BoneWeights, pxmi4BoneIndices, nIndices, pnIndices);
+
+		if (pMesh)
+			SetMesh(0, pMesh);
+		else
+			ResizeMeshes(0);
+
+		if (pxmf3Positions)
+			delete[] pxmf3Positions;
+
+		if (pxmf2TextureCoords0)
+			delete[] pxmf2TextureCoords0;
+
+		if (pxmf3Normals)
+			delete[] pxmf3Normals;
+
+		if (pxmf3Tangents)
+			delete[] pxmf3Tangents;
+
+		if (pnIndices)
+			delete[] pnIndices;
+
+		pMaterial = new CMaterial();
+
+		TCHAR pstrPathName[128] = { '\0' };
+		TCHAR* pstrFileName = char2tchar(pstrAlbedoTextureName);
+		_tcscpy_s(pstrPathName, 128, _T("../Assets/"));
+		_tcscat_s(pstrPathName, 128, pstrFileName);
+		_tcscat_s(pstrPathName, 128, _T(".dds"));
+
+		CTexture *pTexture = new CTexture(nDrawType, RESOURCE_TEXTURE2D, 0);
+		pTexture->LoadTextureFromFile(pd3dDevice, pd3dCommandList, pstrPathName, 0);
+
+		if (pstrFileName)
+			delete[] pstrFileName;
+
+		if (nDrawType > 1)
+		{
+			pstrFileName = char2tchar(pstrNormalTextureName);
+			_tcscpy_s(pstrPathName, 128, _T("../Assets/"));
+			_tcscat_s(pstrPathName, 128, pstrFileName);
+			_tcscat_s(pstrPathName, 128, _T(".dds"));
+
+			pTexture->LoadTextureFromFile(pd3dDevice, pd3dCommandList, pstrPathName, 1);
+		}
+
+		if (pstrAlbedoTextureName)
+			delete[] pstrAlbedoTextureName;
+
+		if (pstrNormalTextureName)
+			delete[] pstrNormalTextureName;
+
+		pMaterial->SetTexture(pTexture);
+
+		UINT ncbElementBytes = ((sizeof(CB_GAMEOBJECT_INFO) + 255) & ~255);
+
+		ID3D12Resource *pd3dcbResource = CreateShaderVariables(pd3dDevice, pd3dCommandList);
+
+		CShader* pShader = NULL;
+
+		if (nDrawType == 1)
+			pShader = new CDefferredTexturedShader();
+		else if (nDrawType == 2)
+			pShader = new CDefferredLightingTexturedShader();
+
+		pShader->CreateShader(pd3dDevice, pd3dGraphicsRootSignature, 4);
+		pShader->CreateCbvAndSrvDescriptorHeaps(pd3dDevice, pd3dCommandList, 1, nDrawType);
+		pShader->CreateConstantBufferViews(pd3dDevice, pd3dCommandList, 1, pd3dcbResource, ncbElementBytes);
+		pShader->CreateShaderResourceViews(pd3dDevice, pd3dCommandList, pTexture, 5, true);
+		SetCbvGPUDescriptorHandle(pShader->GetGPUCbvDescriptorStartHandle());
+
+		pMaterial->SetShader(pShader);
+
+		if (pMaterial)
+			SetMaterial(pMaterial);
+	}
+	if (nType <= 1)
+	{
+		if (nSubMesh <= nSub)
+		{
+			char* pstrFrameName = NULL;
+			UINT nFrameNameSize;
+			InFile.read((char*)&nFrameNameSize, sizeof(UINT));
+
+			pstrFrameName = new char[nFrameNameSize];
+			InFile.read(pstrFrameName, sizeof(char)*nFrameNameSize); // 프레임 이름 사이즈 받기
+
+			TCHAR* pstrFileName = char2tchar(pstrFrameName);// 프레임 이름 받기
+			_tcscat_s(m_strFrameName, 128, pstrFileName);
+
+			InFile.read((char*)&m_iBoneIndex, sizeof(int)); // 본 인덱스 받기
+
+			delete[] pstrFrameName;
+
+			bool bChild = false;
+			InFile.read((char*)&bChild, sizeof(bool));
+
+			if (bChild)
+			{
+				int nChild = 0;
+				InFile.read((char*)&nChild, sizeof(int));
+
+				for (int i = 0; i < nChild; i++)
+				{
+					CAnimationObject *pChild = new CAnimationObject(0);
+					SetChild(pChild);
+					pChild->LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, InFile, nFrame + 1, 1);
+				}
+			}
+		}
+		if (nSubMesh > nSub)
+		{
+			CAnimationObject *pSibling = new CAnimationObject(0);
+			SetChild(pSibling);
+			pSibling->LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, InFile, nFrame + 1, nSub + 1);
+
+		}
+	}
+}
+void CAnimationObject::LoadGeometryFromFile(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList
+	, ID3D12RootSignature *pd3dGraphicsRootSignature, TCHAR *pstrFileName, AnimationController* pAnimationController)
+{
+	ifstream fi;
+
+	fi.open(pstrFileName, ostream::binary);
+
+	if (!fi)
+	{
+		exit(1);
+	}
+	m_bRoot = true;
+	LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, fi, 0, 1);
+	LoadAnimation(pd3dDevice, pd3dCommandList, fi, pAnimationController);
+	fi.close(); // 파일 닫기
+}
+CAnimationObject* CAnimationObject::GetRootObject()
+{
+	CAnimationObject* pRootObject = this;
+
+	while (1)
+	{
+		if (pRootObject->m_pParent == NULL)
+			break;
+		else
+			pRootObject = pRootObject->m_pParent;
+	}
+
+	return pRootObject;
+}
+
+void CAnimationObject::UpdateTransform(XMFLOAT4X4 *pxmf4x4Parent)
+{
+	m_xmf4x4World = (pxmf4x4Parent) ? Matrix4x4::Multiply(m_xmf4x4ToParentTransform, *pxmf4x4Parent) : m_xmf4x4ToParentTransform;
+
+	if (m_pSibling)
+		m_pSibling->UpdateTransform(pxmf4x4Parent);
+	if (m_pChild)
+		m_pChild->UpdateTransform(&m_xmf4x4World);
+}
+
+CAnimationObject *CAnimationObject::FindObject()
+{
+	CAnimationObject *pFrameObject = NULL;
+	if (m_bRoot)
+		return(this);
+
+	if (m_pSibling)
+		if (pFrameObject = m_pSibling->FindObject())
+			return(pFrameObject);
+	if (m_pChild)
+		if (pFrameObject = m_pChild->FindObject())
+			return(pFrameObject);
+
+	return(NULL);
+}
+
+void CAnimationObject::SetChild(CAnimationObject *pChild)
+{
+	if (m_pChild)
+	{
+		CAnimationObject* pLinkObject = m_pChild;
+		while (1)
+		{
+			if (pLinkObject->m_pSibling)
+			{
+				pLinkObject = pLinkObject->m_pSibling;
+			}
+			else
+			{
+				pLinkObject->m_pSibling = pChild;
+				break;
+			}
+		}
+	}
+	else
+	{
+		m_pChild = pChild;
+	}
+	if (pChild)
+		pChild->m_pParent = this;
+}
+
+void CAnimationObject::SetPosition(float x, float y, float z)
+{
+	m_xmf4x4ToParentTransform._41 = x;
+	m_xmf4x4ToParentTransform._42 = y;
+	m_xmf4x4ToParentTransform._43 = z;
+}
+
+void CAnimationObject::SetPosition(XMFLOAT3& xmf3Position)
+{
+	SetPosition(xmf3Position.x, xmf3Position.y, xmf3Position.z);
+}
+void CAnimationObject::SetScale(float x, float y, float z)
+{
+	XMMATRIX mtxScale = XMMatrixScaling(x, y, z);
+	m_xmf4x4ToParentTransform = Matrix4x4::Multiply(mtxScale, m_xmf4x4ToParentTransform);
+}
+
+void CAnimationObject::Rotate(float fPitch, float fYaw, float fRoll)
+{
+	XMMATRIX mtxRotate = XMMatrixRotationRollPitchYaw(XMConvertToRadians(fPitch), XMConvertToRadians(fYaw), XMConvertToRadians(fRoll));
+	m_xmf4x4ToParentTransform = Matrix4x4::Multiply(mtxRotate, m_xmf4x4ToParentTransform);
+}
+
+void CAnimationObject::Rotate(XMFLOAT3 *pxmf3Axis, float fAngle)
+{
+	XMMATRIX mtxRotate = XMMatrixRotationAxis(XMLoadFloat3(pxmf3Axis), XMConvertToRadians(fAngle));
+	m_xmf4x4ToParentTransform = Matrix4x4::Multiply(mtxRotate, m_xmf4x4ToParentTransform);
+}
+
+void CAnimationObject::Rotate(XMFLOAT4 *pxmf4Quaternion)
+{
+	XMMATRIX mtxRotate = XMMatrixRotationQuaternion(XMLoadFloat4(pxmf4Quaternion));
+	m_xmf4x4ToParentTransform = Matrix4x4::Multiply(mtxRotate, m_xmf4x4ToParentTransform);
+}
+void CAnimationObject::SetRotation(XMFLOAT4& pxmf4Quaternion)
+{
+	m_xmf4x4ToParentTransform._11 = pxmf4Quaternion.x;
+	m_xmf4x4ToParentTransform._13 = pxmf4Quaternion.y;
+	m_xmf4x4ToParentTransform._31 = pxmf4Quaternion.z;
+	m_xmf4x4ToParentTransform._33 = pxmf4Quaternion.z;
+}
+void CAnimationObject::ChangeAnimation()
+{
+	if (m_pAnimationController)
+	{
+		m_pAnimationController->ChangeAnimation(rand() % 4);
+	}
+	if (m_pSibling)
+		m_pSibling->ChangeAnimation();
+	if (m_pChild)
+		m_pChild->ChangeAnimation();
+}
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

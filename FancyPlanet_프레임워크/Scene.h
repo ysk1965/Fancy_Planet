@@ -2,6 +2,10 @@
 #include "Shader.h"
 #include "Camera.h"
 
+#define MESH_NUM 1
+
+class CMesh;
+
 class CScene
 {
 public:
@@ -90,13 +94,15 @@ public:
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera = NULL);
 	virtual void ReleaseUploadBuffers();
 	virtual void ChangeAnimation();
+	void CopyObject();
 
 	CharacterScene();
 	~CharacterScene();
 private:
 	CGameObject					**m_ppObjects = NULL;
 	int							m_nObjects = 0;
-	AnimationController *m_pAnimationController = NULL;
+	CMesh **m_ppMeshes = NULL;
+	AnimationController **m_ppAnimationController = NULL;
 };
 
 class ObjectScene : public CScene

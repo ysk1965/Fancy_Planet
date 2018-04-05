@@ -598,6 +598,7 @@ void CGameFramework::BuildObjects()
 	pOScene->BuildObjects(m_pd3dDevice, m_ppd3dCommandLists[i]);
 	m_ppScenes[i++] = pOScene;
 
+
 	m_ppScenes[0]->m_pPlayer = m_pPlayer = new CPlayer(m_pd3dDevice, m_ppd3dCommandLists[2], m_ppScenes[0]->GetGraphicsRootSignature());
 	for (int i = 1; i < NUM_SUBSETS; i++)
 	{
