@@ -16,6 +16,8 @@
 #define RESOURCE_TEXTURE_CUBE		0x04
 #define RESOURCE_BUFFER				0x05
 
+#define BONE_TRANSFORM_NUM 31
+
 #define CHANGE_TIME 0.2f
 
 class CShader;
@@ -35,7 +37,8 @@ struct SRVROOTARGUMENTINFO
 
 struct BONE_TRANSFORMS
 {
-	XMFLOAT4X4 m_xmf4x4BoneTransform[96];
+	XMFLOAT4X4	m_xmf4x4World;
+	XMFLOAT4X4 m_xmf4x4BoneTransform[BONE_TRANSFORM_NUM];
 };
 struct FRAME
 {
@@ -66,8 +69,6 @@ private:
 
 	ID3D12Resource					*m_pd3dcbBoneTransforms = NULL;
 
-	BONE_TRANSFORMS								*m_pBoneTransforms = NULL;
-	BONE_TRANSFORMS								  m_BoneTransforms;
 	ID3D12DescriptorHeap			*m_pd3dBoneTransformsDescriptorHeap = NULL;
 
 	D3D12_CPU_DESCRIPTOR_HANDLE		m_d3dBoneTransformsCPUDescriptorStartHandle;
@@ -268,14 +269,16 @@ class CAnimationObject : public CGameObject
 {
 public:
 	CAnimationObject(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature,
-		UINT nMeshes, TCHAR *pstrFileName, CMesh* pMesh, AnimationController* pAnimationController);
-	CAnimationObject(int nMeshes) : CGameObject(nMeshes)
+		UINT nMeshes, TCHAR *pstrFileName, AnimationController* pAnimationController, UINT nAnimationNumber);
+	CAnimationObject(int nMeshes, UINT nAnimationNumber) : CGameObject(nMeshes), m_iAnimationNum(nAnimationNumber)
 	{
+		m_xmf4x4ToRootTransform = Matrix4x4::Identity();
+		m_xmf4x4ToParentTransform = Matrix4x4::Identity();
 	};
 	~CAnimationObject();
 	void ReleaseUploadBuffers();
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, int iRootParameterIndex, CCamera *pCamera = NULL);
-	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, int iRootParameterIndex, CCamera *pCamera, UINT nInstances);
+	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera, UINT nInstances);
 	void LoadAnimation(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ifstream& InFile, AnimationController* pAnimationController);
 	void LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList,
 		ID3D12RootSignature *pd3dGraphicsRootSignature, ifstream& InFile, UINT nFrame, UINT nSub);
@@ -287,6 +290,7 @@ public:
 	TCHAR* CharToTCHAR(char * asc);
 	void SetChild(CAnimationObject *pChild);
 	virtual void ChangeAnimation();
+	
 
 	virtual void SetPosition(float x, float y, float z);
 	virtual void SetPosition(XMFLOAT3& xmf3Position);
@@ -302,16 +306,34 @@ public:
 
 	XMFLOAT4X4						m_xmf4x4ToRootTransform;
 	XMFLOAT4X4						m_xmf4x4ToParentTransform;
-	TCHAR							m_strFrameName[256] = { '\0' };
+	BONE_TRANSFORMS			*m_BoneTransforms;
 
+	TCHAR							m_strFrameName[256] = { '\0' };
 	bool							m_bRoot = false;
 	int								m_iBoneIndex = -1;
+	int								m_iAnimationNum = -1;
+	UINT							m_nDrawType = -1;
 	XMFLOAT4X4* m_pBindPoses = NULL;
 
 	AnimationController				*m_pAnimationController = NULL;
 	AnimationFactors				*m_pAnimationFactors = NULL;
-private:
+
+	CAnimationObject& operator=(const CAnimationObject& other)
+	{
+		if (this == &other)
+			return *this;
+
+		memcpy(m_strFrameName, other.m_strFrameName, sizeof(TCHAR) * 256);
+		m_bRoot = other.m_bRoot;
+		m_iBoneIndex = other.m_iBoneIndex;
+		m_iAnimationNum = other.m_iAnimationNum;
+		if (other.m_pAnimationController)
+			m_pAnimationController = other.m_pAnimationController;
+
+		return *this;
+	}
 };
+
 class AnimationFactors
 {
 public:
@@ -320,6 +342,9 @@ public:
 		m_nBindpos = nBindpos;
 		m_chronoStart = chrono::system_clock::now();
 		m_ppBoneObject = new CAnimationObject*[m_nBindpos];
+		m_iState = 1;
+		m_iNewState = 0;
+		m_iSaveState = 0;
 	}
 	CAnimationObject* GetFindObject(CAnimationObject* pFindObject, UINT nBoneIndex)
 	{
@@ -336,7 +361,7 @@ public:
 	}
 	void SetBoneObject(CAnimationObject* pRoot)
 	{
-		for (int i = 0; i < m_nBindpos; i++)
+		for (int i = 0; i < m_nBindpos; i++) 
 		{
 			m_ppBoneObject[i] = GetFindObject(pRoot, i);
 		}

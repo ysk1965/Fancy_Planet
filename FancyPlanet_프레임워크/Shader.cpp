@@ -939,7 +939,7 @@ void UIShader::CreateGraphicsRootSignature(ID3D12Device *pd3dDevice)
 
 	pd3dDescriptorRanges[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
 	pd3dDescriptorRanges[0].NumDescriptors = 1;
-	pd3dDescriptorRanges[0].BaseShaderRegister = 13; //Texture
+	pd3dDescriptorRanges[0].BaseShaderRegister = 14; //Texture
 	pd3dDescriptorRanges[0].RegisterSpace = 0;
 	pd3dDescriptorRanges[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 

@@ -3,7 +3,6 @@
 #include "Camera.h"
 
 #define MESH_NUM 1
-
 class CMesh;
 
 class CScene
@@ -39,8 +38,6 @@ public:
 protected:
 
 	ID3D12RootSignature			*m_pd3dGraphicsRootSignature = NULL;
-	int							m_nShaders = 0;
-	CShader					**m_ppShaders = NULL;
 	
 	int									m_nDivision = 0;
 };
@@ -94,14 +91,19 @@ public:
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera = NULL);
 	virtual void ReleaseUploadBuffers();
 	virtual void ChangeAnimation();
-	void CopyObject();
+	void CreateShaderVariables(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList);
+	void UpdateShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList);
+	void CopyObject(CAnimationObject* pSample, CAnimationObject** ppObjects, UINT nSize);
 
 	CharacterScene();
 	~CharacterScene();
+
+	ID3D12Resource					*m_pd3dcbGameObjects = NULL;
+	BONE_TRANSFORMS				*m_pcbMappedGameObjects = NULL;
 private:
-	CGameObject					**m_ppObjects = NULL;
+	CAnimationObject **m_ppSampleObjects = NULL;
+	CAnimationObject	 **m_ppSoldierObjects = NULL;
 	int							m_nObjects = 0;
-	CMesh **m_ppMeshes = NULL;
 	AnimationController **m_ppAnimationController = NULL;
 };
 

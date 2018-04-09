@@ -17,10 +17,13 @@ cbuffer cbGameObjectInfo : register(b2)
 	uint		gnMaterial : packoffset(c4);
 };
 
-cbuffer cbSkinned : register(b13)
+struct INSTANCEDGAMEOBJECTINFO
 {
-	float4x4 gmtxBoneTransforms[96];
+	matrix		gmtxWorld;
+	float4x4 gmtxBoneTransforms[31];
 };
+
+
 Texture2D gtxtTerrainBaseTexture : register(t4);
 Texture2D gtxtTerrainDetailTexture : register(t5);
 Texture2D gtxtTerrainNormalMap : register(t6);
@@ -31,6 +34,7 @@ Texture2D gtxtModel_Normal : register(t11);
 Texture2D gtxtModel_Specular : register(t12);
 SamplerState gWrapSamplerState : register(s0);
 SamplerState gClampSamplerState : register(s1);
+StructuredBuffer<INSTANCEDGAMEOBJECTINFO> gAnimationObjectInfos : register(t0);
 #include "Light.hlsl"
 
 struct VS_TERRAIN_INPUT
@@ -288,7 +292,7 @@ VS_TEXTURED_OUTPUT VSTextured(VS_TEXTURED_INPUT input)
 	return(output);
 }
 
-VS_TEXTURED_OUTPUT VSTexturedAnimation(VS_ANIMATION_INPUT input)
+VS_TEXTURED_OUTPUT VSTexturedAnimation(VS_ANIMATION_INPUT input, uint nInstanceID : SV_InstanceID)
 {
 	VS_TEXTURED_OUTPUT output;
 
@@ -299,15 +303,16 @@ VS_TEXTURED_OUTPUT VSTexturedAnimation(VS_ANIMATION_INPUT input)
 	fWeight[3] = 1.0f - fWeight[0] - fWeight[1] - fWeight[2];
 
 	float3 position = float3(0.0f, 0.0f, 0.0f);
+	float4x4 qwe = float4x4(1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f);
 
 	for (int i = 0; i < 4; i++)
 	{
-		position += fWeight[i] * mul(float4(input.position, 1.0f), gmtxBoneTransforms[input.boneIndices[i]]).xyz;
+		position += fWeight[i] * mul(float4(input.position, 1.0f), gAnimationObjectInfos[nInstanceID].gmtxBoneTransforms[input.boneIndices[i]]).xyz;
 	}
 
 	output.uv = input.uv;
-	output.positionW = mul(float4(position, 1.0f), gmtxWorld).xyz;
-	matrix mtxWorldViewProjection = mul(gmtxWorld, gmtxView);
+	output.positionW = mul(float4(position, 1.0f), gAnimationObjectInfos[nInstanceID].gmtxWorld).xyz;
+	matrix mtxWorldViewProjection = mul(gAnimationObjectInfos[nInstanceID].gmtxWorld, gmtxView);
 	mtxWorldViewProjection = mul(mtxWorldViewProjection, gmtxProjection);
 	output.position = mul(float4(position, 1.0f), mtxWorldViewProjection);
 
@@ -332,7 +337,7 @@ PS_TEXTURED_DEFFERREDLIGHTING_OUTPUT PSTextured(VS_TEXTURED_OUTPUT input) : SV_T
 }
 
 Texture2D<float4> gtxtSkyBox : register(t9);
-Texture2D<float4> gtxUI : register(t13);
+Texture2D<float4> gtxUI : register(t14);
 static float fSize = -0.5f;
 
 struct VS_UI_OUTPUT
@@ -431,7 +436,7 @@ struct A_VS_INPUT
 	uint4 boneIndices : BONEINDICES;
 };
 
-A_VS_OUTPUT ANIMATION_VS(A_VS_INPUT input)
+A_VS_OUTPUT ANIMATION_VS(A_VS_INPUT input, uint nInstanceID : SV_InstanceID)
 {
 	A_VS_OUTPUT output;
 
@@ -447,16 +452,16 @@ A_VS_OUTPUT ANIMATION_VS(A_VS_INPUT input)
 
 	for (int i = 0; i < 4; i++)
 	{
-		position += fWeight[i] * mul(float4(input.position, 1.0f), gmtxBoneTransforms[input.boneIndices[i]]).xyz;
-		normal += fWeight[i] * mul(input.normal, (float3x3)gmtxBoneTransforms[input.boneIndices[i]]);
-		tangent += fWeight[i] * mul(input.tangent.xyz, (float3x3)gmtxBoneTransforms[input.boneIndices[i]]);
+		position += fWeight[i] * mul(float4(input.position, 1.0f), gAnimationObjectInfos[nInstanceID].gmtxBoneTransforms[input.boneIndices[i]]).xyz;
+		normal += fWeight[i] * mul(input.normal, (float3x3)gAnimationObjectInfos[nInstanceID].gmtxBoneTransforms[input.boneIndices[i]]);
+		tangent += fWeight[i] * mul(input.tangent.xyz, (float3x3)gAnimationObjectInfos[nInstanceID].gmtxBoneTransforms[input.boneIndices[i]]);
 	}
 
 	output.uv = input.uv;
-	output.positionW = mul(float4(position, 1.0f), gmtxWorld).xyz;
-	output.normalW = mul(normal, (float3x3)gmtxWorld);
-	output.tangentW = mul(tangent, (float3x3)gmtxWorld);
-	matrix mtxWorldViewProjection = mul(gmtxWorld, gmtxView);
+	output.positionW = mul(float4(position, 1.0f), gAnimationObjectInfos[nInstanceID].gmtxWorld).xyz;
+	output.normalW = mul(normal, (float3x3)gAnimationObjectInfos[nInstanceID].gmtxWorld);
+	output.tangentW = mul(tangent, (float3x3)gAnimationObjectInfos[nInstanceID].gmtxWorld);
+	matrix mtxWorldViewProjection = mul(gAnimationObjectInfos[nInstanceID].gmtxWorld, gmtxView);
 	mtxWorldViewProjection = mul(mtxWorldViewProjection, gmtxProjection);
 	output.position = mul(float4(position, 1.0f), mtxWorldViewProjection);
 
