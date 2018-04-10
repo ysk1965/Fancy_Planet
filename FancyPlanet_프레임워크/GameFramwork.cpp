@@ -599,10 +599,10 @@ void CGameFramework::BuildObjects()
 	m_ppScenes[i++] = pOScene;
 
 
-	m_ppScenes[0]->m_pPlayer = m_pPlayer = new CPlayer(m_pd3dDevice, m_ppd3dCommandLists[2], m_ppScenes[0]->GetGraphicsRootSignature());
+	m_ppScenes[TERRAIN]->m_pPlayer = m_pPlayer = new CPlayer(m_pd3dDevice, m_ppd3dCommandLists[2], m_ppScenes[0]->GetGraphicsRootSignature(), m_ppScenes[TERRAIN]->GetTerrain(), 0);
 	for (int i = 1; i < NUM_SUBSETS; i++)
 	{
-		m_ppScenes[i]->m_pPlayer = m_ppScenes[0]->m_pPlayer;
+		m_ppScenes[i]->m_pPlayer = m_ppScenes[TERRAIN]->m_pPlayer;
 	}
 	m_pCamera = m_pPlayer->GetCamera();
 
@@ -711,7 +711,8 @@ void CGameFramework::ProcessInput()
 				else
 					m_pPlayer->Rotate(cyDelta, cxDelta, 0.0f);
 			}
-			if (dwDirection) m_pPlayer->Move(dwDirection, 100.0f * m_GameTimer.GetTimeElapsed(), true);
+			if (dwDirection) 
+				m_pPlayer->Move(dwDirection, 100.0f * m_GameTimer.GetTimeElapsed(), true);
 		}
 	}
 	m_pPlayer->Update(m_GameTimer.GetTimeElapsed());

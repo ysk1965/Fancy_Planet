@@ -303,7 +303,6 @@ VS_TEXTURED_OUTPUT VSTexturedAnimation(VS_ANIMATION_INPUT input, uint nInstanceI
 	fWeight[3] = 1.0f - fWeight[0] - fWeight[1] - fWeight[2];
 
 	float3 position = float3(0.0f, 0.0f, 0.0f);
-	float4x4 qwe = float4x4(1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f);
 
 	for (int i = 0; i < 4; i++)
 	{

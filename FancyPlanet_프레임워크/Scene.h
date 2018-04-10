@@ -33,7 +33,7 @@ public:
 	virtual void ReleaseUploadBuffers();
 	virtual void ChangeAnimation() = 0;
 	void FrustumCulling(CCamera *pCamera);
-
+	virtual CHeightMapTerrain * GetTerrain() { return NULL; };
 	CPlayer					*m_pPlayer; 
 protected:
 
@@ -56,6 +56,11 @@ public:
 	virtual void ChangeAnimation() {}
 	TerrainAndSkyBoxScene();
 	~TerrainAndSkyBoxScene();
+	virtual CHeightMapTerrain * GetTerrain() 
+	{
+		return m_pTerrain;
+	};
+
 private:
 	CHeightMapTerrain			*m_pTerrain = NULL;
 	CSkyBox						*m_pSkyBox = NULL;

@@ -379,7 +379,7 @@ void CharacterScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsComman
 {
 	m_pd3dGraphicsRootSignature = CreateGraphicsRootSignature(pd3dDevice);
 
-	m_nObjects = 5;
+	m_nObjects = 2;
 	
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
@@ -394,7 +394,7 @@ void CharacterScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsComman
 	{
  		m_ppSoldierObjects[i]->m_pAnimationFactors->SetBoneObject(m_ppSoldierObjects[i]);
 		m_ppSoldierObjects[i]->SetPosition(rand()%3000, rand()%100 + 300 , rand() % 3000);
-		m_ppSoldierObjects[i]->SetScale(25.0f, 25.0f, 25.0f);
+		m_ppSoldierObjects[i]->SetScale(55.0f, 55.0f, 55.0f);
 	}
 }
 void CharacterScene::CopyObject(CAnimationObject* pSample, CAnimationObject** ppObjects, UINT nSize)
@@ -549,10 +549,20 @@ void CharacterScene::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera 
 
 	FrustumCulling(pCamera);
 
+	m_pPlayer->OnPrepareRender();
+
 	for (int i = 0; i < m_nObjects; i++)
 	{
 		m_ppSoldierObjects[i]->m_pAnimationController->SetObject(m_ppSoldierObjects[i]);
 		m_ppSoldierObjects[i]->m_pAnimationController->AdvanceAnimation(pd3dCommandList);
+		if (i == m_nObjects - 1)
+		{
+			m_ppSoldierObjects[m_nObjects - 1]->m_xmf4x4ToParentTransform = m_pPlayer->m_xmf4x4World;
+			XMFLOAT4X4 qwe = Matrix4x4::Identity();
+			qwe._11 = 5, qwe._22 = 5, qwe._33 = 5;
+			m_ppSoldierObjects[m_nObjects - 1]->m_xmf4x4ToParentTransform = Matrix4x4::Multiply(qwe,m_ppSoldierObjects[m_nObjects - 1]->m_xmf4x4ToParentTransform);
+		}
+		
 		m_ppSoldierObjects[i]->UpdateTransform(NULL);
 	}
 	UpdateShaderVariables(pd3dCommandList);

@@ -83,7 +83,6 @@ public:
 
 	void Update(float fTimeElapsed);
 
-	virtual void OnPlayerUpdateCallback(float fTimeElapsed) { }
 	void SetPlayerUpdatedContext(LPVOID pContext) { m_pPlayerUpdatedContext = pContext; }
 
 	virtual void OnCameraUpdateCallback(float fTimeElapsed) { }
@@ -101,7 +100,7 @@ public:
 	virtual void OnPrepareRender();
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera = NULL);
 	virtual void Animate(float fTimeElapsed);
-
+	void OnPlayerUpdateCallback(float fTimeElapsed);
 protected:
 	ID3D12Resource					*m_pd3dcbPlayer = NULL;
 	CB_PLAYER_INFO					*m_pcbMappedPlayer = NULL;

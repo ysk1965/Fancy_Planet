@@ -18,7 +18,6 @@ void AnimationController::SetObject(CAnimationObject* pObject)
 	m_pRootObject = pObject;
 	m_ppBoneObject = pObject->m_pAnimationFactors->m_ppBoneObject;
 }
-
 AnimationController::~AnimationController()
 {
 	if (m_pd3dcbBoneTransforms)
