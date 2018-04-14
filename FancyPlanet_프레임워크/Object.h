@@ -3,6 +3,15 @@
 #include "Camera.h"
 #include <chrono>
 
+enum {
+	NOT_ALL = 0, // 중간에 애니메이션 가능 (구현)
+	ALL = 1, // 애니메이션이 끝나야 다른 얘니메이션이 가능 (구현)
+	MODIFIABLE = 2, // 애니메이션 시간이 변경될수 있음
+	NOT_CYCLE = 3, // 한번만 재생되고 마지막 모습에서 정지
+	CAN_BACK_PLAY = 4, // 뒤로도 재생이 필요한 애니메이션(구현)
+	CYCLE_NEED_TIME = 5 // 싸이클이 필요하지만 처음과 끝이 같지 않는 애니메이션 
+};
+ 
 #define DIR_FORWARD					0x01
 #define DIR_BACKWARD				0x02
 #define DIR_LEFT					0x04
@@ -19,6 +28,8 @@
 #define BONE_TRANSFORM_NUM 31
 
 #define CHANGE_TIME 0.2f
+
+#define CHANG_INDEX -500
 
 class CShader;
 class CAnimationObject;
@@ -49,6 +60,7 @@ struct ANIMATION
 {
 	float fTime;  // 애니메이션 시간
 	UINT nFrame; // 전체 프레임 수
+	UINT nType;
 	FRAME* pFrame; // [Frame * BoneIndex]
 };
 
@@ -242,7 +254,7 @@ public:
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, int iRootParameterIndex, CCamera *pCamera, UINT nInstances);
 	virtual void BuildMaterials(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList) { }
 	virtual void ReleaseUploadBuffers();
-	virtual void ChangeAnimation() {};
+	virtual void ChangeAnimation(int newState) {};
 	virtual void UpdateTransform(XMFLOAT4X4 *pxmf4x4Parent = NULL){};
 
 	XMFLOAT3 GetPosition();
@@ -269,8 +281,8 @@ class CAnimationObject : public CGameObject
 {
 public:
 	CAnimationObject(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature,
-		UINT nMeshes, TCHAR *pstrFileName, AnimationController* pAnimationController, UINT nAnimationNumber);
-	CAnimationObject(int nMeshes, UINT nAnimationNumber) : CGameObject(nMeshes), m_iAnimationNum(nAnimationNumber)
+		UINT nMeshes, TCHAR *pstrFileName, AnimationController* pAnimationController);
+	CAnimationObject(int nMeshes) : CGameObject(nMeshes)
 	{
 		m_xmf4x4ToRootTransform = Matrix4x4::Identity();
 		m_xmf4x4ToParentTransform = Matrix4x4::Identity();
@@ -289,7 +301,7 @@ public:
 	CAnimationObject *FindObject();
 	TCHAR* CharToTCHAR(char * asc);
 	void SetChild(CAnimationObject *pChild);
-	virtual void ChangeAnimation();
+	virtual void ChangeAnimation(int newState);
 	
 
 	virtual void SetPosition(float x, float y, float z);
@@ -311,7 +323,6 @@ public:
 	TCHAR							m_strFrameName[256] = { '\0' };
 	bool							m_bRoot = false;
 	int								m_iBoneIndex = -1;
-	int								m_iAnimationNum = -1;
 	UINT							m_nDrawType = -1;
 	XMFLOAT4X4* m_pBindPoses = NULL;
 
@@ -326,7 +337,6 @@ public:
 		memcpy(m_strFrameName, other.m_strFrameName, sizeof(TCHAR) * 256);
 		m_bRoot = other.m_bRoot;
 		m_iBoneIndex = other.m_iBoneIndex;
-		m_iAnimationNum = other.m_iAnimationNum;
 		if (other.m_pAnimationController)
 			m_pAnimationController = other.m_pAnimationController;
 
@@ -370,7 +380,7 @@ public:
 	std::chrono::milliseconds ms;
 
 	CAnimationObject **m_ppBoneObject = NULL;
-	int m_iState = 1;
+	int m_iState = 0;
 	int m_iNewState = 0;
 	int m_iSaveState = 0;
 

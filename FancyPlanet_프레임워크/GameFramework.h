@@ -130,5 +130,21 @@ private:
 	HANDLE m_threadHandles[NUM_SUBSETS];
 
 	static CGameFramework* m_pGFforMultiThreads;
+
+	//Physx SDK Member Variables =========================
+	PxPhysics*						m_pPxPhysicsSDK;
+	PxScene*						m_pPxScene;
+	PxMaterial*						m_pPxMaterial;
+	PxControllerManager*			m_pPxControllerManager;
+	PxFoundation*					m_pPxFoundation;
+	PxDefaultErrorCallback			m_PxDefaultErrorCallback;
+	PxDefaultAllocator				m_PxDefaultAllocatorCallback;
+	PxVisualDebuggerConnection*     m_pPVDConnection;
+	PxCooking*						m_pCooking;
+	//====================================================
+public:
+	/////////////// Physx SDK Member Function ///////////////
+	void InitializePhysxEngine();
+	void ReleasePhysxEngine();
 };
 

@@ -106,6 +106,8 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 	CreateCommandQueueAndList();
 	CreateRtvAndDsvDescriptorHeaps();
 	CreateSwapChain();
+	//Physx SDK Engine Init=========================
+	InitializePhysxEngine();
 
 	BuildObjects();
 
@@ -562,6 +564,10 @@ void CGameFramework::OnDestroy()
 		m_pd3dDevice->Release();
 	if (m_pdxgiFactory) 
 		m_pdxgiFactory->Release();
+
+	//Physx SDK Release=======================
+	ReleasePhysxEngine();
+	//========================================
 }
 
 void CGameFramework::BuildObjects()
@@ -586,9 +592,9 @@ void CGameFramework::BuildObjects()
 	pTScene->BuildObjects(m_pd3dDevice, m_ppd3dCommandLists[i]);
 	m_ppScenes[i++] = pTScene;
 	
-	EndObjectScene *pEScene = new EndObjectScene();
-	pEScene->BuildObjects(m_pd3dDevice, m_ppd3dCommandLists[i]);
-	m_ppScenes[i++] = pEScene;
+	PhysXScene *pPScene = new PhysXScene(m_pPxPhysicsSDK, m_pPxScene, m_pPxControllerManager, m_pCooking);
+	pPScene->BuildObjects(m_pd3dDevice, m_ppd3dCommandLists[i]);
+	m_ppScenes[i++] = pPScene;
 	
 	CharacterScene *pCScene = new CharacterScene();
 	pCScene->BuildObjects(m_pd3dDevice, m_ppd3dCommandLists[i]);
@@ -598,11 +604,13 @@ void CGameFramework::BuildObjects()
 	pOScene->BuildObjects(m_pd3dDevice, m_ppd3dCommandLists[i]);
 	m_ppScenes[i++] = pOScene;
 
-
 	m_ppScenes[TERRAIN]->m_pPlayer = m_pPlayer = new CPlayer(m_pd3dDevice, m_ppd3dCommandLists[2], m_ppScenes[0]->GetGraphicsRootSignature(), m_ppScenes[TERRAIN]->GetTerrain(), 0);
+	((CPlayer*)m_pPlayer)->BuildObject(m_pPxPhysicsSDK, m_pPxScene, m_pPxMaterial, m_pPxControllerManager); // 이 부분이 문제...!
+	m_pPlayer->ChangeCamera(THIRD_PERSON_CAMERA, 0.0f);
+	//m_ppScenes[0]->m_pPlayer = m_pPlayer = new CPlayer(m_pd3dDevice, m_ppd3dCommandLists[2], m_ppScenes[0]->GetGraphicsRootSignature());
 	for (int i = 1; i < NUM_SUBSETS; i++)
 	{
-		m_ppScenes[i]->m_pPlayer = m_ppScenes[TERRAIN]->m_pPlayer;
+		m_ppScenes[i]->m_pPlayer = m_ppScenes[0]->m_pPlayer;
 	}
 	m_pCamera = m_pPlayer->GetCamera();
 
@@ -661,35 +669,60 @@ void CGameFramework::ReleaseObjects()
 
 void CGameFramework::ProcessInput()
 {
+
 	static UCHAR pKeysBuffer[256];
 	bool bProcessedByScene = false;
-	static int qwe = 0;
+	bool IsInput = false;
 
-	qwe++;
-	if (GetKeyboardState(pKeysBuffer) && m_ppScenes) 
-		bProcessedByScene = m_ppScenes[0]->ProcessInput(pKeysBuffer);
+	if (GetKeyboardState(pKeysBuffer) && m_ppScenes[CHARACTER])
+		bProcessedByScene = m_ppScenes[CHARACTER]->ProcessInput(pKeysBuffer);
+
+
 	if (!bProcessedByScene)
 	{
 		DWORD dwDirection = 0;
 		if (pKeysBuffer[87] & 0xF0)
+		{
 			dwDirection |= DIR_FORWARD;
+			m_ppScenes[CHARACTER]->ChangeAnimation(1);
+			IsInput = true;
+		}
 		if (pKeysBuffer[83] & 0xF0)
+		{
 			dwDirection |= DIR_BACKWARD;
+			m_ppScenes[CHARACTER]->ChangeAnimation(-1);
+			IsInput = true;
+		}
 		if (pKeysBuffer[65] & 0xF0)
-			dwDirection |= DIR_LEFT;
+		{
+			//dwDirection |= DIR_LEFT;
+			m_pPlayer->Rotate(0.0f, -0.6f, 0.0f);
+			//m_ppScenes[CHARACTER]->ChangeAnimation(1);
+			//IsInput = true;
+		}
 		if (pKeysBuffer[68] & 0xF0)
-			dwDirection |= DIR_RIGHT;
-		if (pKeysBuffer[VK_PRIOR] & 0xF0) 
+		{
+			//dwDirection |= DIR_RIGHT;
+			m_pPlayer->Rotate(0.0f, 0.6f, 0.0f);
+			//m_ppScenes[CHARACTER]->ChangeAnimation(1);
+			//IsInput = true;
+		}
+		if (pKeysBuffer[VK_PRIOR] & 0xF0)
+		{
 			dwDirection |= DIR_UP;
-		if (pKeysBuffer[VK_NEXT] & 0xF0) 
+			//m_ppScenes[CHARACTER]->ChangeAnimation(1);
+			IsInput = true;
+		}
+		if (pKeysBuffer[VK_NEXT] & 0xF0)
+		{
 			dwDirection |= DIR_DOWN;
+			//m_ppScenes[CHARACTER]->ChangeAnimation(1);
+			IsInput = true;
+		}
 		if (pKeysBuffer[VK_SPACE] & 0xF0)
 		{
-			if (qwe > 100)
-			{
-				m_ppScenes[CHARACTER]->ChangeAnimation();
-				qwe = 0;
-			}
+			m_ppScenes[CHARACTER]->ChangeAnimation(2);
+			IsInput = true;
 		}
 		float cxDelta = 0.0f, cyDelta = 0.0f;
 		POINT ptCursorPos;
@@ -711,10 +744,14 @@ void CGameFramework::ProcessInput()
 				else
 					m_pPlayer->Rotate(cyDelta, cxDelta, 0.0f);
 			}
-			if (dwDirection) 
-				m_pPlayer->Move(dwDirection, 100.0f * m_GameTimer.GetTimeElapsed(), true);
+			if (dwDirection)
+				m_pPlayer->Move(dwDirection, 45.0f * m_GameTimer.GetTimeElapsed(), true);
 		}
 	}
+
+	if (!IsInput)
+		m_ppScenes[CHARACTER]->ChangeAnimation(0);
+
 	m_pPlayer->Update(m_GameTimer.GetTimeElapsed());
 }
 
@@ -802,6 +839,13 @@ void CGameFramework::PrepareFrame()
 
 void CGameFramework::FrameAdvance()
 {
+	// PhysX Update
+	if (m_pPxScene)
+	{
+		m_pPxScene->simulate(1 / 10.f);
+		m_pPxScene->fetchResults(true);
+	}
+
 	m_GameTimer.Tick(0.0f);
 	ProcessInput();
 	AnimateObjects();
@@ -880,3 +924,70 @@ void CGameFramework::FrameAdvance()
 	::SetWindowText(m_hWnd, m_pszFrameRate);
 }
 
+void CGameFramework::InitializePhysxEngine()
+{
+	m_pPxFoundation = PxCreateFoundation(PX_PHYSICS_VERSION, m_PxDefaultAllocatorCallback, m_PxDefaultErrorCallback);
+	// 파운데이션 클래스의 인스턴스를 작성
+
+	PxTolerancesScale PxScale = PxTolerancesScale();
+	// 시뮬레이션이 실행되는 스케일을 정의하는 클래스
+	// 시뮬레이션 스케일을 변경하려면 장면의 기본 중력 값을 변경하려는 것이됨, 안정적인 시뮬레이션에서는 bounceThreshold를 변경해야할 수도 있음.
+
+	if (FAILED(m_pPxPhysicsSDK == NULL))
+	{
+		MSG_BOX(L"PhysicsSDK Initialize Failed");
+		// 실패메세지 필요하면 넣기
+	}
+
+	m_pPxPhysicsSDK = PxCreatePhysics(PX_PHYSICS_VERSION, *m_pPxFoundation, PxScale, false);
+	// PhysX SDK의 인스턴스 생성
+
+
+	//Cooking Init
+	PxCookingParams params(PxScale); // 메쉬 Cooking에 영향을 미치는 매개 변수 설명
+	params.meshWeldTolerance = 0.001f; //메쉬 용접 공차
+	params.meshPreprocessParams = PxMeshPreprocessingFlags(PxMeshPreprocessingFlag::eWELD_VERTICES |
+		PxMeshPreprocessingFlag::eREMOVE_UNREFERENCED_VERTICES | PxMeshPreprocessingFlag::eREMOVE_DUPLICATED_TRIANGLES);
+	// 메쉬 전처리 매개 변수, 옵션 제어하는데 사용
+	m_pCooking = PxCreateCooking(PX_PHYSICS_VERSION, *m_pPxFoundation, params);
+	// Cooking 인터페이스의 인스턴스를 생성
+
+	PxInitExtensions(*m_pPxPhysicsSDK); // PhysXExtensions 라이브러리 초기화
+	PxSceneDesc sceneDesc(m_pPxPhysicsSDK->getTolerancesScale()); // Scene의 설명자 클래스
+	sceneDesc.gravity = PxVec3(0.0f, -9.81f, 0.0f); // 중력 값
+
+	if (!sceneDesc.cpuDispatcher)
+	{
+		PxDefaultCpuDispatcher* pCpuDispatcher = PxDefaultCpuDispatcherCreate(1);
+		// CPU Task 디스패쳐의 기본 구현 (기본 디스패쳐 생성 그리고 초기화)
+		sceneDesc.cpuDispatcher = pCpuDispatcher;
+	}
+
+	if (!sceneDesc.filterShader)
+		sceneDesc.filterShader = PxDefaultSimulationFilterShader;
+	// 간단한 필터 셰이더 구현
+
+	m_pPxScene = m_pPxPhysicsSDK->createScene(sceneDesc); // 씬 생성
+
+	m_pPxControllerManager = PxCreateControllerManager(*m_pPxScene); // 컨트롤러 생성
+
+																	 // Physx Visual Debugger
+	if (NULL == m_pPxPhysicsSDK->getPvdConnectionManager())
+	{
+		return;
+	}
+	PxVisualDebuggerConnectionFlags connectionFlags = PxVisualDebuggerExt::getAllConnectionFlags();
+	m_pPxPhysicsSDK->getVisualDebugger()->setVisualDebuggerFlag(PxVisualDebuggerFlag::eTRANSMIT_SCENEQUERIES, true);
+	m_pPVDConnection = PxVisualDebuggerExt::createConnection(m_pPxPhysicsSDK->getPvdConnectionManager(), "127.0.0.1", 5425, 1000, connectionFlags);
+	// PVD 셋팅
+}
+
+void CGameFramework::ReleasePhysxEngine()
+{
+	if (m_pPVDConnection) m_pPVDConnection->release();
+	if (m_pPxControllerManager) m_pPxControllerManager->release();
+	if (m_pPxScene) m_pPxScene->release();
+	if (m_pPxFoundation) m_pPxFoundation->release();
+	if (m_pPxPhysicsSDK) m_pPxPhysicsSDK->release();
+	if (m_pCooking) m_pCooking->release();
+}

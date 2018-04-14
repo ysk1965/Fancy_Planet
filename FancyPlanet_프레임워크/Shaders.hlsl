@@ -90,9 +90,7 @@ PS_TEXTURED_DEFFERREDLIGHTING_OUTPUT PSTerrain(VS_TERRAIN_OUTPUT input) : SV_TAR
 
 	float4 cDetailTexColor = gtxtTerrainDetailTexture.Sample(gWrapSamplerState, input.uv1);
 
-	float4 cColor = saturate((cBaseTexColor * 0.5f) + (cDetailTexColor * 0.5f));
-
-	output.diffuse = cColor;
+	float4 cColor = saturate((cBaseTexColor * 0.1f) + (cDetailTexColor * 0.9f));
 
 	float3 N = normalize(input.normalW);
 	float3 T = normalize(input.tangentW - dot(input.tangentW, N) * N);
@@ -103,6 +101,9 @@ PS_TEXTURED_DEFFERREDLIGHTING_OUTPUT PSTerrain(VS_TERRAIN_OUTPUT input) : SV_TAR
 	// -1 와 1사이 값으로 변환한다.
 	normal = 2.0f * normal - 1.0f;
 	float3 normalW = mul(normal, TBN);
+
+	output.diffuse = cColor;
+
 	output.normal = float4(normalW, 1.0f);
 
 	output.depth = float4(input.positionW, 1.0f);
@@ -303,6 +304,7 @@ VS_TEXTURED_OUTPUT VSTexturedAnimation(VS_ANIMATION_INPUT input, uint nInstanceI
 	fWeight[3] = 1.0f - fWeight[0] - fWeight[1] - fWeight[2];
 
 	float3 position = float3(0.0f, 0.0f, 0.0f);
+	float4x4 qwe = float4x4(1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f);
 
 	for (int i = 0; i < 4; i++)
 	{
@@ -411,7 +413,7 @@ float4 UIPS(VS_UI_OUTPUT input) : SV_TARGET
 		input.position = float4(0.0f, 0.0f, 0.0f, 1.0f);
 	}
 
-	float3 color = gtxUI.Sample(gWrapSamplerState, input.position.xy).rgb;
+	float3 color = gtxUI.Load(input.position.xyz).rgb;
 
 	return float4(color, 1.0f);
 }

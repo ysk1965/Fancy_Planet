@@ -5,6 +5,7 @@
 #include <fstream>
 #include <stack>
 #include <sstream>
+#include <float.h> 
 
 using namespace std;
 
@@ -32,14 +33,18 @@ AnimationController::~AnimationController()
 }
 void AnimationController::ChangeAnimation(int iNewState)
 {
-	if (iNewState >= 0)
+	if (iNewState != CHANG_INDEX)
 	{
 		m_pRootObject->m_pAnimationFactors->m_fSaveLastFrame = m_pRootObject->m_pAnimationFactors->m_fCurrentFrame;
 		m_pRootObject->m_pAnimationFactors->m_iNewState = iNewState;
-		m_pRootObject->m_pAnimationFactors->m_iSaveState = m_pRootObject->m_pAnimationFactors->m_iState;
-		m_pRootObject->m_pAnimationFactors->m_iState = -1;
+		if(m_pRootObject->m_pAnimationFactors->m_iState > 0)
+			m_pRootObject->m_pAnimationFactors->m_iSaveState = m_pRootObject->m_pAnimationFactors->m_iState;
+		else
+			m_pRootObject->m_pAnimationFactors->m_iSaveState = -m_pRootObject->m_pAnimationFactors->m_iState;
+
+		m_pRootObject->m_pAnimationFactors->m_iState = CHANG_INDEX;
 	}
-	else
+	else if(iNewState == CHANG_INDEX)
 	{
 		m_pRootObject->m_pAnimationFactors->m_iState = m_pRootObject->m_pAnimationFactors->m_iNewState;
 	}
@@ -49,87 +54,179 @@ void AnimationController::ChangeAnimation(int iNewState)
 }
 void AnimationController::GetCurrentFrame()
 {
-	m_pRootObject->m_pAnimationFactors->ms = std::chrono::duration_cast<std::chrono::milliseconds>(chrono::system_clock::now() - m_pRootObject->m_pAnimationFactors->m_chronoStart);
-	float fCurrentTime = m_pRootObject->m_pAnimationFactors->ms.count() /1000.0f;
-	float fQuotient = fCurrentTime / m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].fTime;
-	
-	m_pRootObject->m_pAnimationFactors->m_fCurrentFrame = (fCurrentTime / m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].fTime - (UINT)fQuotient) * m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].nFrame;
+	if (m_pRootObject->m_pAnimationFactors->m_iState != CHANG_INDEX && m_pRootObject->m_pAnimationFactors->m_iState < 0)
+	{
+		m_pRootObject->m_pAnimationFactors->ms = std::chrono::duration_cast<std::chrono::milliseconds>(chrono::system_clock::now() - m_pRootObject->m_pAnimationFactors->m_chronoStart);
+		float fCurrentTime = m_pRootObject->m_pAnimationFactors->ms.count() / 1000.0f;
+		float fQuotient = fCurrentTime / m_pAnimation[-m_pRootObject->m_pAnimationFactors->m_iState].fTime;
+
+		m_pRootObject->m_pAnimationFactors->m_fCurrentFrame = (1.0f - (fCurrentTime / m_pAnimation[-m_pRootObject->m_pAnimationFactors->m_iState].fTime - (UINT)fQuotient)) // 0 ~1 사이값
+			* m_pAnimation[-m_pRootObject->m_pAnimationFactors->m_iState].nFrame;
+	}
+	else
+	{
+		m_pRootObject->m_pAnimationFactors->ms = std::chrono::duration_cast<std::chrono::milliseconds>(chrono::system_clock::now() - m_pRootObject->m_pAnimationFactors->m_chronoStart);
+		float fCurrentTime = m_pRootObject->m_pAnimationFactors->ms.count() / 1000.0f;
+		float fQuotient = fCurrentTime / m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].fTime;
+
+		m_pRootObject->m_pAnimationFactors->m_fCurrentFrame = (fCurrentTime / m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].fTime - (UINT)fQuotient) * m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].nFrame;
+	}
 }
 SRT AnimationController::Interpolate(int iBoneNum)
 {
 	SRT result;
-	float prev = (UINT)m_pRootObject->m_pAnimationFactors->m_fCurrentFrame;
-	float next = (UINT)(m_pRootObject->m_pAnimationFactors->m_fCurrentFrame + 1);
+
+	float prev;
+	float next;
 
 	result.S = XMFLOAT3(1.0f, 1.0f, 1.0f);
 
-	if (prev == m_pRootObject->m_pAnimationFactors->m_fCurrentFrame)
+	if (m_pRootObject->m_pAnimationFactors->m_iState > 0)
 	{
-		result.R = m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].RotationQuat;
-		result.T = m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].Translation;
+		prev = (UINT)m_pRootObject->m_pAnimationFactors->m_fCurrentFrame;
+		next = (UINT)(m_pRootObject->m_pAnimationFactors->m_fCurrentFrame + 1);
+
+		if (prev == m_pRootObject->m_pAnimationFactors->m_fCurrentFrame)
+		{
+			result.R = m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].RotationQuat;
+			result.T = m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].Translation;
+		}
+		else
+		{
+			float m;
+			float b;
+			float x = m_pRootObject->m_pAnimationFactors->m_fCurrentFrame - prev;
+
+			m = m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].pFrame[m_nBone*(UINT)next + iBoneNum].RotationQuat.x - m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].RotationQuat.x;
+			b = m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].RotationQuat.x;
+			result.R.x = m * x + b;
+
+			m = m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].pFrame[m_nBone*(UINT)next + iBoneNum].RotationQuat.y - m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].RotationQuat.y;
+			b = m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].RotationQuat.y;
+			result.R.y = m * x + b;
+
+			m = m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].pFrame[m_nBone*(UINT)next + iBoneNum].RotationQuat.z - m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].RotationQuat.z;
+			b = m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].RotationQuat.z;
+			result.R.z = m * x + b;
+
+			m = m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].pFrame[m_nBone*(UINT)next + iBoneNum].RotationQuat.w - m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].RotationQuat.w;
+			b = m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].RotationQuat.w;
+			result.R.w = m * x + b;
+
+			result.R = Vector4::Normalize(result.R);
+
+			m = m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].pFrame[m_nBone*(UINT)next + iBoneNum].Translation.x - m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].Translation.x;
+			b = m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].Translation.x;
+			result.T.x = m * x + b;
+
+			m = m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].pFrame[m_nBone*(UINT)next + iBoneNum].Translation.y - m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].Translation.y;
+			b = m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].Translation.y;
+			result.T.y = m * x + b;
+
+			m = m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].pFrame[m_nBone*(UINT)next + iBoneNum].Translation.z - m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].Translation.z;
+			b = m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].Translation.z;
+			result.T.z = m * x + b;
+		}
 	}
 	else
 	{
-		float m;
-		float b;
-		float x = m_pRootObject->m_pAnimationFactors->m_fCurrentFrame - prev;
-				
-		m = m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].pFrame[m_nBone*(UINT)next + iBoneNum].RotationQuat.x - m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].RotationQuat.x;
-		b = m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].RotationQuat.x;
-		result.R.x = m * x + b;
+		prev = (UINT)m_pRootObject->m_pAnimationFactors->m_fCurrentFrame;
+		next = (UINT)(m_pRootObject->m_pAnimationFactors->m_fCurrentFrame - 1);
 
-		m = m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].pFrame[m_nBone*(UINT)next + iBoneNum].RotationQuat.y - m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].RotationQuat.y;
-		b = m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].RotationQuat.y;
-		result.R.y = m * x + b;
+		if (next < 0)
+			next = 0;
 
-		m = m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].pFrame[m_nBone*(UINT)next + iBoneNum].RotationQuat.z - m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].RotationQuat.z;
-		b = m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].RotationQuat.z;
-		result.R.z = m * x + b;
 
-		m = m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].pFrame[m_nBone*(UINT)next + iBoneNum].RotationQuat.w - m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].RotationQuat.w;
-		b = m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].RotationQuat.w;
-		result.R.w = m * x + b;
+		if (prev == m_pRootObject->m_pAnimationFactors->m_fCurrentFrame)
+		{
+			result.R = m_pAnimation[-m_pRootObject->m_pAnimationFactors->m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].RotationQuat;
+			result.T = m_pAnimation[-m_pRootObject->m_pAnimationFactors->m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].Translation;
+		}
+		else
+		{
+			float m;
+			float b;
+			float x = m_pRootObject->m_pAnimationFactors->m_fCurrentFrame - prev;
 
-		result.R = Vector4::Normalize(result.R);
+			m = m_pAnimation[-m_pRootObject->m_pAnimationFactors->m_iState].pFrame[m_nBone*(UINT)next + iBoneNum].RotationQuat.x - m_pAnimation[-m_pRootObject->m_pAnimationFactors->m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].RotationQuat.x;
+			b = m_pAnimation[-m_pRootObject->m_pAnimationFactors->m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].RotationQuat.x;
+			result.R.x = m * x + b;
 
-		m = m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].pFrame[m_nBone*(UINT)next + iBoneNum].Translation.x - m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].Translation.x;
-		b = m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].Translation.x;
-		result.T.x = m * x + b;
+			m = m_pAnimation[-m_pRootObject->m_pAnimationFactors->m_iState].pFrame[m_nBone*(UINT)next + iBoneNum].RotationQuat.y - m_pAnimation[-m_pRootObject->m_pAnimationFactors->m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].RotationQuat.y;
+			b = m_pAnimation[-m_pRootObject->m_pAnimationFactors->m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].RotationQuat.y;
+			result.R.y = m * x + b;
 
-		m = m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].pFrame[m_nBone*(UINT)next + iBoneNum].Translation.y - m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].Translation.y;
-		b = m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].Translation.y;
-		result.T.y = m * x + b;
+			m = m_pAnimation[-m_pRootObject->m_pAnimationFactors->m_iState].pFrame[m_nBone*(UINT)next + iBoneNum].RotationQuat.z - m_pAnimation[-m_pRootObject->m_pAnimationFactors->m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].RotationQuat.z;
+			b = m_pAnimation[-m_pRootObject->m_pAnimationFactors->m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].RotationQuat.z;
+			result.R.z = m * x + b;
 
-		m = m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].pFrame[m_nBone*(UINT)next + iBoneNum].Translation.z - m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].Translation.z;
-		b = m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].Translation.z;
-		result.T.z = m * x + b;
+			m = m_pAnimation[-m_pRootObject->m_pAnimationFactors->m_iState].pFrame[m_nBone*(UINT)next + iBoneNum].RotationQuat.w - m_pAnimation[-m_pRootObject->m_pAnimationFactors->m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].RotationQuat.w;
+			b = m_pAnimation[-m_pRootObject->m_pAnimationFactors->m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].RotationQuat.w;
+			result.R.w = m * x + b;
+
+			result.R = Vector4::Normalize(result.R);
+
+			m = m_pAnimation[-m_pRootObject->m_pAnimationFactors->m_iState].pFrame[m_nBone*(UINT)next + iBoneNum].Translation.x - m_pAnimation[-m_pRootObject->m_pAnimationFactors->m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].Translation.x;
+			b = m_pAnimation[-m_pRootObject->m_pAnimationFactors->m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].Translation.x;
+			result.T.x = m * x + b;
+
+			m = m_pAnimation[-m_pRootObject->m_pAnimationFactors->m_iState].pFrame[m_nBone*(UINT)next + iBoneNum].Translation.y - m_pAnimation[-m_pRootObject->m_pAnimationFactors->m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].Translation.y;
+			b = m_pAnimation[-m_pRootObject->m_pAnimationFactors->m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].Translation.y;
+			result.T.y = m * x + b;
+
+			m = m_pAnimation[-m_pRootObject->m_pAnimationFactors->m_iState].pFrame[m_nBone*(UINT)next + iBoneNum].Translation.z - m_pAnimation[-m_pRootObject->m_pAnimationFactors->m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].Translation.z;
+			b = m_pAnimation[-m_pRootObject->m_pAnimationFactors->m_iState].pFrame[m_nBone*(UINT)prev + iBoneNum].Translation.z;
+			result.T.z = m * x + b;
+		}
 	}
-
 	return result;
 }
 SRT AnimationController::Interpolate(int iBoneNum, float fTime)
 {
 	SRT result;
 	float fTimeRate = fTime / CHANGE_TIME; // 0 ~ 1사이값
-	 
+
 	float m;
 	float b;
 
-	result.S = XMFLOAT3(1.0f, 1.0f, 1.0f);  
-	XMStoreFloat4(&result.R, XMQuaternionSlerp(XMLoadFloat4(&m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iSaveState].pFrame[m_nBone*(UINT)m_pRootObject->m_pAnimationFactors->m_fSaveLastFrame + iBoneNum].RotationQuat)
-		, XMLoadFloat4(&m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iNewState].pFrame[iBoneNum].RotationQuat), fTimeRate));
+	result.S = XMFLOAT3(1.0f, 1.0f, 1.0f);
 
-	m = m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iNewState].pFrame[iBoneNum].Translation.x - m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iSaveState].pFrame[m_nBone*(UINT)m_pRootObject->m_pAnimationFactors->m_fSaveLastFrame + iBoneNum].Translation.x;
-	b = m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iSaveState].pFrame[m_nBone*(UINT)m_pRootObject->m_pAnimationFactors->m_fSaveLastFrame + iBoneNum].Translation.x;
-	result.T.x = m * fTimeRate + b;
+	if (m_pRootObject->m_pAnimationFactors->m_iNewState >= 0)
+	{
+		//assert(fTimeRate <= 1);
 
-	m = m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iNewState].pFrame[iBoneNum].Translation.y - m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iSaveState].pFrame[m_nBone*(UINT)m_pRootObject->m_pAnimationFactors->m_fSaveLastFrame + iBoneNum].Translation.y;
-	b = m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iSaveState].pFrame[m_nBone*(UINT)m_pRootObject->m_pAnimationFactors->m_fSaveLastFrame + iBoneNum].Translation.y;
-	result.T.y = m * fTimeRate + b;
+		XMStoreFloat4(&result.R, XMQuaternionSlerp(XMLoadFloat4(&m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iSaveState].pFrame[m_nBone*(UINT)m_pRootObject->m_pAnimationFactors->m_fSaveLastFrame + iBoneNum].RotationQuat)
+			, XMLoadFloat4(&m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iNewState].pFrame[iBoneNum].RotationQuat), fTimeRate));
 
-	m = m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iNewState].pFrame[iBoneNum].Translation.z - m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iSaveState].pFrame[m_nBone*(UINT)m_pRootObject->m_pAnimationFactors->m_fSaveLastFrame + iBoneNum].Translation.z;
-	b = m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iSaveState].pFrame[m_nBone*(UINT)m_pRootObject->m_pAnimationFactors->m_fSaveLastFrame + iBoneNum].Translation.z;
-	result.T.z = m * fTimeRate + b;
+		m = m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iNewState].pFrame[iBoneNum].Translation.x - m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iSaveState].pFrame[m_nBone*(UINT)m_pRootObject->m_pAnimationFactors->m_fSaveLastFrame + iBoneNum].Translation.x;
+		b = m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iSaveState].pFrame[m_nBone*(UINT)m_pRootObject->m_pAnimationFactors->m_fSaveLastFrame + iBoneNum].Translation.x;
+		result.T.x = m * fTimeRate + b;
+
+		m = m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iNewState].pFrame[iBoneNum].Translation.y - m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iSaveState].pFrame[m_nBone*(UINT)m_pRootObject->m_pAnimationFactors->m_fSaveLastFrame + iBoneNum].Translation.y;
+		b = m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iSaveState].pFrame[m_nBone*(UINT)m_pRootObject->m_pAnimationFactors->m_fSaveLastFrame + iBoneNum].Translation.y;
+		result.T.y = m * fTimeRate + b;
+
+		m = m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iNewState].pFrame[iBoneNum].Translation.z - m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iSaveState].pFrame[m_nBone*(UINT)m_pRootObject->m_pAnimationFactors->m_fSaveLastFrame + iBoneNum].Translation.z;
+		b = m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iSaveState].pFrame[m_nBone*(UINT)m_pRootObject->m_pAnimationFactors->m_fSaveLastFrame + iBoneNum].Translation.z;
+		result.T.z = m * fTimeRate + b;
+	}
+	else if (m_pRootObject->m_pAnimationFactors->m_iNewState < 0 )
+	{
+		XMStoreFloat4(&result.R, XMQuaternionSlerp(XMLoadFloat4(&m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iSaveState].pFrame[m_nBone*(UINT)m_pRootObject->m_pAnimationFactors->m_fSaveLastFrame + iBoneNum].RotationQuat)
+			, XMLoadFloat4(&m_pAnimation[-m_pRootObject->m_pAnimationFactors->m_iNewState].pFrame[m_nBone*m_pAnimation[-m_pRootObject->m_pAnimationFactors->m_iNewState].nFrame + iBoneNum].RotationQuat), fTimeRate));
+
+		m = m_pAnimation[-m_pRootObject->m_pAnimationFactors->m_iNewState].pFrame[m_nBone*m_pAnimation[-m_pRootObject->m_pAnimationFactors->m_iNewState].nFrame + iBoneNum].Translation.x - m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iSaveState].pFrame[m_nBone*(UINT)m_pRootObject->m_pAnimationFactors->m_fSaveLastFrame + iBoneNum].Translation.x;
+		b = m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iSaveState].pFrame[m_nBone*(UINT)m_pRootObject->m_pAnimationFactors->m_fSaveLastFrame + iBoneNum].Translation.x;
+		result.T.x = m * fTimeRate + b;
+
+		m = m_pAnimation[-m_pRootObject->m_pAnimationFactors->m_iNewState].pFrame[m_nBone*m_pAnimation[-m_pRootObject->m_pAnimationFactors->m_iNewState].nFrame + iBoneNum].Translation.y - m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iSaveState].pFrame[m_nBone*(UINT)m_pRootObject->m_pAnimationFactors->m_fSaveLastFrame + iBoneNum].Translation.y;
+		b = m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iSaveState].pFrame[m_nBone*(UINT)m_pRootObject->m_pAnimationFactors->m_fSaveLastFrame + iBoneNum].Translation.y;
+		result.T.y = m * fTimeRate + b;
+
+		m = m_pAnimation[-m_pRootObject->m_pAnimationFactors->m_iNewState].pFrame[m_nBone*m_pAnimation[-m_pRootObject->m_pAnimationFactors->m_iNewState].nFrame + iBoneNum].Translation.z - m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iSaveState].pFrame[m_nBone*(UINT)m_pRootObject->m_pAnimationFactors->m_fSaveLastFrame + iBoneNum].Translation.z;
+		b = m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iSaveState].pFrame[m_nBone*(UINT)m_pRootObject->m_pAnimationFactors->m_fSaveLastFrame + iBoneNum].Translation.z;
+		result.T.z = m * fTimeRate + b;
+	}
 	return result;
 }
 void AnimationController::SetToParentTransforms()
@@ -138,11 +235,18 @@ void AnimationController::SetToParentTransforms()
 	FrameStack.push(m_pRootObject);
 
 	float fTime = std::chrono::duration_cast<std::chrono::milliseconds>(chrono::system_clock::now() - m_pRootObject->m_pAnimationFactors->m_chronoStart).count() / 1000.0f;
+	
+	if (m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].nType == ALL && m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].fTime < fTime)
+	{
+		ChangeAnimation(0);
+		fTime = 0;
+	}
 
-	if (m_pRootObject->m_pAnimationFactors->m_iState == -1 && (fTime > CHANGE_TIME))
-		ChangeAnimation(-1);
-
-	GetCurrentFrame(); // 현재 프레임 계산
+	if (m_pRootObject->m_pAnimationFactors->m_iState == CHANG_INDEX && (fTime > CHANGE_TIME))
+		ChangeAnimation(CHANG_INDEX);
+	
+	if (m_pRootObject->m_pAnimationFactors->m_iState != CHANG_INDEX)
+		GetCurrentFrame(); // 현재 프레임 계산
 	
 	for (int i = 0;; i++)
 	{
@@ -156,7 +260,7 @@ void AnimationController::SetToParentTransforms()
 		{
 			SRT srt;
 
-			if(m_pRootObject->m_pAnimationFactors->m_iState != -1)
+			if (m_pRootObject->m_pAnimationFactors->m_iState != CHANG_INDEX)
 				srt = Interpolate(i);
 			else
 				srt = Interpolate(i, fTime);
@@ -170,11 +274,11 @@ void AnimationController::SetToParentTransforms()
 			XMStoreFloat4x4(&TargetFrame->m_xmf4x4ToParentTransform, XMMatrixAffineTransformation(S, zero, Q, P));
 		}
 
-		if(TargetFrame->m_pSibling)
-			FrameStack.push(TargetFrame->m_pSibling);  
-		if(TargetFrame->m_pChild)
+		if (TargetFrame->m_pSibling)
+			FrameStack.push(TargetFrame->m_pSibling);
+		if (TargetFrame->m_pChild)
 			FrameStack.push(TargetFrame->m_pChild);
-	}	
+	}
 }
 void AnimationController::SetToRootTransforms()
 {
@@ -188,8 +292,8 @@ void AnimationController::SetToRootTransforms()
 
 		CAnimationObject* TargetFrame = FrameStack.top();
 		FrameStack.pop();
-		
-		if(TargetFrame->m_pParent != NULL && TargetFrame != m_pRootObject->m_pChild)
+
+		if (TargetFrame->m_pParent != NULL && TargetFrame != m_pRootObject->m_pChild)
 			TargetFrame->m_xmf4x4ToRootTransform = Matrix4x4::Multiply(TargetFrame->m_xmf4x4ToParentTransform, TargetFrame->m_pParent->m_xmf4x4ToRootTransform);
 		else
 			TargetFrame->m_xmf4x4ToRootTransform = TargetFrame->m_xmf4x4ToParentTransform;
@@ -203,10 +307,10 @@ void AnimationController::SetToRootTransforms()
 void AnimationController::AdvanceAnimation(ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	SetToParentTransforms(); // 시간에 맞추어 m_xmf4x4ToParentTransform에 맞는 값을 넣어준다. 
-							// 현재 시간에 상관없이 계속 프레임이 진행되게 만들었다.
+							 // 현재 시간에 상관없이 계속 프레임이 진행되게 만들었다.
 	SetToRootTransforms();
 
-	for (UINT i = 0; i < m_pRootObject->m_pAnimationFactors->m_nBindpos ; i++)
+	for (UINT i = 0; i < m_pRootObject->m_pAnimationFactors->m_nBindpos; i++)
 	{
 		XMMATRIX offset = XMLoadFloat4x4(&m_pBindPoses[i]); // 본오프셋 행렬
 		XMMATRIX toRoot = XMLoadFloat4x4(&m_ppBoneObject[i]->m_xmf4x4ToRootTransform);
@@ -229,7 +333,7 @@ CTexture::CTexture(int nTextures, UINT nTextureType, int nSamplers)
 	}
 
 	m_nSamplers = nSamplers;
-	if (m_nSamplers > 0) 
+	if (m_nSamplers > 0)
 		m_pd3dSamplerGpuDescriptorHandles = new D3D12_GPU_DESCRIPTOR_HANDLE[m_nSamplers];
 }
 
@@ -237,8 +341,8 @@ CTexture::~CTexture()
 {
 	if (m_ppd3dTextures)
 	{
-		for (int i = 0; i < m_nTextures; i++) 
-			if (m_ppd3dTextures[i]) 
+		for (int i = 0; i < m_nTextures; i++)
+			if (m_ppd3dTextures[i])
 				m_ppd3dTextures[i]->Release();
 	}
 
@@ -285,8 +389,8 @@ void CTexture::ReleaseUploadBuffers()
 {
 	if (m_ppd3dTextureUploadBuffers)
 	{
-		for (int i = 0; i < m_nTextures; i++) 
-			if (m_ppd3dTextureUploadBuffers[i]) 
+		for (int i = 0; i < m_nTextures; i++)
+			if (m_ppd3dTextureUploadBuffers[i])
 				m_ppd3dTextureUploadBuffers[i]->Release();
 		delete[] m_ppd3dTextureUploadBuffers;
 		m_ppd3dTextureUploadBuffers = NULL;
@@ -316,43 +420,43 @@ CMaterial::CMaterial()
 
 CMaterial::~CMaterial()
 {
-	if (m_pTexture) 
+	if (m_pTexture)
 		m_pTexture->Release();
-	if (m_pShader) 
+	if (m_pShader)
 		m_pShader->Release();
 }
 
 void CMaterial::SetTexture(CTexture *pTexture)
 {
-	if (m_pTexture) 
+	if (m_pTexture)
 		m_pTexture->Release();
 	m_pTexture = pTexture;
-	if (m_pTexture) 
+	if (m_pTexture)
 		m_pTexture->AddRef();
 }
 
 void CMaterial::SetShader(CShader *pShader)
 {
-	if (m_pShader) 
+	if (m_pShader)
 		m_pShader->Release();
 
 	m_pShader = pShader;
 
-	if (m_pShader) 
+	if (m_pShader)
 		m_pShader->AddRef();
 }
 
 void CMaterial::UpdateShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList)
 {
-	if (m_pTexture) 
+	if (m_pTexture)
 		m_pTexture->UpdateShaderVariables(pd3dCommandList);
 }
 
 void CMaterial::ReleaseShaderVariables()
 {
-	if (m_pShader) 
+	if (m_pShader)
 		m_pShader->ReleaseShaderVariables();
-	if (m_pTexture) 
+	if (m_pTexture)
 		m_pTexture->ReleaseShaderVariables();
 }
 
@@ -374,7 +478,7 @@ CGameObject::CGameObject(int nMeshes)
 	if (m_nMeshes > 0)
 	{
 		m_ppMeshes = new CMesh*[m_nMeshes];
-		for (int i = 0; i < m_nMeshes; i++)	
+		for (int i = 0; i < m_nMeshes; i++)
 			m_ppMeshes[i] = NULL;
 	}
 }
@@ -422,10 +526,10 @@ void CGameObject::SetMesh(int nIndex, CMesh *pMesh)
 {
 	if (m_ppMeshes)
 	{
-		if (m_ppMeshes[nIndex]) 
+		if (m_ppMeshes[nIndex])
 			m_ppMeshes[nIndex]->Release();
 		m_ppMeshes[nIndex] = pMesh;
-		if (pMesh) 
+		if (pMesh)
 			pMesh->AddRef();
 	}
 }
@@ -437,13 +541,13 @@ void CGameObject::SetShader(CShader *pShader)
 		CMaterial *pMaterial = new CMaterial();
 		SetMaterial(pMaterial);
 	}
-	if (m_pMaterial) 
+	if (m_pMaterial)
 		m_pMaterial->SetShader(pShader);
 }
 
 void CGameObject::SetMaterial(CMaterial *pMaterial)
 {
-	if (m_pMaterial) 
+	if (m_pMaterial)
 		m_pMaterial->Release();
 	m_pMaterial = pMaterial;
 	if (m_pMaterial) m_pMaterial->AddRef();
@@ -465,23 +569,23 @@ void CGameObject::ReleaseShaderVariables()
 		m_pd3dcbGameObject->Unmap(0, NULL);
 		m_pd3dcbGameObject->Release();
 	}
-	
-	if (m_pMaterial) 
+
+	if (m_pMaterial)
 		m_pMaterial->ReleaseShaderVariables();
 }
 
 void CGameObject::UpdateShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList)
 {
 	XMStoreFloat4x4(&m_pcbMappedGameObject->m_xmf4x4World, XMMatrixTranspose(XMLoadFloat4x4(&m_xmf4x4World)));
-	
-	if (m_pMaterial) 
+
+	if (m_pMaterial)
 		m_pcbMappedGameObject->m_nMaterial = m_pMaterial->m_nReflection;
 }
 
 void CGameObject::UpdateAnimationVariables(ID3D12GraphicsCommandList *pd3dCommandList)
 {
-	
-	
+
+
 }
 
 void CGameObject::Animate(float fTimeElapsed)
@@ -551,7 +655,7 @@ void CGameObject::Render(ID3D12GraphicsCommandList *pd3dCommandList, int iRootPa
 	{
 		for (int i = 0; i < m_nMeshes; i++)
 		{
-			if (m_ppMeshes[i]) 
+			if (m_ppMeshes[i])
 				m_ppMeshes[i]->Render(pd3dCommandList, nInstances);
 		}
 	}
@@ -562,12 +666,12 @@ void CGameObject::ReleaseUploadBuffers()
 	{
 		for (int i = 0; i < m_nMeshes; i++)
 		{
-			if (m_ppMeshes[i]) 
+			if (m_ppMeshes[i])
 				m_ppMeshes[i]->ReleaseUploadBuffers();
 		}
 	}
 
-	if (m_pMaterial) 
+	if (m_pMaterial)
 		m_pMaterial->ReleaseUploadBuffers();
 }
 
@@ -690,10 +794,11 @@ CHeightMapTerrain::CHeightMapTerrain(ID3D12Device *pd3dDevice, ID3D12GraphicsCom
 
 	m_nMeshes = cxBlocks * czBlocks;
 	m_ppMeshes = new CMesh*[m_nMeshes];
-	for (int i = 0; i < m_nMeshes; i++)	
+	for (int i = 0; i < m_nMeshes; i++)
 		m_ppMeshes[i] = NULL;
 
 	CHeightMapGridMesh *pHeightMapGridMesh = NULL;
+
 	for (int z = 0, zStart = 0; z < czBlocks; z++)
 	{
 		for (int x = 0, xStart = 0; x < cxBlocks; x++)
@@ -710,10 +815,10 @@ CHeightMapTerrain::CHeightMapTerrain(ID3D12Device *pd3dDevice, ID3D12GraphicsCom
 	CTexture *pTerrainTexture = new CTexture(3, RESOURCE_TEXTURE2D, 0);
 
 	pTerrainTexture->LoadTextureFromFile(pd3dDevice, pd3dCommandList, L"../Assets/Image/Terrain/Base_Texture.dds", 0);
-	pTerrainTexture->LoadTextureFromFile(pd3dDevice, pd3dCommandList, L"../Assets/Image/Terrain/Detail_Texture_7.dds", 1);
+	pTerrainTexture->LoadTextureFromFile(pd3dDevice, pd3dCommandList, L"../Assets/Image/Terrain/Detail_Texture.dds", 1);
 	pTerrainTexture->LoadTextureFromFile(pd3dDevice, pd3dCommandList, L"../Assets/Image/Terrain/NormalMap3.dds", 2);
 
-	UINT ncbElementBytes = ((sizeof(CB_GAMEOBJECT_INFO) + 255) & ~255); 
+	UINT ncbElementBytes = ((sizeof(CB_GAMEOBJECT_INFO) + 255) & ~255);
 
 	CTerrainShader *pTerrainShader = new CTerrainShader();
 	pTerrainShader->CreateShader(pd3dDevice, pd3dGraphicsRootSignature, 4);
@@ -734,7 +839,7 @@ CHeightMapTerrain::CHeightMapTerrain(ID3D12Device *pd3dDevice, ID3D12GraphicsCom
 
 CHeightMapTerrain::~CHeightMapTerrain(void)
 {
-	if (m_pHeightMapImage) 
+	if (m_pHeightMapImage)
 		delete m_pHeightMapImage;
 }
 
@@ -810,17 +915,17 @@ void CSkyBox::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamer
 		{
 			if (m_pMaterial)
 			{
-				if (m_pMaterial->m_pTexture) 
+				if (m_pMaterial->m_pTexture)
 					m_pMaterial->m_pTexture->UpdateShaderVariable(pd3dCommandList, 0);
 			}
-			if (m_ppMeshes[i]) 
+			if (m_ppMeshes[i])
 				m_ppMeshes[i]->Render(pd3dCommandList);
 		}
 	}
 }
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 CAnimationObject::CAnimationObject(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList
-	, ID3D12RootSignature *pd3dGraphicsRootSignature, UINT nMeshes, TCHAR *pstrFileName, AnimationController* pAnimationController, UINT nAnimationNumber) : CGameObject(nMeshes), m_iAnimationNum(nAnimationNumber)
+	, ID3D12RootSignature *pd3dGraphicsRootSignature, UINT nMeshes, TCHAR *pstrFileName, AnimationController* pAnimationController) : CGameObject(nMeshes)
 {
 	m_xmf4x4ToParentTransform = Matrix4x4::Identity();
 
@@ -920,7 +1025,7 @@ void CAnimationObject::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamer
 			m_pMaterial->m_pTexture->UpdateShaderVariables(pd3dCommandList);
 		}
 	}
-	
+
 	if (m_ppMeshes)
 	{
 		for (int i = 0; i < m_nMeshes; i++)
@@ -963,6 +1068,8 @@ void CAnimationObject::LoadAnimation(ID3D12Device *pd3dDevice, ID3D12GraphicsCom
 		{
 			InFile.read((char*)&pAnimationController->m_pAnimation[i].nFrame, sizeof(UINT)); // 프레임 수 
 			InFile.read((char*)&pAnimationController->m_pAnimation[i].fTime, sizeof(float)); // 애니메이션 시간 (30fps 기준)
+			InFile.read((char*)&pAnimationController->m_pAnimation[i].nType , sizeof(UINT)); // 애니메이션 타입
+
 			pAnimationController->m_pAnimation[i].pFrame
 				= new FRAME[(pAnimationController->m_pAnimation[i].nFrame + 1) * pAnimationController->m_nBone];
 			InFile.read((char*)pAnimationController->m_pAnimation[i].pFrame
@@ -1156,7 +1263,7 @@ void CAnimationObject::LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, ID3D
 
 				for (int i = 0; i < nChild; i++)
 				{
-					CAnimationObject *pChild = new CAnimationObject(0, m_iAnimationNum);
+					CAnimationObject *pChild = new CAnimationObject(0);
 					SetChild(pChild);
 					pChild->LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, InFile, nFrame + 1, 1);
 				}
@@ -1164,7 +1271,7 @@ void CAnimationObject::LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, ID3D
 		}
 		if (nSubMesh > nSub)
 		{
-			CAnimationObject *pSibling = new CAnimationObject(0, m_iAnimationNum);
+			CAnimationObject *pSibling = new CAnimationObject(0);
 			SetChild(pSibling);
 			pSibling->LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, InFile, nFrame + 1, nSub + 1);
 
@@ -1173,7 +1280,7 @@ void CAnimationObject::LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, ID3D
 }
 void CAnimationObject::LoadGeometryFromFile(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList
 	, ID3D12RootSignature *pd3dGraphicsRootSignature, TCHAR *pstrFileName, AnimationController* pAnimationController)
-{  
+{
 	ifstream fi;
 
 	fi.open(pstrFileName, ostream::binary);
@@ -1296,16 +1403,16 @@ void CAnimationObject::SetRotation(XMFLOAT4& pxmf4Quaternion)
 	m_xmf4x4ToParentTransform._31 = pxmf4Quaternion.z;
 	m_xmf4x4ToParentTransform._33 = pxmf4Quaternion.z;
 }
-void CAnimationObject::ChangeAnimation()
+void CAnimationObject::ChangeAnimation(int newState)
 {
 	if (m_pAnimationController)
 	{
-		m_pAnimationController->ChangeAnimation(rand() % 4);
+		m_pAnimationController->ChangeAnimation(newState);
 	}
 	if (m_pSibling)
-		m_pSibling->ChangeAnimation();
+		m_pSibling->ChangeAnimation(newState);
 	if (m_pChild)
-		m_pChild->ChangeAnimation();
+		m_pChild->ChangeAnimation(newState);
 }
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

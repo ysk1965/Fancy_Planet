@@ -15,7 +15,10 @@ struct CB_PLAYER_INFO
 	XMFLOAT4X4					m_xmf4x4World;
 };
 
-class CPlayer : public CGameObject
+class CPlayer
+	: public CGameObject,
+	public PxUserControllerHitReport,
+	public PxControllerBehaviorCallback
 {
 protected:
 	XMFLOAT3					m_xmf3Position = XMFLOAT3(0.0f, 0.0f, 0.0f);
@@ -24,7 +27,7 @@ protected:
 	XMFLOAT3					m_xmf3Look = XMFLOAT3(0.0f, 0.0f, 1.0f);
 
 	XMFLOAT3					m_xmf3Velocity = XMFLOAT3(0.0f, 0.0f, 0.0f);
-	XMFLOAT3     			m_xmf3Gravity = XMFLOAT3(0.0f, 0.0f, 0.0f);
+	XMFLOAT3     				m_xmf3Gravity = XMFLOAT3(0.0f, 0.0f, 0.0f);
 
 	float           			m_fPitch = 0.0f;
 	float           			m_fYaw = 0.0f;
@@ -38,6 +41,38 @@ protected:
 	LPVOID						m_pCameraUpdatedContext = NULL;
 
 	CCamera						*m_pCamera = NULL;
+
+	//////////////////////////
+	//		   PhysX		//
+	//////////////////////////
+	PxScene*					m_pScene;
+private:
+	PxController * m_pPxCharacterController;
+
+	CGameObject* pSphereMesh; // 충돌박스 입히기
+	FLOAT m_fFallvelocity;
+	FLOAT m_fFallAcceleration;
+
+	bool IsOnGround(void);
+public:
+	void AddForceAtLocalPos(PxRigidBody& body, const PxVec3& force, const PxVec3& pos, PxForceMode::Enum mode, bool wakeup = true);
+	void AddForceAtPosInternal(PxRigidBody& body, const PxVec3& force, const PxVec3& pos, PxForceMode::Enum mode, bool wakeup);
+
+	void onShapeHit(const PxControllerShapeHit & hit);
+	virtual void onControllerHit(const PxControllersHit& hit) {}
+	virtual void onObstacleHit(const PxControllerObstacleHit& hit) {}
+
+	void	BuildObject(PxPhysics* pPxPhysics, PxScene* pPxScene, PxMaterial *pPxMaterial, PxControllerManager *pPxControllerManager);
+
+	// Implements PxControllerBehaviorCallback
+	virtual PxControllerBehaviorFlags		getBehaviorFlags(const PxShape& shape, const PxActor& actor);
+	virtual PxControllerBehaviorFlags		getBehaviorFlags(const PxController& controller);
+	virtual PxControllerBehaviorFlags		getBehaviorFlags(const PxObstacle& obstacle);
+
+	void PxMove(float speed, float fTimeElapsed);
+	//////////////////////////
+	//		   PhysX		//
+	//////////////////////////
 
 public:
 	CPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature
@@ -83,6 +118,7 @@ public:
 
 	void Update(float fTimeElapsed);
 
+	virtual void OnPlayerUpdateCallback(float fTimeElapsed);
 	void SetPlayerUpdatedContext(LPVOID pContext) { m_pPlayerUpdatedContext = pContext; }
 
 	virtual void OnCameraUpdateCallback(float fTimeElapsed) { }
@@ -100,7 +136,7 @@ public:
 	virtual void OnPrepareRender();
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera = NULL);
 	virtual void Animate(float fTimeElapsed);
-	void OnPlayerUpdateCallback(float fTimeElapsed);
+
 protected:
 	ID3D12Resource					*m_pd3dcbPlayer = NULL;
 	CB_PLAYER_INFO					*m_pcbMappedPlayer = NULL;
