@@ -52,9 +52,17 @@ private:
 	CGameObject* pSphereMesh; // 충돌박스 입히기
 	FLOAT m_fFallvelocity;
 	FLOAT m_fFallAcceleration;
-
+	CAnimationObject* m_pRenderObject;
 	bool IsOnGround(void);
 public:
+	void SetRenderObject(CAnimationObject* pRenderObject)
+	{
+		m_pRenderObject = pRenderObject;
+	}
+	XMFLOAT4X4& GetPlayerWorldTransform()
+	{
+		return m_pRenderObject->m_xmf4x4World;
+	}
 	void AddForceAtLocalPos(PxRigidBody& body, const PxVec3& force, const PxVec3& pos, PxForceMode::Enum mode, bool wakeup = true);
 	void AddForceAtPosInternal(PxRigidBody& body, const PxVec3& force, const PxVec3& pos, PxForceMode::Enum mode, bool wakeup);
 

@@ -4,6 +4,15 @@
 #include "Camera.h"
 #include "Player.h"
 
+#define MAP_SIZE 2056.0f
+#define PLAYER_MAP_RANGE 200.0f
+
+struct UI_INFO
+{
+	XMFLOAT2 xmf2Map1;
+	XMFLOAT2 xmf2Map2;
+};
+
 class CShader
 {
 public:
@@ -243,7 +252,7 @@ private:
 class UIShader : public CShader
 {
 public:
-	UIShader();
+	UIShader(CPlayer * pPlayer);
 	virtual ~UIShader();
 
 	virtual D3D12_INPUT_LAYOUT_DESC CreateInputLayout();
@@ -259,10 +268,15 @@ public:
 	virtual void ReleaseObjects();
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera);
 
-	void UpdateShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList);
+	virtual void UpdateShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList);
 	virtual void ReleaseShaderVariables();
-	void CreateShaderVariables(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList);
-
+	virtual void CreateShaderVariables(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList);
+	void CalculateMiniMap();
 private:
-	CTexture * m_pTexture;
+	CPlayer*	 m_pPlayer;
+	CTexture*	 m_pTexture;
+	UI_INFO		 m_ui;
+
+	ID3D12Resource					*m_pd3dcbUI = NULL;
+	UI_INFO		*m_pcbMappedUI = NULL;
 };

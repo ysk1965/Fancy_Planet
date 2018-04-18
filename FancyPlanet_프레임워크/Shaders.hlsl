@@ -304,7 +304,6 @@ VS_TEXTURED_OUTPUT VSTexturedAnimation(VS_ANIMATION_INPUT input, uint nInstanceI
 	fWeight[3] = 1.0f - fWeight[0] - fWeight[1] - fWeight[2];
 
 	float3 position = float3(0.0f, 0.0f, 0.0f);
-	float4x4 qwe = float4x4(1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f);
 
 	for (int i = 0; i < 4; i++)
 	{
@@ -338,85 +337,7 @@ PS_TEXTURED_DEFFERREDLIGHTING_OUTPUT PSTextured(VS_TEXTURED_OUTPUT input) : SV_T
 }
 
 Texture2D<float4> gtxtSkyBox : register(t9);
-Texture2D<float4> gtxUI : register(t14);
-static float fSize = -0.5f;
 
-struct VS_UI_OUTPUT
-{
-	float4 position : SV_POSITION;
-	uint nVertexID : ID;
-};
-
-VS_UI_OUTPUT UIVS(uint nVertexID : SV_VertexID)
-{
-	VS_UI_OUTPUT output;
-	
-	output.nVertexID = nVertexID;
-
-	//사각형을 그린다.
-	if (nVertexID == 0)
-	{
-		output.position = float4(-1.0f, fSize, 0.0f, 1.0f);
-	}
-	else if (nVertexID == 1)
-	{
-		output.position = float4(fSize, fSize, 0.0f, 1.0f);
-	}
-	else if (nVertexID == 2)
-	{
-		output.position = float4(fSize, -1.0f, 0.0f, 1.0f);
-	}
-	else if (nVertexID == 3)
-	{
-		output.position = float4(-1.0f, fSize, 0.0f, 1.0f);
-	}
-	else if (nVertexID == 4)
-	{
-		output.position = float4(fSize, -1.0f, 0.0f, 1.0f);
-	}
-	else if (nVertexID == 5)
-	{
-		output.position = float4(-1.0f, -1.0f, 0.0f, 1.0f);
-	}
-	else
-	{
-		output.position = float4(0, 0, 0, 0);
-	}
-	
-	return output;
-}
-
-float4 UIPS(VS_UI_OUTPUT input) : SV_TARGET
-{
-	if (input.nVertexID == 0)
-	{
-		input.position = float4(0.0f, +1.0f, 0.0f, 1.0f);
-	}
-	else if (input.nVertexID == 1)
-	{
-		input.position = float4(+1.0f, +1.0f, 0.0f, 1.0f);
-	}
-	else if (input.nVertexID == 2)
-	{
-		input.position = float4(+1.0f, 0.0f, 0.0f, 1.0f);
-	}
-	else if (input.nVertexID == 3)
-	{
-		input.position = float4(0.0f, +1.0f, 0.0f, 1.0f);
-	}
-	else if (input.nVertexID == 4)
-	{
-		input.position = float4(+1.0f, 0.0f, 0.0f, 1.0f);
-	}
-	else if (input.nVertexID == 5)
-	{
-		input.position = float4(0.0f, 0.0f, 0.0f, 1.0f);
-	}
-
-	float3 color = gtxUI.Load(input.position.xyz).rgb;
-
-	return float4(color, 1.0f);
-}
 
 float4 PSSkyBox(VS_TEXTURED_OUTPUT input) : SV_TARGET
 {
@@ -424,8 +345,6 @@ float4 PSSkyBox(VS_TEXTURED_OUTPUT input) : SV_TARGET
 
 	return(cColor);
 }
-
-
 
 struct A_VS_INPUT
 {

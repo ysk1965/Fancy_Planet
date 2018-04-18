@@ -13,6 +13,13 @@ enum
 	NUM_COMMANDLIST = 4
 };
 
+enum 
+{
+	TERRAIN, 
+	PHYSICS,
+	CHARACTER, 
+	OBEJECT 
+};
 using namespace std;
 
 class CGameFramework
@@ -52,6 +59,11 @@ public:
 	void OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
 	LRESULT CALLBACK OnProcessingWindowMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
 
+
+	XMFLOAT4X4& GetPlayerMatrix()
+	{
+		return m_pPlayer->GetPlayerWorldTransform();
+	};
 	void PrepareFrame();
 private:
 	ID3D12GraphicsCommandList *m_pd3dScreenCommandList;

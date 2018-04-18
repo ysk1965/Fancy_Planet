@@ -598,7 +598,8 @@ CHeightMapImage::CHeightMapImage(LPCTSTR pFileName, int nWidth, int nLength, XMF
 		}
 	}
 
-	if (pHeightMapPixels) delete[] pHeightMapPixels;
+	if (pHeightMapPixels) 
+		delete[] pHeightMapPixels;
 }
 
 CHeightMapImage::~CHeightMapImage()

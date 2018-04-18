@@ -186,6 +186,7 @@ void CShader::CreateConstantBufferViews(ID3D12Device *pd3dDevice, ID3D12Graphics
 	D3D12_GPU_VIRTUAL_ADDRESS d3dGpuVirtualAddress = pd3dConstantBuffers->GetGPUVirtualAddress();
 	D3D12_CONSTANT_BUFFER_VIEW_DESC d3dCBVDesc;
 	d3dCBVDesc.SizeInBytes = nStride;
+
 	for (int j = 0; j < nConstantBufferViews; j++)
 	{
 		d3dCBVDesc.BufferLocation = d3dGpuVirtualAddress + (nStride * j);
@@ -707,10 +708,11 @@ void CTextureToFullScreenShader::BuildObjects(ID3D12Device *pd3dDevice, ID3D12Gr
 {
 	m_pTexture = (CTexture *)pContext;
 
-	CreateCbvAndSrvDescriptorHeaps(pd3dDevice, pd3dCommandList, 0, m_pTexture->GetTextureCount());
+	CreateCbvAndSrvDescriptorHeaps(pd3dDevice, pd3dCommandList, 2, m_pTexture->GetTextureCount());
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 	CreateShaderResourceViews(pd3dDevice, pd3dCommandList, m_pTexture, 0, false);
 
+	//CreateConstantBufferViews(pd3dDevice, pd3dCommandList, 1, m_pd3dcbUI, ncbElementBytes);
 	BuildLightsAndMaterials();
 
 	m_pPlayer = pPlayer;
@@ -915,8 +917,9 @@ D3D12_INPUT_LAYOUT_DESC CSkyBoxShader::CreateInputLayout()
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-UIShader::UIShader()
+UIShader::UIShader(CPlayer * pPlayer)
 {
+	m_pPlayer = pPlayer;
 }
 
 UIShader::~UIShader()
@@ -943,7 +946,7 @@ void UIShader::CreateGraphicsRootSignature(ID3D12Device *pd3dDevice)
 	pd3dDescriptorRanges[0].RegisterSpace = 0;
 	pd3dDescriptorRanges[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 
-	D3D12_ROOT_PARAMETER pd3dRootParameters[2];
+	D3D12_ROOT_PARAMETER pd3dRootParameters[3];
 
 	pd3dRootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
 	pd3dRootParameters[0].DescriptorTable.NumDescriptorRanges = 1;
@@ -954,6 +957,11 @@ void UIShader::CreateGraphicsRootSignature(ID3D12Device *pd3dDevice)
 	pd3dRootParameters[1].Descriptor.ShaderRegister = 1; //Camera
 	pd3dRootParameters[1].Descriptor.RegisterSpace = 0;
 	pd3dRootParameters[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+
+	pd3dRootParameters[2].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+	pd3dRootParameters[2].Descriptor.ShaderRegister = 0; //UI
+	pd3dRootParameters[2].Descriptor.RegisterSpace = 0;
+	pd3dRootParameters[2].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 
 	D3D12_STATIC_SAMPLER_DESC d3dSamplerDesc;
 	::ZeroMemory(&d3dSamplerDesc, sizeof(D3D12_STATIC_SAMPLER_DESC));
@@ -995,12 +1003,12 @@ void UIShader::CreateGraphicsRootSignature(ID3D12Device *pd3dDevice)
 
 D3D12_SHADER_BYTECODE UIShader::CreateVertexShader(ID3DBlob **ppd3dShaderBlob)
 {
-	return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "UIVS", "vs_5_1", ppd3dShaderBlob));
+	return(CShader::CompileShaderFromFile(L"UI.hlsl", "UIVS", "vs_5_1", ppd3dShaderBlob));
 }
 
 D3D12_SHADER_BYTECODE UIShader::CreatePixelShader(ID3DBlob **ppd3dShaderBlob)
 {
-	return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "UIPS", "ps_5_1", ppd3dShaderBlob));
+	return(CShader::CompileShaderFromFile(L"UI.hlsl", "UIPS", "ps_5_1", ppd3dShaderBlob));
 }
 
 void UIShader::CreateShader(ID3D12Device *pd3dDevice, ID3D12RootSignature *pd3dGraphicsRootSignature, UINT nRenderTargets)
@@ -1014,7 +1022,9 @@ void UIShader::CreateShader(ID3D12Device *pd3dDevice, ID3D12RootSignature *pd3dG
 void UIShader::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList)
 {
 	m_pTexture = new CTexture(1, RESOURCE_TEXTURE2D, 0);
-	m_pTexture->LoadTextureFromFile(pd3dDevice, pd3dCommandList, L"../Assets/UI.dds", 0);
+	m_pTexture->LoadTextureFromFile(pd3dDevice, pd3dCommandList, L"../Assets/map2.dds", 0);
+
+	UINT ncbElementBytes = ((sizeof(UI_INFO) + 255) & ~255);
 
 	CreateCbvAndSrvDescriptorHeaps(pd3dDevice, pd3dCommandList, 0, m_pTexture->GetTextureCount());
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
@@ -1030,13 +1040,97 @@ void UIShader::ReleaseObjects()
 	if (m_pTexture)
 		delete m_pTexture;
 }
+void UIShader::CalculateMiniMap()
+{
+	MAP_SIZE, PLAYER_MAP_RANGE;
+
+	XMFLOAT3 xmf3Position = m_pPlayer->GetPosition();
+
+	if ((xmf3Position.x >= 0 && xmf3Position.x < PLAYER_MAP_RANGE) &&  // 1
+		(xmf3Position.z >= (MAP_SIZE - PLAYER_MAP_RANGE) && xmf3Position.z < MAP_SIZE))
+	{
+		m_ui.xmf2Map1.x = 0.0f;
+		m_ui.xmf2Map1.y = 0.0f;
+		m_ui.xmf2Map2.x = (2 * PLAYER_MAP_RANGE) / MAP_SIZE;
+		m_ui.xmf2Map2.y = (2 * PLAYER_MAP_RANGE) / MAP_SIZE;
+	}
+	else if ((xmf3Position.x >= PLAYER_MAP_RANGE && xmf3Position.x < (MAP_SIZE - PLAYER_MAP_RANGE)) && // 2
+		(xmf3Position.z >= (MAP_SIZE - PLAYER_MAP_RANGE) && xmf3Position.z < MAP_SIZE))
+	{
+		m_ui.xmf2Map1.x = (xmf3Position.x - PLAYER_MAP_RANGE) / MAP_SIZE;
+		m_ui.xmf2Map1.y = 0.0f;
+		m_ui.xmf2Map2.x = (xmf3Position.x + PLAYER_MAP_RANGE) / MAP_SIZE;
+		m_ui.xmf2Map2.y = (2 * PLAYER_MAP_RANGE) / MAP_SIZE;
+	}
+	else if ((xmf3Position.x >= (MAP_SIZE - PLAYER_MAP_RANGE) && xmf3Position.x < MAP_SIZE) && // 3
+		(xmf3Position.z >= (MAP_SIZE - PLAYER_MAP_RANGE) && xmf3Position.z < MAP_SIZE))
+	{
+		m_ui.xmf2Map1.x = (MAP_SIZE - (2 * PLAYER_MAP_RANGE)) / MAP_SIZE;
+		m_ui.xmf2Map1.y = 0.0f;
+		m_ui.xmf2Map2.x = 1.0f;
+		m_ui.xmf2Map2.y = (2 * PLAYER_MAP_RANGE) / MAP_SIZE;
+	}
+	else if ((xmf3Position.x >= (MAP_SIZE - PLAYER_MAP_RANGE) && xmf3Position.x < MAP_SIZE) && // 4
+		(xmf3Position.z >= PLAYER_MAP_RANGE && xmf3Position.z < (MAP_SIZE - PLAYER_MAP_RANGE)))
+	{
+		m_ui.xmf2Map1.x = (MAP_SIZE - (2 * PLAYER_MAP_RANGE)) / MAP_SIZE;
+		m_ui.xmf2Map1.y = (MAP_SIZE - (xmf3Position.z + PLAYER_MAP_RANGE)) / MAP_SIZE;
+		m_ui.xmf2Map2.x = 1.0f;
+		m_ui.xmf2Map2.y = (MAP_SIZE - (xmf3Position.z - PLAYER_MAP_RANGE)) / MAP_SIZE;
+	}
+	else if ((xmf3Position.x >= (MAP_SIZE - PLAYER_MAP_RANGE) && xmf3Position.x < MAP_SIZE) && // 5
+		(xmf3Position.z >= 0 && xmf3Position.z < PLAYER_MAP_RANGE))
+	{
+		m_ui.xmf2Map1.x = (MAP_SIZE - (2 * PLAYER_MAP_RANGE)) / MAP_SIZE;
+		m_ui.xmf2Map1.y = (MAP_SIZE - (2 * PLAYER_MAP_RANGE)) / MAP_SIZE;
+		m_ui.xmf2Map2.x = 1.0f;
+		m_ui.xmf2Map2.y = 1.0f;
+	}
+	else if ((xmf3Position.x >= PLAYER_MAP_RANGE && xmf3Position.x < (MAP_SIZE - PLAYER_MAP_RANGE)) && // 6
+		(xmf3Position.z >= 0 && xmf3Position.z < PLAYER_MAP_RANGE))
+	{
+		m_ui.xmf2Map1.x = (xmf3Position.x - PLAYER_MAP_RANGE) / MAP_SIZE;
+		m_ui.xmf2Map1.y = (MAP_SIZE - (2 * PLAYER_MAP_RANGE)) / MAP_SIZE;
+		m_ui.xmf2Map2.x = (xmf3Position.x + PLAYER_MAP_RANGE) / MAP_SIZE;
+		m_ui.xmf2Map2.y = 1.0f;
+	}
+	else if ((xmf3Position.x >= 0 && xmf3Position.x < PLAYER_MAP_RANGE) && // 7
+		(xmf3Position.z >= 0 && xmf3Position.z < PLAYER_MAP_RANGE))
+	{
+		m_ui.xmf2Map1.x = 0.0f;
+		m_ui.xmf2Map1.y = (MAP_SIZE - (2 * PLAYER_MAP_RANGE)) / MAP_SIZE;
+		m_ui.xmf2Map2.x = (2 * PLAYER_MAP_RANGE) / MAP_SIZE;
+		m_ui.xmf2Map2.y = 1.0f;
+	}
+	else if ((xmf3Position.x >= 0 && xmf3Position.x < PLAYER_MAP_RANGE) && // 8
+		(xmf3Position.z >= PLAYER_MAP_RANGE && xmf3Position.z < (MAP_SIZE - PLAYER_MAP_RANGE)))
+	{
+		m_ui.xmf2Map1.x = 0.0f;
+		m_ui.xmf2Map1.y = (MAP_SIZE - (xmf3Position.z + PLAYER_MAP_RANGE)) / MAP_SIZE;
+		m_ui.xmf2Map2.x = (2 * PLAYER_MAP_RANGE) / MAP_SIZE;
+		m_ui.xmf2Map2.y = (MAP_SIZE - (xmf3Position.z - PLAYER_MAP_RANGE)) / MAP_SIZE;
+	}
+	else // 9
+	{
+		m_ui.xmf2Map1.x = (xmf3Position.x - PLAYER_MAP_RANGE) / MAP_SIZE;
+		m_ui.xmf2Map1.y = (MAP_SIZE - (xmf3Position.z + PLAYER_MAP_RANGE)) / MAP_SIZE;
+		m_ui.xmf2Map2.x = (xmf3Position.x + PLAYER_MAP_RANGE) / MAP_SIZE;
+		m_ui.xmf2Map2.y = (MAP_SIZE - (xmf3Position.z - PLAYER_MAP_RANGE)) / MAP_SIZE;
+	}
+}
 
 void UIShader::CreateShaderVariables(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList)
 {
+	UINT ncbElementBytes = ((sizeof(UI_INFO) + 255) & ~255); //256ÀÇ ¹è¼ö
+	m_pd3dcbUI = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes ,
+		D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
+
+	m_pd3dcbUI->Map(0, NULL, (void **)&m_pcbMappedUI);
 }
 
 void UIShader::UpdateShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList)
 {
+	::memcpy(m_pcbMappedUI, &m_ui, sizeof(UI_INFO));
 }
 
 void UIShader::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera)
@@ -1046,11 +1140,16 @@ void UIShader::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCame
 	pCamera->SetViewportsAndScissorRects(pd3dCommandList);
 	pCamera->UpdateShaderVariables(pd3dCommandList);
 
+	CalculateMiniMap();
+
 	UpdateShaderVariables(pd3dCommandList);
+
+	D3D12_GPU_VIRTUAL_ADDRESS d3dcbUIGpuVirtualAddress = m_pd3dcbUI->GetGPUVirtualAddress();
+	pd3dCommandList->SetGraphicsRootConstantBufferView(2, d3dcbUIGpuVirtualAddress);
 
 	if (m_pTexture)
 		m_pTexture->UpdateShaderVariables(pd3dCommandList);
 
 	pd3dCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	pd3dCommandList->DrawInstanced(8, 1, 0, 0);
+	pd3dCommandList->DrawInstanced(6, 1, 0, 0);
 }

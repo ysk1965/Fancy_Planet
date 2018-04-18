@@ -35,7 +35,7 @@ public:
 	virtual CHeightMapTerrain * GetTerrain() { return NULL; };
 	void FrustumCulling(CCamera *pCamera);
 
-	CPlayer					*m_pPlayer; 
+	CPlayer					*m_pPlayer;
 protected:
 
 	ID3D12RootSignature			*m_pd3dGraphicsRootSignature = NULL;

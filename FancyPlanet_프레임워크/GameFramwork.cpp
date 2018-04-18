@@ -5,7 +5,6 @@
 #include "stdafx.h"
 #include "GameFramework.h"
 #include <process.h>
-enum { TERRAIN, END, CHARACTER, OBEJECT };
 CGameFramework* CGameFramework::m_pGFforMultiThreads = NULL;
 
 CGameFramework::CGameFramework()
@@ -302,13 +301,12 @@ void CGameFramework::CreateRenderTargetViews()
 		m_pd3dDevice->CreateRenderTargetView(pTexture->GetTexture(i), &d3dRenderTargetViewDesc, m_pd3dRtvRenderTargetBufferCPUHandles[i]);
 		d3dRtvCPUDescriptorHandle.ptr += m_nRtvDescriptorIncrementSize;
 	}
-
 	m_pScreenShader = new CTextureToFullScreenShader();
 	m_pScreenShader->CreateGraphicsRootSignature(m_pd3dDevice);
 	m_pScreenShader->CreateShader(m_pd3dDevice, m_pScreenShader->GetGraphicsRootSignature(), 4);
-	m_pScreenShader->BuildObjects(m_pd3dDevice, m_pd3dScreenCommandList, m_pPlayer ,pTexture);
+	m_pScreenShader->BuildObjects(m_pd3dDevice, m_pd3dScreenCommandList, m_pPlayer, pTexture);
 
-	m_pUIShader = new UIShader();
+	m_pUIShader = new UIShader(m_pPlayer);
 	m_pUIShader->CreateGraphicsRootSignature(m_pd3dDevice);
 	m_pUIShader->CreateShader(m_pd3dDevice, m_pUIShader->GetGraphicsRootSignature(), 4);
 	m_pUIShader->BuildObjects(m_pd3dDevice, m_pd3dScreenCommandList);
@@ -593,26 +591,25 @@ void CGameFramework::BuildObjects()
 	m_ppScenes[i++] = pTScene;
 	
 	PhysXScene *pPScene = new PhysXScene(m_pPxPhysicsSDK, m_pPxScene, m_pPxControllerManager, m_pCooking);
-	pPScene->BuildObjects(m_pd3dDevice, m_ppd3dCommandLists[i]);
 	m_ppScenes[i++] = pPScene;
 	
 	CharacterScene *pCScene = new CharacterScene();
-	pCScene->BuildObjects(m_pd3dDevice, m_ppd3dCommandLists[i]);
 	m_ppScenes[i++] = pCScene;
 	
 	ObjectScene *pOScene = new ObjectScene();
-	pOScene->BuildObjects(m_pd3dDevice, m_ppd3dCommandLists[i]);
 	m_ppScenes[i++] = pOScene;
 
 	m_ppScenes[TERRAIN]->m_pPlayer = m_pPlayer = new CPlayer(m_pd3dDevice, m_ppd3dCommandLists[2], m_ppScenes[0]->GetGraphicsRootSignature(), m_ppScenes[TERRAIN]->GetTerrain(), 0);
-	((CPlayer*)m_pPlayer)->BuildObject(m_pPxPhysicsSDK, m_pPxScene, m_pPxMaterial, m_pPxControllerManager); // 이 부분이 문제...!
+	m_pPlayer->BuildObject(m_pPxPhysicsSDK, m_pPxScene, m_pPxMaterial, m_pPxControllerManager); 
 	m_pPlayer->ChangeCamera(THIRD_PERSON_CAMERA, 0.0f);
-	//m_ppScenes[0]->m_pPlayer = m_pPlayer = new CPlayer(m_pd3dDevice, m_ppd3dCommandLists[2], m_ppScenes[0]->GetGraphicsRootSignature());
-	for (int i = 1; i < NUM_SUBSETS; i++)
+	
+	for (int j = PHYSICS; j < NUM_SUBSETS; j++)
 	{
-		m_ppScenes[i]->m_pPlayer = m_ppScenes[0]->m_pPlayer;
+		m_ppScenes[j]->m_pPlayer = m_pPlayer;
+		m_ppScenes[j]->BuildObjects(m_pd3dDevice, m_ppd3dCommandLists[j]);
 	}
 	m_pCamera = m_pPlayer->GetCamera();
+
 
 	m_ppbDivision = new bool*[m_nDivision];
 	for (int i = 0; i < m_nDivision; i++)
@@ -710,13 +707,11 @@ void CGameFramework::ProcessInput()
 		if (pKeysBuffer[VK_PRIOR] & 0xF0)
 		{
 			dwDirection |= DIR_UP;
-			//m_ppScenes[CHARACTER]->ChangeAnimation(1);
 			IsInput = true;
 		}
 		if (pKeysBuffer[VK_NEXT] & 0xF0)
 		{
 			dwDirection |= DIR_DOWN;
-			//m_ppScenes[CHARACTER]->ChangeAnimation(1);
 			IsInput = true;
 		}
 		if (pKeysBuffer[VK_SPACE] & 0xF0)
@@ -745,7 +740,7 @@ void CGameFramework::ProcessInput()
 					m_pPlayer->Rotate(cyDelta, cxDelta, 0.0f);
 			}
 			if (dwDirection)
-				m_pPlayer->Move(dwDirection, 45.0f * m_GameTimer.GetTimeElapsed(), true);
+				m_pPlayer->Move(dwDirection, 250.0f * m_GameTimer.GetTimeElapsed(), true);
 		}
 	}
 
@@ -889,7 +884,6 @@ void CGameFramework::FrameAdvance()
 #ifdef _WITH_PLAYER_TOP
 	m_pd3dCommandList->ClearDepthStencilView(m_d3dDsvDepthStencilBufferCPUHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, NULL);
 #endif
-	//m_pPlayer->Render(m_pd3dCommandList, m_pCamera);
 
 	::SynchronizeResourceTransition(m_pd3dScreenCommandList, m_ppd3dSwapChainBackBuffers[m_nSwapChainBufferIndex], D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 

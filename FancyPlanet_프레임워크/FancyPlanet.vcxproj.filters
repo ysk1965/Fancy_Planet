@@ -63,6 +63,9 @@
     <ClInclude Include="Shader.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
+    <ClInclude Include="protocol.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -127,6 +130,7 @@
   <ItemGroup>
     <FxCompile Include="Shaders.hlsl" />
     <FxCompile Include="Light.hlsl" />
+    <FxCompile Include="UI.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Assets\Image\Terrain\HeightMap.raw">

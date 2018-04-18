@@ -52,7 +52,7 @@ TerrainAndSkyBoxScene::TerrainAndSkyBoxScene()
 }
 TerrainAndSkyBoxScene::~TerrainAndSkyBoxScene()
 {
-
+	ReleaseObjects();
 }
 void TerrainAndSkyBoxScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList)
 {
@@ -62,7 +62,7 @@ void TerrainAndSkyBoxScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12Graphic
 	XMFLOAT4 xmf4Color(0.0f, 0.5f, 0.0f, 0.0f);
 
 	m_pTerrain = new CHeightMapTerrain(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature,
-		_T("../Assets/Image/Terrain/HeightMap.raw"), 257, 257, 257, 257, xmf3Scale, xmf4Color);
+		_T("../Assets/Image/Terrain/HeightMap2.raw"), 257, 257, 257, 257, xmf3Scale, xmf4Color);
 
 	m_pSkyBox = new CSkyBox(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
 }
@@ -242,7 +242,7 @@ PhysXScene::PhysXScene(PxPhysics* pPxPhysicsSDK, PxScene* pPxScene, PxController
 }
 PhysXScene::~PhysXScene()
 {
-
+	ReleaseObjects();
 }
 void PhysXScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList)
 {
@@ -389,7 +389,7 @@ CharacterScene::CharacterScene()
 }
 CharacterScene::~CharacterScene()
 {
-
+	ReleaseObjects();
 }
 void CharacterScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList)
 {
@@ -405,12 +405,17 @@ void CharacterScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsComman
 
 	CopyObject(m_ppSampleObjects[0], m_ppSoldierObjects, m_nObjects - 1);
 	m_ppSoldierObjects[m_nObjects - 1] = m_ppSampleObjects[0];
-
+	m_ppSoldierObjects[m_nObjects - 1]->SetPlayer(m_pPlayer);
+	m_pPlayer->SetRenderObject(m_ppSoldierObjects[m_nObjects - 1]);
+	
 	for (int i = 0; i < m_nObjects; i++)
 	{
  		m_ppSoldierObjects[i]->m_pAnimationFactors->SetBoneObject(m_ppSoldierObjects[i]);
 		m_ppSoldierObjects[i]->SetPosition(rand()%3000, rand()%100 + 300 , rand() % 3000);
-		m_ppSoldierObjects[i]->SetScale(25.0f, 25.0f, 25.0f);
+		if (i != m_nObjects - 1)
+			m_ppSoldierObjects[i]->SetScale(5.0f, 5.0f, 5.0f);
+		else
+			m_ppSoldierObjects[m_nObjects - 1]->SetPlayerScale(5);
 	}
 }
 void CharacterScene::CopyObject(CAnimationObject* pSample, CAnimationObject** ppObjects, UINT nSize)
@@ -588,9 +593,9 @@ void CharacterScene::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera 
 		if (i == m_nObjects - 1)
 		{
 			m_ppSoldierObjects[m_nObjects - 1]->m_xmf4x4ToParentTransform = m_pPlayer->m_xmf4x4World;
-			XMFLOAT4X4 qwe = Matrix4x4::Identity();
-			qwe._11 = 5, qwe._22 = 5, qwe._33 = 5;
-			m_ppSoldierObjects[m_nObjects - 1]->m_xmf4x4ToParentTransform = Matrix4x4::Multiply(qwe, m_ppSoldierObjects[m_nObjects - 1]->m_xmf4x4ToParentTransform);
+			XMFLOAT4X4 Scale = Matrix4x4::Identity();
+			Scale._11 = Scale._22 = Scale._33 = m_ppSoldierObjects[m_nObjects - 1]->GetPlayerScale();
+			m_ppSoldierObjects[m_nObjects - 1]->m_xmf4x4ToParentTransform = Matrix4x4::Multiply(Scale, m_ppSoldierObjects[m_nObjects - 1]->m_xmf4x4ToParentTransform);
 		}
 
 		m_ppSoldierObjects[i]->UpdateTransform(NULL);
@@ -598,7 +603,6 @@ void CharacterScene::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera 
 	UpdateShaderVariables(pd3dCommandList);
 	m_ppSoldierObjects[m_nObjects - 1]->Render(pd3dCommandList, pCamera, m_nObjects);
 }
-
 ID3D12RootSignature *CharacterScene::CreateGraphicsRootSignature(ID3D12Device *pd3dDevice)
 {
 	ID3D12RootSignature *pd3dGraphicsRootSignature = NULL;
@@ -746,7 +750,7 @@ ObjectScene::ObjectScene()
 }
 ObjectScene::~ObjectScene()
 {
-
+	ReleaseObjects();
 }
 void ObjectScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList)
 {
@@ -823,7 +827,7 @@ ID3D12RootSignature *ObjectScene::CreateGraphicsRootSignature(ID3D12Device *pd3d
 	pd3dRootParameters[4].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
 	D3D12_STATIC_SAMPLER_DESC pd3dSamplerDescs[1];
-
+	
 	pd3dSamplerDescs[0].Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
 	pd3dSamplerDescs[0].AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
 	pd3dSamplerDescs[0].AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;

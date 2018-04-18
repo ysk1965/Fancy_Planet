@@ -33,7 +33,7 @@ AnimationController::~AnimationController()
 }
 void AnimationController::ChangeAnimation(int iNewState)
 {
-	if (iNewState != CHANG_INDEX)
+	if (iNewState != CHANG_INDEX && m_pRootObject->m_pAnimationFactors->m_iState != CHANG_INDEX)
 	{
 		m_pRootObject->m_pAnimationFactors->m_fSaveLastFrame = m_pRootObject->m_pAnimationFactors->m_fCurrentFrame;
 		m_pRootObject->m_pAnimationFactors->m_iNewState = iNewState;
@@ -941,6 +941,9 @@ CAnimationObject::~CAnimationObject()
 
 	if (m_pAnimationController)
 		delete m_pAnimationController;
+
+	if (m_BoneTransforms)
+		delete m_BoneTransforms;
 
 	if (m_pSibling)
 		delete m_pSibling;

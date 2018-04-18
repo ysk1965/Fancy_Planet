@@ -279,7 +279,24 @@ public:
 
 class CAnimationObject : public CGameObject
 {
+private:
+	CPlayer * m_pPlayer = NULL;
+	UINT m_nScale = 1;
+
 public:
+	UINT GetPlayerScale()
+	{
+		return m_nScale;
+	}
+	void SetPlayerScale(UINT nScale)
+	{
+		m_nScale = nScale;
+	}
+	void SetPlayer(CPlayer* pPlayer)
+	{
+		m_pPlayer = pPlayer;
+	}
+
 	CAnimationObject(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature,
 		UINT nMeshes, TCHAR *pstrFileName, AnimationController* pAnimationController);
 	CAnimationObject(int nMeshes) : CGameObject(nMeshes)
@@ -287,7 +304,7 @@ public:
 		m_xmf4x4ToRootTransform = Matrix4x4::Identity();
 		m_xmf4x4ToParentTransform = Matrix4x4::Identity();
 	};
-	~CAnimationObject();
+	virtual ~CAnimationObject();
 	void ReleaseUploadBuffers();
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, int iRootParameterIndex, CCamera *pCamera = NULL);
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera, UINT nInstances);

@@ -32,7 +32,7 @@ CPlayer::CPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dComman
 		m_pCamera->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
 	CHeightMapTerrain *pTerrain = (CHeightMapTerrain *)pContext;
-	SetPosition(XMFLOAT3(200, pTerrain->GetHeight(200, 300), 300));
+	SetPosition(XMFLOAT3(0, pTerrain->GetHeight(200, 300), 0));
 	SetPlayerUpdatedContext(pTerrain);
 	SetCameraUpdatedContext(pTerrain);
 }
@@ -100,25 +100,44 @@ void CPlayer::Move(const XMFLOAT3& xmf3Shift, bool bUpdateVelocity)
 void CPlayer::Rotate(float x, float y, float z)
 {
 	DWORD nCurrentCameraMode = m_pCamera->GetMode();
+
 	if ((nCurrentCameraMode == FIRST_PERSON_CAMERA) || (nCurrentCameraMode == THIRD_PERSON_CAMERA))
 	{
 		if (x != 0.0f)
 		{
 			m_fPitch += x;
-			if (m_fPitch > +89.0f) { x -= (m_fPitch - 89.0f); m_fPitch = +89.0f; }
-			if (m_fPitch < -89.0f) { x -= (m_fPitch + 89.0f); m_fPitch = -89.0f; }
+			if (m_fPitch > +89.0f) 
+			{
+				x -= (m_fPitch - 89.0f); 
+				m_fPitch = +89.0f;
+			}
+			if (m_fPitch < -89.0f)
+			{
+				x -= (m_fPitch + 89.0f);
+				m_fPitch = -89.0f; 
+			}
 		}
 		if (y != 0.0f)
 		{
 			m_fYaw += y;
-			if (m_fYaw > 360.0f) m_fYaw -= 360.0f;
-			if (m_fYaw < 0.0f) m_fYaw += 360.0f;
+			if (m_fYaw > 360.0f)
+				m_fYaw -= 360.0f;
+			if (m_fYaw < 0.0f)
+				m_fYaw += 360.0f;
 		}
 		if (z != 0.0f)
 		{
 			m_fRoll += z;
-			if (m_fRoll > +20.0f) { z -= (m_fRoll - 20.0f); m_fRoll = +20.0f; }
-			if (m_fRoll < -20.0f) { z -= (m_fRoll + 20.0f); m_fRoll = -20.0f; }
+			if (m_fRoll > +20.0f) 
+			{
+				z -= (m_fRoll - 20.0f);
+				m_fRoll = +20.0f; 
+			}
+			if (m_fRoll < -20.0f)
+			{
+				z -= (m_fRoll + 20.0f);
+				m_fRoll = -20.0f;
+			}
 		}
 		m_pCamera->Rotate(x, y, z);
 		if (y != 0.0f)
