@@ -21,11 +21,6 @@ void AnimationController::SetObject(CAnimationObject* pObject)
 }
 AnimationController::~AnimationController()
 {
-	if (m_pd3dcbBoneTransforms)
-	{
-		m_pd3dcbBoneTransforms->Unmap(0, NULL);
-		m_pd3dcbBoneTransforms->Release();
-	}
 	if (m_ppBoneObject)
 		delete[] m_ppBoneObject;
 	if (m_pAnimation)
@@ -37,6 +32,7 @@ void AnimationController::ChangeAnimation(int iNewState)
 	{
 		m_pRootObject->m_pAnimationFactors->m_fSaveLastFrame = m_pRootObject->m_pAnimationFactors->m_fCurrentFrame;
 		m_pRootObject->m_pAnimationFactors->m_iNewState = iNewState;
+
 		if(m_pRootObject->m_pAnimationFactors->m_iState > 0)
 			m_pRootObject->m_pAnimationFactors->m_iSaveState = m_pRootObject->m_pAnimationFactors->m_iState;
 		else
@@ -236,10 +232,18 @@ void AnimationController::SetToParentTransforms()
 
 	float fTime = std::chrono::duration_cast<std::chrono::milliseconds>(chrono::system_clock::now() - m_pRootObject->m_pAnimationFactors->m_chronoStart).count() / 1000.0f;
 	
-	if (m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].nType == ALL && m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].fTime < fTime)
+	if (m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].fTime < fTime)
 	{
-		ChangeAnimation(0);
-		fTime = 0;
+		if (m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].nType == ALL)
+		{
+			ChangeAnimation(0);
+			fTime = 0;
+		}
+		if (m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].nType == CONTINUOUS_PLAYBACK)
+		{
+			ChangeAnimation(m_pRootObject->m_pAnimationFactors->m_iState + 1);
+			fTime = 0;
+		}
 	}
 
 	if (m_pRootObject->m_pAnimationFactors->m_iState == CHANG_INDEX && (fTime > CHANGE_TIME))
@@ -316,8 +320,17 @@ void AnimationController::AdvanceAnimation(ID3D12GraphicsCommandList* pd3dComman
 		XMMATRIX toRoot = XMLoadFloat4x4(&m_ppBoneObject[i]->m_xmf4x4ToRootTransform);
 		XMMATRIX finalTransform = XMMatrixMultiply(XMMatrixTranspose(offset), (toRoot));
 
-		XMStoreFloat4x4(&m_pRootObject->m_BoneTransforms->m_xmf4x4BoneTransform[i], XMMatrixTranspose(finalTransform));
+		if(i < BONE_TRANSFORM_NUM)
+			XMStoreFloat4x4(&m_pRootObject->m_BoneTransforms->m_xmf4x4BoneTransform[i], XMMatrixTranspose(finalTransform));
+		else if(i >= BONE_TRANSFORM_NUM && i < (BONE_TRANSFORM_NUM2 + BONE_TRANSFORM_NUM))
+			XMStoreFloat4x4(&m_pRootObject->m_BoneTransforms2->m_xmf4x4BoneTransform[i - BONE_TRANSFORM_NUM], XMMatrixTranspose(finalTransform));
+		else
+			XMStoreFloat4x4(&m_pRootObject->m_BoneTransforms3->m_xmf4x4BoneTransform[i - (BONE_TRANSFORM_NUM2 + BONE_TRANSFORM_NUM)], XMMatrixTranspose(finalTransform));
 	}
+	//m_pRootObject->m_BoneTransforms2->m_xmf4x4BoneTransform[62 - BONE_TRANSFORM_NUM] = Matrix4x4::Identity();
+	//m_pRootObject->m_BoneTransforms3->m_xmf4x4BoneTransform[63 - (BONE_TRANSFORM_NUM2 + BONE_TRANSFORM_NUM)] = Matrix4x4::Identity();
+	//m_pRootObject->m_BoneTransforms3->m_xmf4x4BoneTransform[64 - (BONE_TRANSFORM_NUM2 + BONE_TRANSFORM_NUM)] = Matrix4x4::Identity();
+	//m_pRootObject->m_BoneTransforms3->m_xmf4x4BoneTransform[65 - (BONE_TRANSFORM_NUM2 + BONE_TRANSFORM_NUM)] = Matrix4x4::Identity();
 }
 
 
@@ -945,6 +958,12 @@ CAnimationObject::~CAnimationObject()
 	if (m_BoneTransforms)
 		delete m_BoneTransforms;
 
+	if (m_BoneTransforms2)
+		delete m_BoneTransforms2;
+
+	if (m_BoneTransforms3)
+		delete m_BoneTransforms3;
+
 	if (m_pSibling)
 		delete m_pSibling;
 	if (m_pChild)
@@ -1040,6 +1059,7 @@ void CAnimationObject::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamer
 
 	if (m_pSibling)
 		m_pSibling->Render(pd3dCommandList, pCamera, nInstances);
+
 	if (m_pChild)
 		m_pChild->Render(pd3dCommandList, pCamera, nInstances);
 }
@@ -1138,16 +1158,21 @@ void CAnimationObject::LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, ID3D
 		InFile.read((char*)pxmf3BoneWeights, sizeof(XMFLOAT3) * nVertices); // 본가중치 받기
 		InFile.read((char*)pxmi4BoneIndices, sizeof(XMINT4) * nVertices); // 본인덱스 받기
 
+		if (GetRootObject()->m_pAnimationFactors != NULL)
+		{
+			delete GetRootObject()->m_pAnimationFactors;
+		}
+		
 		int nBindPoses;
-
+		
 		InFile.read((char*)&nBindPoses, sizeof(int)); // 본포즈 길이 받기
-
+		
 		GetRootObject()->m_pAnimationFactors = new AnimationFactors(nBindPoses);
-
+		
 		GetRootObject()->m_pBindPoses = new XMFLOAT4X4[nBindPoses];
-
+		
 		InFile.read((char*)GetRootObject()->m_pBindPoses, sizeof(XMFLOAT4X4) *nBindPoses); // 본포즈 받기
-
+		
 		int Namesize;
 
 		InFile.read((char*)&Namesize, sizeof(int)); // 디퓨즈맵이름 받기
@@ -1294,6 +1319,9 @@ void CAnimationObject::LoadGeometryFromFile(ID3D12Device *pd3dDevice, ID3D12Grap
 	}
 	m_bRoot = true;
 	m_BoneTransforms = new BONE_TRANSFORMS();
+	m_BoneTransforms2 = new BONE_TRANSFORMS2();
+	m_BoneTransforms3 = new BONE_TRANSFORMS2();
+
 	LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, fi, 0, 1);
 	LoadAnimation(pd3dDevice, pd3dCommandList, fi, pAnimationController);
 	fi.close(); // 파일 닫기

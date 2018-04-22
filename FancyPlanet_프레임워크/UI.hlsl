@@ -1,6 +1,6 @@
 SamplerState gWrapSamplerState : register(s0);
 Texture2D<float4> gtxUI : register(t14);
-static float fSize = 0.0f;
+static float fSize = -0.5f;
 
 struct VS_UI_OUTPUT
 {

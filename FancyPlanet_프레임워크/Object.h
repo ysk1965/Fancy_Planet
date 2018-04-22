@@ -9,7 +9,8 @@ enum {
 	MODIFIABLE = 2, // 애니메이션 시간이 변경될수 있음
 	NOT_CYCLE = 3, // 한번만 재생되고 마지막 모습에서 정지
 	CAN_BACK_PLAY = 4, // 뒤로도 재생이 필요한 애니메이션(구현)
-	CYCLE_NEED_TIME = 5 // 싸이클이 필요하지만 처음과 끝이 같지 않는 애니메이션 
+	CYCLE_NEED_TIME = 5, // 싸이클이 필요하지만 처음과 끝이 같지 않는 애니메이션 
+	CONTINUOUS_PLAYBACK = 6 // 재생이 끊기지 않고, 다음 인덱스 애니메이션이 자동 실행
 };
  
 #define DIR_FORWARD					0x01
@@ -26,6 +27,7 @@ enum {
 #define RESOURCE_BUFFER				0x05
 
 #define BONE_TRANSFORM_NUM 31
+#define BONE_TRANSFORM_NUM2 32
 
 #define CHANGE_TIME 0.2f
 
@@ -50,6 +52,10 @@ struct BONE_TRANSFORMS
 {
 	XMFLOAT4X4	m_xmf4x4World;
 	XMFLOAT4X4 m_xmf4x4BoneTransform[BONE_TRANSFORM_NUM];
+};
+struct BONE_TRANSFORMS2
+{
+	XMFLOAT4X4 m_xmf4x4BoneTransform[BONE_TRANSFORM_NUM2];
 };
 struct FRAME
 {
@@ -78,13 +84,6 @@ class AnimationController
 {
 private:
 	UINT m_nAnimation = 0;
-
-	ID3D12Resource					*m_pd3dcbBoneTransforms = NULL;
-
-	ID3D12DescriptorHeap			*m_pd3dBoneTransformsDescriptorHeap = NULL;
-
-	D3D12_CPU_DESCRIPTOR_HANDLE		m_d3dBoneTransformsCPUDescriptorStartHandle;
-	D3D12_GPU_DESCRIPTOR_HANDLE		m_d3dBoneTransformsGPUDescriptorStartHandle;
 
 	CAnimationObject* m_pRootObject = NULL;
 	CAnimationObject **m_ppBoneObject = NULL;
@@ -335,7 +334,10 @@ public:
 
 	XMFLOAT4X4						m_xmf4x4ToRootTransform;
 	XMFLOAT4X4						m_xmf4x4ToParentTransform;
+
 	BONE_TRANSFORMS			*m_BoneTransforms;
+	BONE_TRANSFORMS2			*m_BoneTransforms2;
+	BONE_TRANSFORMS2			*m_BoneTransforms3;
 
 	TCHAR							m_strFrameName[256] = { '\0' };
 	bool							m_bRoot = false;

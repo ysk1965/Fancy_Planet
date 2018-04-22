@@ -681,13 +681,13 @@ void CGameFramework::ProcessInput()
 		if (pKeysBuffer[87] & 0xF0)
 		{
 			dwDirection |= DIR_FORWARD;
-			m_ppScenes[CHARACTER]->ChangeAnimation(1);
+			m_ppScenes[CHARACTER]->ChangeAnimation(2);
 			IsInput = true;
 		}
 		if (pKeysBuffer[83] & 0xF0)
 		{
 			dwDirection |= DIR_BACKWARD;
-			m_ppScenes[CHARACTER]->ChangeAnimation(-1);
+			m_ppScenes[CHARACTER]->ChangeAnimation(-2);
 			IsInput = true;
 		}
 		if (pKeysBuffer[65] & 0xF0)
@@ -716,7 +716,7 @@ void CGameFramework::ProcessInput()
 		}
 		if (pKeysBuffer[VK_SPACE] & 0xF0)
 		{
-			m_ppScenes[CHARACTER]->ChangeAnimation(2);
+			m_ppScenes[CHARACTER]->ChangeAnimation(5);
 			IsInput = true;
 		}
 		float cxDelta = 0.0f, cyDelta = 0.0f;
@@ -740,7 +740,7 @@ void CGameFramework::ProcessInput()
 					m_pPlayer->Rotate(cyDelta, cxDelta, 0.0f);
 			}
 			if (dwDirection)
-				m_pPlayer->Move(dwDirection, 250.0f * m_GameTimer.GetTimeElapsed(), true);
+				m_pPlayer->Move(dwDirection, 100.0f * m_GameTimer.GetTimeElapsed(), true);
 		}
 	}
 

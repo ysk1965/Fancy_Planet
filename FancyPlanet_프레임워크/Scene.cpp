@@ -399,7 +399,7 @@ void CharacterScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsComman
 	
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
-	m_ppSampleObjects[0] = new CAnimationObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, 0, L"../Assets/Soldier.bss", m_ppAnimationController[0]);
+	m_ppSampleObjects[0] = new CAnimationObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, 0, L"../Assets/Astronaut.bss", m_ppAnimationController[0]);
 	
 	m_ppSoldierObjects = new CAnimationObject*[m_nObjects];
 
@@ -411,9 +411,10 @@ void CharacterScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsComman
 	for (int i = 0; i < m_nObjects; i++)
 	{
  		m_ppSoldierObjects[i]->m_pAnimationFactors->SetBoneObject(m_ppSoldierObjects[i]);
-		m_ppSoldierObjects[i]->SetPosition(rand()%3000, rand()%100 + 300 , rand() % 3000);
+		//m_ppSoldierObjects[i]->SetPosition(rand() % 3000, rand() % 100 + 300, rand() % 3000);
+		m_ppSoldierObjects[i]->SetPosition(100, 300 , 100);
 		if (i != m_nObjects - 1)
-			m_ppSoldierObjects[i]->SetScale(5.0f, 5.0f, 5.0f);
+			m_ppSoldierObjects[i]->SetScale(50.0f, 50.0f, 50.0f);
 		else
 			m_ppSoldierObjects[m_nObjects - 1]->SetPlayerScale(5);
 	}
@@ -438,6 +439,8 @@ void CharacterScene::CopyObject(CAnimationObject* pSample, CAnimationObject** pp
 		ppEmptyObjects[i] = ppObjects[i];
 
 		ppEmptyObjects[i]->m_BoneTransforms = new BONE_TRANSFORMS();
+		ppEmptyObjects[i]->m_BoneTransforms2 = new BONE_TRANSFORMS2();
+		ppEmptyObjects[i]->m_BoneTransforms3 = new BONE_TRANSFORMS2();
 	}
 	for (int i = 0; i < nSize; i++)
 	{
@@ -532,18 +535,55 @@ void CharacterScene::CreateShaderVariables(ID3D12Device *pd3dDevice, ID3D12Graph
 		, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
 
 	m_pd3dcbGameObjects->Map(0, NULL, (void **)&m_pcbMappedGameObjects);
+
+
+	UINT ncbElementBytes2 = ((sizeof(BONE_TRANSFORMS2) + 255) & ~255); //256ÀÇ ¹è¼ö
+	m_pd3dcbGameObjects2 = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes2 * m_nObjects
+		, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
+
+	m_pd3dcbGameObjects2->Map(0, NULL, (void **)&m_pcbMappedGameObjects2);
+
+	m_pd3dcbGameObjects3 = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes2 * m_nObjects
+		, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
+
+	m_pd3dcbGameObjects3->Map(0, NULL, (void **)&m_pcbMappedGameObjects3);
 }
 void CharacterScene::UpdateShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList)
 {
 	UINT ncbElementBytes = ((sizeof(BONE_TRANSFORMS) + 255) & ~255);
+	UINT ncbElementBytes2 = ((sizeof(BONE_TRANSFORMS2) + 255) & ~255);
 
 	pd3dCommandList->SetGraphicsRootShaderResourceView(8, m_pd3dcbGameObjects->GetGPUVirtualAddress());
+	pd3dCommandList->SetGraphicsRootShaderResourceView(9, m_pd3dcbGameObjects2->GetGPUVirtualAddress());
+	pd3dCommandList->SetGraphicsRootShaderResourceView(10, m_pd3dcbGameObjects3->GetGPUVirtualAddress());
 	
 	for (int i = 0; i < m_nObjects; i++)
 	{
 		BONE_TRANSFORMS *pbMappedcbGameObject = (BONE_TRANSFORMS *)((UINT8 *)m_pcbMappedGameObjects + (i * ncbElementBytes));
 		XMStoreFloat4x4(&pbMappedcbGameObject->m_xmf4x4World, XMMatrixTranspose(XMLoadFloat4x4(&m_ppSoldierObjects[i]->m_xmf4x4World)));
 		::memcpy(pbMappedcbGameObject->m_xmf4x4BoneTransform, &m_ppSoldierObjects[i]->m_BoneTransforms->m_xmf4x4BoneTransform, sizeof(XMFLOAT4X4) * BONE_TRANSFORM_NUM);
+
+		BONE_TRANSFORMS2*pbMappedcbGameObject2 = (BONE_TRANSFORMS2 *)((UINT8 *)m_pcbMappedGameObjects2 + (i * ncbElementBytes2));
+		::memcpy(pbMappedcbGameObject2->m_xmf4x4BoneTransform, &m_ppSoldierObjects[i]->m_BoneTransforms2->m_xmf4x4BoneTransform, sizeof(XMFLOAT4X4) * BONE_TRANSFORM_NUM2);
+		//
+		//m_ppSoldierObjects[i]->m_BoneTransforms2->m_xmf4x4BoneTransform[62 - BONE_TRANSFORM_NUM]._24 *= 5;
+		//m_ppSoldierObjects[i]->m_BoneTransforms2->m_xmf4x4BoneTransform[62 - BONE_TRANSFORM_NUM]._34 *= 5;
+		//m_ppSoldierObjects[i]->m_BoneTransforms2->m_xmf4x4BoneTransform[62 - BONE_TRANSFORM_NUM]._14 *= 5;
+		//
+		//m_ppSoldierObjects[i]->m_BoneTransforms3->m_xmf4x4BoneTransform[65 - (BONE_TRANSFORM_NUM2 + BONE_TRANSFORM_NUM)]._24 *= 3;
+		//m_ppSoldierObjects[i]->m_BoneTransforms3->m_xmf4x4BoneTransform[65 - (BONE_TRANSFORM_NUM2 + BONE_TRANSFORM_NUM)]._34 *= 3;
+		//m_ppSoldierObjects[i]->m_BoneTransforms3->m_xmf4x4BoneTransform[65 - (BONE_TRANSFORM_NUM2 + BONE_TRANSFORM_NUM)]._14 *= 3;
+		//
+		//m_ppSoldierObjects[i]->m_BoneTransforms3->m_xmf4x4BoneTransform[63 - (BONE_TRANSFORM_NUM2 + BONE_TRANSFORM_NUM)]._24 /= 50;
+		//m_ppSoldierObjects[i]->m_BoneTransforms3->m_xmf4x4BoneTransform[63 - (BONE_TRANSFORM_NUM2 + BONE_TRANSFORM_NUM)]._34 /= 50;
+		//m_ppSoldierObjects[i]->m_BoneTransforms3->m_xmf4x4BoneTransform[63 - (BONE_TRANSFORM_NUM2 + BONE_TRANSFORM_NUM)]._14 /= 50;
+		//
+		//m_ppSoldierObjects[i]->m_BoneTransforms3->m_xmf4x4BoneTransform[64 - (BONE_TRANSFORM_NUM2 + BONE_TRANSFORM_NUM)]._24 *= 2;
+		//m_ppSoldierObjects[i]->m_BoneTransforms3->m_xmf4x4BoneTransform[64 - (BONE_TRANSFORM_NUM2 + BONE_TRANSFORM_NUM)]._34 *= 2;
+		//m_ppSoldierObjects[i]->m_BoneTransforms3->m_xmf4x4BoneTransform[64 - (BONE_TRANSFORM_NUM2 + BONE_TRANSFORM_NUM)]._14 *= 2;
+		//
+		BONE_TRANSFORMS2*pbMappedcbGameObject3 = (BONE_TRANSFORMS2 *)((UINT8 *)m_pcbMappedGameObjects3 + (i * ncbElementBytes2));
+		::memcpy(pbMappedcbGameObject3->m_xmf4x4BoneTransform, &m_ppSoldierObjects[i]->m_BoneTransforms3->m_xmf4x4BoneTransform, sizeof(XMFLOAT4X4) * BONE_TRANSFORM_NUM2);
 	}
 }
 void CharacterScene::AnimateObjects(float fTimeElapsed, CCamera *pCamera)
@@ -567,8 +607,9 @@ void CharacterScene::ChangeAnimation(int newState)
 			if (m_ppSoldierObjects[i]->m_pAnimationController->m_pAnimation[-newState].nType != CAN_BACK_PLAY)
 				return;
 		}
-
 		if (m_ppSoldierObjects[i]->m_pAnimationController->m_pAnimation[m_ppSoldierObjects[i]->m_pAnimationFactors->m_iState].nType == ALL)
+			return;
+		if (m_ppSoldierObjects[i]->m_pAnimationController->m_pAnimation[m_ppSoldierObjects[i]->m_pAnimationFactors->m_iState].nType == CONTINUOUS_PLAYBACK)
 			return;
 
 		m_ppSoldierObjects[i]->m_pAnimationController->SetObject(m_ppSoldierObjects[i]);
@@ -590,6 +631,7 @@ void CharacterScene::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera 
 	{
 		m_ppSoldierObjects[i]->m_pAnimationController->SetObject(m_ppSoldierObjects[i]);
 		m_ppSoldierObjects[i]->m_pAnimationController->AdvanceAnimation(pd3dCommandList);
+
 		if (i == m_nObjects - 1)
 		{
 			m_ppSoldierObjects[m_nObjects - 1]->m_xmf4x4ToParentTransform = m_pPlayer->m_xmf4x4World;
@@ -597,9 +639,9 @@ void CharacterScene::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera 
 			Scale._11 = Scale._22 = Scale._33 = m_ppSoldierObjects[m_nObjects - 1]->GetPlayerScale();
 			m_ppSoldierObjects[m_nObjects - 1]->m_xmf4x4ToParentTransform = Matrix4x4::Multiply(Scale, m_ppSoldierObjects[m_nObjects - 1]->m_xmf4x4ToParentTransform);
 		}
-
 		m_ppSoldierObjects[i]->UpdateTransform(NULL);
 	}
+
 	UpdateShaderVariables(pd3dCommandList);
 	m_ppSoldierObjects[m_nObjects - 1]->Render(pd3dCommandList, pCamera, m_nObjects);
 }
@@ -651,7 +693,7 @@ ID3D12RootSignature *CharacterScene::CreateGraphicsRootSignature(ID3D12Device *p
 	pd3dDescriptorRanges[6].RegisterSpace = 0;
 	pd3dDescriptorRanges[6].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 
-	D3D12_ROOT_PARAMETER pd3dRootParameters[9];
+	D3D12_ROOT_PARAMETER pd3dRootParameters[11];
 
 	pd3dRootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
 	pd3dRootParameters[0].Descriptor.ShaderRegister = 0; //Player
@@ -697,6 +739,16 @@ ID3D12RootSignature *CharacterScene::CreateGraphicsRootSignature(ID3D12Device *p
 	pd3dRootParameters[8].Descriptor.ShaderRegister = 0;
 	pd3dRootParameters[8].Descriptor.RegisterSpace = 0;
 	pd3dRootParameters[8].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
+
+	pd3dRootParameters[9].ParameterType = D3D12_ROOT_PARAMETER_TYPE_SRV;
+	pd3dRootParameters[9].Descriptor.ShaderRegister = 1;
+	pd3dRootParameters[9].Descriptor.RegisterSpace = 0;
+	pd3dRootParameters[9].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
+
+	pd3dRootParameters[10].ParameterType = D3D12_ROOT_PARAMETER_TYPE_SRV;
+	pd3dRootParameters[10].Descriptor.ShaderRegister = 2;
+	pd3dRootParameters[10].Descriptor.RegisterSpace = 0;
+	pd3dRootParameters[10].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
 
 	D3D12_STATIC_SAMPLER_DESC pd3dSamplerDescs[1];
 

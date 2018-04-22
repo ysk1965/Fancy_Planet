@@ -333,12 +333,12 @@ void CDefferredTexturedShader::CreateShader(ID3D12Device *pd3dDevice, ID3D12Root
 }
 D3D12_SHADER_BYTECODE CDefferredTexturedShader::CreateVertexShader(ID3DBlob **ppd3dShaderBlob)
 {
-	return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "VSTexturedAnimation", "vs_5_1", ppd3dShaderBlob));
+	return(CShader::CompileShaderFromFile(L"Animation.hlsl", "VSTexturedAnimation", "vs_5_1", ppd3dShaderBlob));
 }
 
 D3D12_SHADER_BYTECODE CDefferredTexturedShader::CreatePixelShader(ID3DBlob **ppd3dShaderBlob)
 {
-	return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "PSTextured", "ps_5_1", ppd3dShaderBlob));
+	return(CShader::CompileShaderFromFile(L"Animation.hlsll", "PSTextured", "ps_5_1", ppd3dShaderBlob));
 }
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -377,12 +377,12 @@ D3D12_INPUT_LAYOUT_DESC CDefferredLightingTexturedShader::CreateInputLayout()
 
 D3D12_SHADER_BYTECODE CDefferredLightingTexturedShader::CreateVertexShader(ID3DBlob **ppd3dShaderBlob)
 {
-	return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "ANIMATION_VS", "vs_5_1", ppd3dShaderBlob));
+	return(CShader::CompileShaderFromFile(L"Animation.hlsl", "ANIMATION_VS", "vs_5_1", ppd3dShaderBlob));
 }
 
 D3D12_SHADER_BYTECODE CDefferredLightingTexturedShader::CreatePixelShader(ID3DBlob **ppd3dShaderBlob)
 {
-	return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "PS_TDL", "ps_5_1", ppd3dShaderBlob));
+	return(CShader::CompileShaderFromFile(L"Animation.hlsl", "PS_TDL", "ps_5_1", ppd3dShaderBlob));
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

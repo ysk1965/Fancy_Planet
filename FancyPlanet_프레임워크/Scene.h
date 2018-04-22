@@ -119,6 +119,12 @@ public:
 
 	ID3D12Resource					*m_pd3dcbGameObjects = NULL;
 	BONE_TRANSFORMS				*m_pcbMappedGameObjects = NULL;
+
+	ID3D12Resource					*m_pd3dcbGameObjects2 = NULL;
+	BONE_TRANSFORMS2			*m_pcbMappedGameObjects2 = NULL;
+
+	ID3D12Resource					*m_pd3dcbGameObjects3 = NULL;
+	BONE_TRANSFORMS2				*m_pcbMappedGameObjects3 = NULL;
 private:
 	CAnimationObject **m_ppSampleObjects = NULL;
 	CAnimationObject	 **m_ppSoldierObjects = NULL;
