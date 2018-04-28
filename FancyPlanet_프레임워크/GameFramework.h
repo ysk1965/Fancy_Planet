@@ -6,19 +6,19 @@
 #include "Timer.h"
 #include "Player.h"
 #include "Scene.h"
-
+#include "protocol.h"
 enum
 {
 	NUM_SUBSETS = 4,
 	NUM_COMMANDLIST = 4
 };
 
-enum 
+enum
 {
-	TERRAIN, 
+	TERRAIN,
 	PHYSICS,
-	CHARACTER, 
-	OBEJECT 
+	CHARACTER,
+	OBEJECT
 };
 using namespace std;
 
@@ -66,7 +66,7 @@ public:
 	};
 	void PrepareFrame();
 private:
-	ID3D12GraphicsCommandList *m_pd3dScreenCommandList;
+	ID3D12GraphicsCommandList * m_pd3dScreenCommandList;
 	CTextureToFullScreenShader *m_pScreenShader = NULL;
 	UIShader * m_pUIShader = NULL;
 	ID3D12CommandAllocator		*m_pd3dScreenCommandAllocator;
@@ -86,7 +86,7 @@ private:
 	bool						**m_ppbDivision = NULL;
 	bool						m_bMsaa4xEnable = false;
 	UINT						m_nMsaa4xQualityLevels = 0;
-	
+
 	static const UINT				m_nSwapChainBuffers = 2;
 	UINT							m_nSwapChainBufferIndex;
 
@@ -113,7 +113,7 @@ private:
 	ID3D12Debug					*m_pd3dDebugController;
 #endif
 
-	static const UINT				m_nRenderTargetBuffers = 4; 
+	static const UINT				m_nRenderTargetBuffers = 4;
 	ID3D12Resource					*m_ppd3dRenderTargetBuffers[m_nRenderTargetBuffers];
 	D3D12_CPU_DESCRIPTOR_HANDLE		m_pd3dRtvRenderTargetBufferCPUHandles[m_nRenderTargetBuffers];
 
@@ -126,7 +126,7 @@ private:
 	POINT						m_ptOldCursorPos;
 
 	_TCHAR						m_pszFrameRate[50];
-	static CGameFramework* Get() 
+	static CGameFramework* Get()
 	{
 		return  m_pGFforMultiThreads;
 	}
@@ -158,5 +158,29 @@ public:
 	/////////////// Physx SDK Member Function ///////////////
 	void InitializePhysxEngine();
 	void ReleasePhysxEngine();
+
+	//서버
+private:
+
+	SOCKET g_mysocket;
+	WSABUF	send_wsabuf;
+	char 	send_buffer[BUF_SIZE];
+	WSABUF	recv_wsabuf;
+	char	recv_buffer[BUF_SIZE];
+	char	packet_buffer[BUF_SIZE];
+	DWORD		in_packet_size = 0;
+	int		saved_packet_size = 0;
+	int		g_myid; // 내 아이디
+	PLAYER_INFO g_my_info;
+	array <PLAYER_INFO, MAX_USER> g_player_info;
+
+	bool is_fowardmove = false;
+
+
+public:
+	void ProcessPacket(char *ptr);
+	void ReadPacket(SOCKET sock);
+	void InitNetwork(HWND main_window);
+
 };
 

@@ -87,7 +87,7 @@ void CPlayer::Move(const XMFLOAT3& xmf3Shift, bool bUpdateVelocity)
 {
 	if (bUpdateVelocity)
 	{
-		m_pPxCharacterController->move(PxVec3(xmf3Shift.x, xmf3Shift.y, xmf3Shift.z) * 1.4f, 0, NULL, PxControllerFilters()); //Pxplayer Move
+		m_pPxCharacterController->move(PxVec3(xmf3Shift.x, xmf3Shift.y, xmf3Shift.z) * 0.2f, 0, NULL, PxControllerFilters()); //Pxplayer Move
 		m_xmf3Velocity = Vector3::Add(m_xmf3Velocity, xmf3Shift);
 	}
 	else
@@ -214,52 +214,56 @@ void CPlayer::Update(float fTimeElapsed)
 		fDeceleration = fLength;
 	m_xmf3Velocity = Vector3::Add(m_xmf3Velocity, Vector3::ScalarProduct(m_xmf3Velocity, -fDeceleration, true));
 
-	//////////////////////////////////////////////////////////////////////////////////////
-	//////////////////////////////////////////////////////////////////////////////////////
-	//////////////////////////////////////////////////////////////////////////////////////
+	//////////////////////////////////////////////////////////////
+	//															//
+	//							PhysX							//
+	//															//
+	//////////////////////////////////////////////////////////////
 
-	//m_pPxCharacterController->move(PxVec3(m_xmf3Velocity.x, m_xmf3Velocity.y, m_xmf3Velocity.z) * m_fSpeed * fTimeElapsed * 1.4f, 0, fTimeElapsed, PxControllerFilters());
-
-	//PhysX에 값을 전달해준다. 중력
-	m_fFallvelocity -= m_fFallAcceleration * fTimeElapsed * 50.f;
-
-	if (m_fFallvelocity < -1000.f)
-		m_fFallvelocity = -1000.f;
-	
-	m_pPxCharacterController->move(PxVec3(0, 1.f, 0) * fTimeElapsed * m_fFallvelocity, 0, fTimeElapsed, PxControllerFilters());
-
-	PxControllerState   m_pPxState;
-
-	//피직스 객체의 상태값을 m_pPxState에 넣어준다.
-	m_pPxCharacterController->getState(m_pPxState);
-
-	//윗쪽 충돌하거나 아랫쪽 충돌하면 m_fFallvelocity = 0.0f
-	if (m_pPxState.collisionFlags == PxControllerCollisionFlag::eCOLLISION_DOWN ||
-		m_pPxState.collisionFlags == PxControllerCollisionFlag::eCOLLISION_UP)
-		m_fFallvelocity = 0.f;
-
-	////현재 PhysX의 값으로 객체의 월드행렬을 만들어준다.
-	//m_xmf3Position = XMFLOAT3((float)m_pPxCharacterController->getFootPosition().x, (float)m_pPxCharacterController->getFootPosition().y, (float)m_pPxCharacterController->getFootPosition().z);
-
+	////m_fTimeDelta = fTimeElapsed;
+	//
+	////PhysX에 값을 전달해준다. 중력
+	//m_fFallvelocity -= m_fFallAcceleration * fTimeElapsed * 50.f;
+	//
+	//if (m_fFallvelocity < -1000.f)
+	//	m_fFallvelocity = -1000.f;
+	//
+	//m_pPxCharacterController->move(PxVec3(0, 1.f, 0) * fTimeElapsed * m_fFallvelocity, 0, fTimeElapsed, PxControllerFilters());
+	//
+	//PxControllerState   m_pPxState;
+	//
+	////피직스 객체의 상태값을 m_pPxState에 넣어준다.
+	//m_pPxCharacterController->getState(m_pPxState);
+	//
+	////윗쪽 충돌하거나 아랫쪽 충돌하면 m_fFallvelocity = 0.0f
+	//if (m_pPxState.collisionFlags == PxControllerCollisionFlag::eCOLLISION_DOWN ||
+	//	m_pPxState.collisionFlags == PxControllerCollisionFlag::eCOLLISION_UP)
+	//	m_fFallvelocity = 0.f;
+	//
+	//////현재 PhysX의 값으로 객체의 월드행렬을 만들어준다.
+	//m_xmf3Position = XMFLOAT3((float)m_pPxCharacterController->getFootPosition().x, (float)m_pPxCharacterController->getFootPosition().y, (float)m_pPxCharacterController->getFootPosition().z); //컨트롤러의 발 위치 CCT 모양의 아래 부분
+	//
 	//float m_fRevice = 0.5f; //Player의 Y보정값(발이 지면에 안박히게 보정)
-
+	//
 	//XMMATRIX matTrans = XMMatrixTranslation(m_xmf3Position.x, m_xmf3Position.y + m_fRevice, m_xmf3Position.z);
-
+	//
 	//XMMATRIX matRotX = XMMatrixRotationX((float)D3DXToRadian(m_fPitch));
 	//XMMATRIX matRotY = XMMatrixRotationY((float)D3DXToRadian(m_fYaw));
 	//XMMATRIX matRotZ = XMMatrixRotationZ((float)D3DXToRadian(m_fRoll));
-
-	//XMStoreFloat4x4(&m_xmf4x4World,  m_fPitch * m_fYaw * m_fRoll * matTrans);
-	
+	//
+	//XMStoreFloat4x4(&m_xmf4x4World, matRotX * matRotY * matRotZ * matTrans);
+	////m_pCamera->SetPosition(XMFLOAT3(m_xmf3Position.x, m_xmf3Position.y+14, m_xmf3Position.z));
+	////m_pCamera->Move(m_xmf3Position);
+	//
 	//DWORD nCurrentCameraMode = m_pCamera->GetMode();
-
+	//
 	//if (nCurrentCameraMode == THIRD_PERSON_CAMERA)
 	//	m_pCamera->Update(m_xmf3Position, fTimeElapsed);
 	//if (m_pCameraUpdatedContext)
 	//	OnCameraUpdateCallback(fTimeElapsed);
 	//if (nCurrentCameraMode == THIRD_PERSON_CAMERA)
 	//	m_pCamera->SetLookAt(m_xmf3Position);
-
+	//
 	//m_pCamera->RegenerateViewMatrix();
 }
 
@@ -380,38 +384,12 @@ void CPlayer::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamer
 
 void CPlayer::BuildObject(PxPhysics* pPxPhysics, PxScene* pPxScene, PxMaterial *pPxMaterial, PxControllerManager *pPxControllerManager)
 {
-	
-	//XMFLOAT3 vMin = *(CMeshMgr::GetInstance()->Get_MeshMin(m_uiObjNum));
-	//XMFLOAT3 vMax = *(CMeshMgr::GetInstance()->Get_MeshMax(m_uiObjNum));
-
-
-	//XMFLOAT3 _d3dxvExtents =
-	//XMFLOAT3((abs(vMin.x) + abs(vMax.x)) / 2, (abs(vMin.y) + abs(vMax.y)) / 2, (abs(vMin.z) + abs(vMax.z)) / 2);
-
-	////Player의 바운딩 박스 생성
-	//PxBoxControllerDesc PxBoxdesc;
-	//PxBoxdesc.position = PxExtendedVec3(0, 0, 0);
-	//PxBoxdesc.halfForwardExtent = _d3dxvExtents.y / 2;
-	//PxBoxdesc.halfSideExtent = _d3dxvExtents.z / 2;
-	//PxBoxdesc.halfHeight = _d3dxvExtents.x / 2;
-	//PxBoxdesc.slopeLimit = 10;
-	//PxBoxdesc.contactOffset = 0.00001;
-	//PxBoxdesc.upDirection = PxVec3(0, 1, 0);
-	//PxBoxdesc.material = pPxMaterial;
-	
-
-	//if (m_pPxCharacterController == NULL)
-	//{
-	//	MSG_BOX(L"PhysicsSDK Initialize Failed");
-	//	// 실패메세지 필요하면 넣기
-	//}
-
 	m_pScene = pPxScene;
 
 	PxCapsuleControllerDesc	PxCapsuledesc;
 	PxCapsuledesc.position = PxExtendedVec3(0, 0, 0);
-	PxCapsuledesc.radius = 5.0f;
-	PxCapsuledesc.height = 6.0f;
+	PxCapsuledesc.radius = 1.0f;
+	PxCapsuledesc.height = 2.0f;
 	//캐릭터가 올라갈 수있는 장애물의 최대 높이를 정의합니다. 
 	PxCapsuledesc.stepOffset = 2.f;
 
@@ -429,11 +407,11 @@ void CPlayer::BuildObject(PxPhysics* pPxPhysics, PxScene* pPxScene, PxMaterial *
 	PxCapsuledesc.behaviorCallback = this;
 	PxCapsuledesc.reportCallback = this;
 
-	if (pPxControllerManager->createController(PxCapsuledesc) == NULL)
-	{
-		MSG_BOX(L"PhysicsSDK Initialize Failed");
-		// 실패메세지 필요하면 넣기
-	}
+	//if (pPxControllerManager->createController(PxCapsuledesc) == NULL)
+	//{
+	//	MSG_BOX(L"PhysicsSDK Initialize Failed");
+	//	// 실패메세지 필요하면 넣기
+	//}
 
 	m_pPxCharacterController = pPxControllerManager->createController(PxCapsuledesc);
 

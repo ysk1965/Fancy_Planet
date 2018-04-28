@@ -8,7 +8,7 @@ class CMesh;
 class CScene
 {
 public:
-	CScene();
+	CScene(PxPhysics* pPxPhysicsSDK, PxScene* pPxScene, PxControllerManager* pPxControllerManager, PxCooking* pCooking);
 	~CScene();
 
 	bool OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
@@ -38,6 +38,14 @@ public:
 	CPlayer					*m_pPlayer;
 protected:
 
+	//Physx SDK Member Variables =========================
+	PxPhysics * m_pPxPhysicsSDK;
+	PxScene*						m_pPxScene;
+	PxControllerManager*			m_pPxControllerManager;
+	PxMaterial*						m_pPxMaterial;
+	PxCooking*						m_pCooking;
+	//=====================================================
+
 	ID3D12RootSignature			*m_pd3dGraphicsRootSignature = NULL;
 	
 	int									m_nDivision = 0;
@@ -59,8 +67,16 @@ public:
 	{
 		return m_pTerrain;
 	};
-	TerrainAndSkyBoxScene();
+	TerrainAndSkyBoxScene(PxPhysics* pPxPhysicsSDK, PxScene* pPxScene, PxControllerManager* pPxControllerManager, PxCooking* pCooking);
 	~TerrainAndSkyBoxScene();
+protected:
+	//Physx SDK Member Variables =========================
+	PxPhysics*						m_pPxPhysicsSDK;
+	PxScene*						m_pPxScene;
+	PxControllerManager*			m_pPxControllerManager;
+	PxMaterial*						m_pPxMaterial;
+	PxCooking*						m_pCooking;
+	//=====================================================
 private:
 	CHeightMapTerrain			*m_pTerrain = NULL;
 	CSkyBox						*m_pSkyBox = NULL;
@@ -88,13 +104,9 @@ public:
 	PhysXScene(PxPhysics* pPxPhysicsSDK, PxScene* pPxScene, PxControllerManager* pPxControllerManager, PxCooking* pCooking);
 	~PhysXScene();
 protected:
-	//Physx SDK Member Variables =========================
-	PxPhysics *						m_pPxPhysicsSDK;
-	PxScene*						m_pPxScene;
-	PxControllerManager*			m_pPxControllerManager;
-	PxMaterial*						m_pPxMaterial;
-	PxCooking*						m_pCooking;
-	//=====================================================
+	//씬은 게임 객체들의 집합이다. 게임 객체는 셰이더를 포함한다.
+	CPhysXObject * *m_ppObjects = NULL;
+	int m_nObjects = 0;
 private:
 };
 
@@ -104,7 +116,6 @@ class CharacterScene : public CScene
 public:
 	virtual void BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList);
 	virtual void ReleaseObjects();
-
 	virtual ID3D12RootSignature *CreateGraphicsRootSignature(ID3D12Device *pd3dDevice);
 	virtual void AnimateObjects(float fTimeElapsed, CCamera *pCamera);
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera = NULL);
@@ -113,19 +124,20 @@ public:
 	void CreateShaderVariables(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList);
 	void UpdateShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList);
 	void CopyObject(CAnimationObject* pSample, CAnimationObject** ppObjects, UINT nSize);
-
-	CharacterScene();
+	CAnimationObject* FindMeshRendererObject(CAnimationObject* pRootObject, UINT nRendererMesh);
+	CharacterScene(PxPhysics* pPxPhysicsSDK, PxScene* pPxScene, PxControllerManager* pPxControllerManager, PxCooking* pCooking);
 	~CharacterScene();
 
-	ID3D12Resource					*m_pd3dcbGameObjects = NULL;
+private:
+	ID3D12Resource * m_pd3dcbGameObjects = NULL;
 	BONE_TRANSFORMS				*m_pcbMappedGameObjects = NULL;
 
 	ID3D12Resource					*m_pd3dcbGameObjects2 = NULL;
 	BONE_TRANSFORMS2			*m_pcbMappedGameObjects2 = NULL;
 
 	ID3D12Resource					*m_pd3dcbGameObjects3 = NULL;
-	BONE_TRANSFORMS2				*m_pcbMappedGameObjects3 = NULL;
-private:
+	BONE_TRANSFORMS3				*m_pcbMappedGameObjects3 = NULL;
+
 	CAnimationObject **m_ppSampleObjects = NULL;
 	CAnimationObject	 **m_ppSoldierObjects = NULL;
 	int							m_nObjects = 0;
@@ -144,7 +156,7 @@ public:
 	virtual void ReleaseUploadBuffers();
 	virtual void ChangeAnimation(int newState) {}
 
-	ObjectScene();
+	ObjectScene(PxPhysics* pPxPhysicsSDK, PxScene* pPxScene, PxControllerManager* pPxControllerManager, PxCooking* pCooking);
 	~ObjectScene();
 private:
 };

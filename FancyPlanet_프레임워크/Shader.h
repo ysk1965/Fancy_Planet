@@ -128,33 +128,19 @@ public:
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-class CTestShader : public CShader
+class CRendererMeshShader : public CShader
 {
 public:
-	CTestShader();
-	virtual ~CTestShader();
+	CRendererMeshShader();
+	virtual ~CRendererMeshShader();
 
 	virtual D3D12_INPUT_LAYOUT_DESC CreateInputLayout();
 	virtual D3D12_SHADER_BYTECODE CreateVertexShader(ID3DBlob **ppd3dShaderBlob);
 	virtual D3D12_SHADER_BYTECODE CreatePixelShader(ID3DBlob **ppd3dShaderBlob);
 
 	virtual void CreateShader(ID3D12Device *pd3dDevice, ID3D12RootSignature *pd3dGraphicsRootSignature, UINT nRenderTargets);
-	virtual void BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, int iIndex, void *pContext = NULL);
-	virtual void CreateShaderVariables(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList);
-	virtual void UpdateShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList);
-	virtual void ReleaseShaderVariables(); 
-	virtual void ReleaseUploadBuffers();
-	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera);
-
-	virtual void FrustumCulling(CCamera* pCamera);
+	
 private:
-	CMaterial						*m_pMaterial = NULL;
-
-	int								m_nTestObject = 0;
-	CGameObject			**m_ppTestObjects = NULL;
-
-	ID3D12Resource					*m_pd3dcbGameObjects = NULL;
-	CB_GAMEOBJECT_INFO		*m_pcbMappedGameObjects = NULL;
 };
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //

@@ -182,6 +182,18 @@ public:
 };
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
+class CRendererMeshVertex : public CIlluminatedTexturedTBNVertex
+{
+protected:
+	UINT						m_nIndex;
+public:
+	CRendererMeshVertex() { m_xmf3Position = XMFLOAT3(0.0f, 0.0f, 0.0f); m_xmf2TexCoord = XMFLOAT2(0.0f, 0.0f); m_xmf3Normal = XMFLOAT3(0.0f, 0.0f, 0.0f); m_xmf3Tangent = XMFLOAT3(0.0f, 0.0f, 0.0f); m_nIndex = 0; }
+	CRendererMeshVertex(float x, float y, float z, XMFLOAT2 xmf2TexCoord, XMFLOAT3 xmf3tanget, XMFLOAT3 xmf3Normal, UINT nIndex) { m_xmf3Position = XMFLOAT3(x, y, z); m_xmf3Normal = xmf3Normal; m_xmf2TexCoord = xmf2TexCoord; m_xmf3Tangent = xmf3tanget; m_nIndex = nIndex; }
+	CRendererMeshVertex(XMFLOAT3 xmf3Position, XMFLOAT3 xmf3tanget = XMFLOAT3(0.0f, 0.0f, 0.0f), XMFLOAT3 xmf3Normal = XMFLOAT3(0.0f, 0.0f, 0.0f), XMFLOAT2 xmf2TexCoord = XMFLOAT2(0.0f, 0.0f), UINT nIndex = 0) { m_xmf3Position = xmf3Position; m_xmf3Normal = xmf3Normal; m_xmf2TexCoord = xmf2TexCoord; m_xmf3Tangent = xmf3tanget; m_nIndex = nIndex;	}
+	~CRendererMeshVertex() { }
+};
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
 class CAnimation1Vertex : public CIlluminatedTexturedTBNVertex
 {
 protected:
@@ -281,6 +293,10 @@ protected:
 	UINT							m_nStartIndex = 0;
 	int								m_nBaseVertex = 0;
 
+	//[PhysX]
+	PxVec3*			m_pPxVtx;
+	PxU32*			m_pPxIndex;
+
 public:
 	UINT							m_nVertices = 0;
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList);
@@ -345,6 +361,14 @@ public:
 	virtual ~CMeshIlluminatedTexturedTBN();
 };
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+class CRendererMesh : public CMeshIlluminatedTexturedTBN
+{
+public:
+	CRendererMesh(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList);
+	CRendererMesh(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, UINT nVertices, XMFLOAT3 *pxmf3Positions, XMFLOAT3 *pxmf3Tangents, XMFLOAT3 *pxmf3Normals, XMFLOAT2 *pxmf2UVs, UINT nIndex, UINT nIndices, UINT *pnIndices);
+	virtual ~CRendererMesh();
+};
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 class CAnimationMesh : public CMeshIlluminatedTexturedTBN
 {
 public:
@@ -397,7 +421,7 @@ protected:
 	XMFLOAT3					m_xmf3Scale;
 
 public:
-	CHeightMapGridMesh(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, int xStart, int zStart, int nWidth, int nLength, XMFLOAT3 xmf3Scale = XMFLOAT3(1.0f, 1.0f, 1.0f), XMFLOAT4 xmf4Color = XMFLOAT4(1.0f, 1.0f, 0.0f, 0.0f), void *pContext = NULL);
+	CHeightMapGridMesh(PxPhysics* pPxPhysicsSDK, PxScene* pPxScene, PxControllerManager* pPxControllerManager, PxCooking* pCooking, PxRigidActor* PhysXRigidActor, PxTriangleMesh* PhysXTriangleMesh, PxMaterial* PhysXMeterial, ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, int xStart, int zStart, int nWidth, int nLength, XMFLOAT3 xmf3Scale = XMFLOAT3(1.0f, 1.0f, 1.0f), XMFLOAT4 xmf4Color = XMFLOAT4(1.0f, 1.0f, 0.0f, 0.0f), void *pContext = NULL);
 	virtual ~CHeightMapGridMesh();
 
 	XMFLOAT3 GetScale() { return(m_xmf3Scale); }

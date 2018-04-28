@@ -3,7 +3,8 @@
 #include "Camera.h"
 #include <chrono>
 
-enum {
+enum 
+{
 	NOT_ALL = 0, // 중간에 애니메이션 가능 (구현)
 	ALL = 1, // 애니메이션이 끝나야 다른 얘니메이션이 가능 (구현)
 	MODIFIABLE = 2, // 애니메이션 시간이 변경될수 있음
@@ -12,7 +13,15 @@ enum {
 	CYCLE_NEED_TIME = 5, // 싸이클이 필요하지만 처음과 끝이 같지 않는 애니메이션 
 	CONTINUOUS_PLAYBACK = 6 // 재생이 끊기지 않고, 다음 인덱스 애니메이션이 자동 실행
 };
- 
+
+enum
+{
+	SKINNEDMESH = 0,
+	RENDERMESH = 1,
+	LAYER = 2,
+	END = 3,
+	GET_TYPE = 4
+};
 #define DIR_FORWARD					0x01
 #define DIR_BACKWARD				0x02
 #define DIR_LEFT					0x04
@@ -28,6 +37,8 @@ enum {
 
 #define BONE_TRANSFORM_NUM 31
 #define BONE_TRANSFORM_NUM2 32
+#define BONE_TRANSFORM_NUM3 26
+#define RENDERER_MESH_WORLD_TRANSFORM 6
 
 #define CHANGE_TIME 0.2f
 
@@ -57,6 +68,11 @@ struct BONE_TRANSFORMS2
 {
 	XMFLOAT4X4 m_xmf4x4BoneTransform[BONE_TRANSFORM_NUM2];
 };
+struct BONE_TRANSFORMS3
+{
+	XMFLOAT4X4 m_xmf4x4BoneTransform[BONE_TRANSFORM_NUM3];
+	XMFLOAT4X4	m_xmf4x4RedererMeshWorld[RENDERER_MESH_WORLD_TRANSFORM];
+};
 struct FRAME
 {
 	XMFLOAT3 Translation;
@@ -76,7 +92,6 @@ typedef struct SRT
 	XMFLOAT4 R;
 	XMFLOAT3 T;
 }SRT;
-
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -98,8 +113,7 @@ public:
 		return m_nAnimation;
 	}
 
-	AnimationController(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, UINT nAnimation,
-		XMFLOAT4X4* pBindPoses);
+	AnimationController(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, UINT nAnimation);
 	~AnimationController();
 	void GetCurrentFrame();
 	SRT Interpolate(int iBoneNum);
@@ -110,7 +124,7 @@ public:
 	void AdvanceAnimation(ID3D12GraphicsCommandList* pd3dCommandList);
 	void ChangeAnimation(int iNewState);
 	void SetObject(CAnimationObject* pObject);
-
+	void SetBindPoses(XMFLOAT4X4* pBindPoses);
 
 	ANIMATION *m_pAnimation;
 };
@@ -281,8 +295,26 @@ class CAnimationObject : public CGameObject
 private:
 	CPlayer * m_pPlayer = NULL;
 	UINT m_nScale = 1;
-
+	bool m_bRendererMesh = false;
+	XMFLOAT4X4* m_pBindPoses = NULL;
+	UINT m_nRendererMesh = 0;
 public:
+	void SetRendererMeshNum(UINT index)
+	{
+		m_nRendererMesh = index;
+	}
+	int GetRendererMeshNum()
+	{
+		return m_nRendererMesh;
+	}
+	void SetRendererMesh(bool b)
+	{
+		m_bRendererMesh = b;
+	}
+	bool IsRendererMesh()
+	{
+		return m_bRendererMesh;
+	}
 	UINT GetPlayerScale()
 	{
 		return m_nScale;
@@ -309,17 +341,19 @@ public:
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera, UINT nInstances);
 	void LoadAnimation(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ifstream& InFile, AnimationController* pAnimationController);
 	void LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList,
-		ID3D12RootSignature *pd3dGraphicsRootSignature, ifstream& InFile, UINT nFrame, UINT nSub);
+		ID3D12RootSignature *pd3dGraphicsRootSignature, ifstream& InFile, UINT nSub);
 	void LoadGeometryFromFile(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature
 		, TCHAR *pstrFileName, AnimationController* pAnimationController);
 	virtual void UpdateTransform(XMFLOAT4X4 *pxmf4x4Parent = NULL);
 	CAnimationObject* GetRootObject();
-	CAnimationObject *FindObject();
+	XMFLOAT4X4* GetBindPoses()
+	{
+		return m_pBindPoses;
+	};
 	TCHAR* CharToTCHAR(char * asc);
 	void SetChild(CAnimationObject *pChild);
 	virtual void ChangeAnimation(int newState);
 	
-
 	virtual void SetPosition(float x, float y, float z);
 	virtual void SetPosition(XMFLOAT3& xmf3Position);
 	virtual void SetScale(float x, float y, float z);
@@ -343,12 +377,11 @@ public:
 	bool							m_bRoot = false;
 	int								m_iBoneIndex = -1;
 	UINT							m_nDrawType = -1;
-	XMFLOAT4X4* m_pBindPoses = NULL;
 
 	AnimationController				*m_pAnimationController = NULL;
 	AnimationFactors				*m_pAnimationFactors = NULL;
 
-	CAnimationObject& operator=(const CAnimationObject& other)
+	CAnimationObject& operator=(CAnimationObject& other)
 	{
 		if (this == &other)
 			return *this;
@@ -356,6 +389,8 @@ public:
 		memcpy(m_strFrameName, other.m_strFrameName, sizeof(TCHAR) * 256);
 		m_bRoot = other.m_bRoot;
 		m_iBoneIndex = other.m_iBoneIndex;
+		SetRendererMesh(other.IsRendererMesh());
+		SetRendererMeshNum(other.GetRendererMeshNum());
 		if (other.m_pAnimationController)
 			m_pAnimationController = other.m_pAnimationController;
 
@@ -411,7 +446,8 @@ public:
 class CHeightMapTerrain : public CGameObject
 {
 public:
-	CHeightMapTerrain(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature, LPCTSTR pFileName, int nWidth, int nLength, int nBlockWidth, int nBlockLength, XMFLOAT3 xmf3Scale, XMFLOAT4 xmf4Color);
+	CHeightMapTerrain(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature, LPCTSTR pFileName, int nWidth, int nLength, int nBlockWidth, int nBlockLength, XMFLOAT3 xmf3Scale, XMFLOAT4 xmf4Color,
+		PxPhysics* pPxPhysicsSDK, PxScene* pPxScene, PxControllerManager* pPxControllerManager, PxCooking* pCooking);
 	virtual ~CHeightMapTerrain();
 
 private:
@@ -449,3 +485,25 @@ public:
 };
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+class CPhysXObject : public CGameObject
+{
+protected:
+	PxRigidDynamic * m_pPxActor; // 다이나믹 객체
+	CMesh *m_pMesh = NULL;
+	CShader *m_pShader = NULL;
+public:
+	CPhysXObject(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature);
+	virtual ~CPhysXObject();
+
+	virtual void SetMesh(CMesh *pMesh);
+	virtual void SetShader(CShader *pShader);
+
+	virtual void SetPosition(XMFLOAT3& xmf3Position);
+	virtual void SetRotation(XMFLOAT4& pxmf4Quaternion);
+	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera = NULL);
+
+	// Px
+	virtual void	BuildObject(PxPhysics* pPxPhysics, PxScene* pPxScene, PxMaterial *pPxMaterial, XMFLOAT3 vScale, PxCooking* pCooking);
+	void			PhysXUpdate(const float& fTimeDelta);
+	virtual int		Update(const float& fTimeDelta);
+};

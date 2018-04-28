@@ -27,8 +27,6 @@ struct INSTANCEDGAMEOBJECTINFO
 Texture2D gtxtTerrainBaseTexture : register(t4);
 Texture2D gtxtTerrainDetailTexture : register(t5);
 Texture2D gtxtTerrainNormalMap : register(t6);
-Texture2D gtxtTexture_Stone : register(t7);
-Texture2D gtxtTexture_StoneNormal : register(t8);
 SamplerState gWrapSamplerState : register(s0);
 SamplerState gClampSamplerState : register(s1);
 
@@ -109,78 +107,7 @@ PS_TEXTURED_DEFFERREDLIGHTING_OUTPUT PSTerrain(VS_TERRAIN_OUTPUT input) : SV_TAR
 
 	return(output);
 }
-struct VS_INPUT
-{
-	float3 position : POSITION;
-	float2 uv : TEXCOORD;
-	float3 normal : NORMAL;
-	float3 tangent : TANGENT;
-};
-struct VS_OUTPUT
-{
-	float4 position : SV_POSITION;
-	float2 uv : TEXCOORD;
-	float3 normalW : NORMAL;
-	float3 positionW : POSITION;
-	float3 tangentW : TANGENT;
-	float3 bitangentW : BITANGENT;
-};
 
-VS_OUTPUT Test_VS(VS_INPUT input)
-{
-	VS_OUTPUT output;
-
-	output.positionW = (float3)mul(float4(input.position, 1.0f), gmtxWorld);
-	output.position = mul(mul(float4(output.positionW, 1.0f), gmtxView), gmtxProjection);
-	output.normalW = normalize(mul(input.normal, (float3x3)gmtxWorld));
-	output.tangentW = normalize(mul(input.tangent, (float3x3)gmtxWorld));
-	output.bitangentW = normalize(cross(output.normalW, output.tangentW));
-	output.uv = input.uv;
-
-	return(output);
-}
-
-[earlydepthstencil]
-PS_TEXTURED_DEFFERREDLIGHTING_OUTPUT Test_PS (VS_OUTPUT input) : SV_TARGET
-{
-	PS_TEXTURED_DEFFERREDLIGHTING_OUTPUT output;
-
-	float3 diffuse = gtxtTexture_Stone.Sample(gWrapSamplerState, input.uv).rgb;
-
-	output.diffuse = float4(diffuse,1.0f);
-
-	float3 N = normalize(input.normalW);
-	float3 T = normalize(input.tangentW - dot(input.tangentW, N) * N);
-	float3 B = cross(N, T);
-	float3x3 TBN = float3x3(T, B, N);
-	// 노말맵으로 부터 법선벡터를 가져온다.
-	float3 normal = gtxtTexture_StoneNormal.Sample(gWrapSamplerState, input.uv).rgb;
-	// -1 와 1사이 값으로 변환한다.
-	normal = 2.0f * normal - 1.0f;
-	float3 normalW = mul(normal, TBN);
-	output.normal = float4(normalW, 1.0f);
-
-	output.depth = float4(input.positionW, 1.0f);
-
-	output.specular = float4((float)gnMaterial, (float)gnMaterial, (float)gnMaterial, 64.0f / 255.0f);
-
-	return output;
-}
-
-
-VS_OUTPUT VS_TDL(VS_INPUT input)
-{
-	VS_OUTPUT output;
-
-	output.positionW = (float3)mul(float4(input.position, 1.0f), gmtxWorld);
-	output.position = mul(mul(float4(output.positionW, 1.0f), gmtxView), gmtxProjection);
-	output.normalW = normalize(mul(input.normal, (float3x3)gmtxWorld));
-	output.tangentW = normalize(mul(input.tangent, (float3x3)gmtxWorld));
-	output.bitangentW = normalize(cross(output.normalW, output.tangentW));
-	output.uv = input.uv;
-
-	return(output);
-}
 struct A_VS_OUTPUT
 {
 	float4 position : SV_POSITION;

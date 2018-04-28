@@ -15,9 +15,21 @@ CMesh::CMesh(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandLis
 	m_nStride = sizeof(CVertex);
 	m_nVertices = nVertices;
 
+	//피직스 관련 Vertex, Index
+	m_pPxVtx = new PxVec3[nVertices];
+	ZeroMemory(m_pPxVtx, sizeof(PxVec3) * nVertices);
+
+	m_pPxIndex = new PxU32[nIndices];
+	ZeroMemory(m_pPxIndex, sizeof(PxU32) * nIndices);
+
 	CVertex *pVertices = new CVertex[m_nVertices];
-	for (UINT i = 0; i < m_nVertices; i++) 
+	for (UINT i = 0; i < m_nVertices; i++) {
 		pVertices[i] = CVertex(pxmf3Positions[i]);
+		m_pPxVtx->x = pxmf3Positions->x;
+		m_pPxVtx->y = pxmf3Positions->y;
+		m_pPxVtx->z = pxmf3Positions->z;
+	}
+
 
 	m_pd3dVertexBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, pVertices, m_nStride * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dVertexUploadBuffer);
 
@@ -356,6 +368,45 @@ CMeshIlluminatedTexturedTBN::~CMeshIlluminatedTexturedTBN()
 }
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+CRendererMesh::~CRendererMesh()
+{
+}
+
+CRendererMesh::CRendererMesh(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList) : CMeshIlluminatedTexturedTBN(pd3dDevice, pd3dCommandList)
+{
+
+}
+CRendererMesh::CRendererMesh(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList,
+	UINT nVertices, XMFLOAT3 *pxmf3Positions, XMFLOAT3 *pxmf3Tangents, XMFLOAT3 *pxmf3Normals, XMFLOAT2 *pxmf2UVs, UINT nIndex, UINT nIndices, UINT *pnIndices) : CMeshIlluminatedTexturedTBN(pd3dDevice, pd3dCommandList)
+{
+	m_nStride = sizeof(CRendererMeshVertex);
+	m_nVertices = nVertices;
+
+	CRendererMeshVertex *pVertices = new CRendererMeshVertex[m_nVertices];
+
+	for (UINT i = 0; i < m_nVertices; i++)
+		pVertices[i] = CRendererMeshVertex(pxmf3Positions[i], pxmf3Tangents[i], pxmf3Normals[i], pxmf2UVs[i], nIndex);
+
+	m_pd3dVertexBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, pVertices, m_nStride * m_nVertices
+		, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dVertexUploadBuffer);
+
+	m_d3dVertexBufferView.BufferLocation = m_pd3dVertexBuffer->GetGPUVirtualAddress();
+	m_d3dVertexBufferView.StrideInBytes = m_nStride;
+	m_d3dVertexBufferView.SizeInBytes = m_nStride * m_nVertices;
+
+	if (nIndices > 0)
+	{
+		m_nIndices = nIndices;
+
+		m_pd3dIndexBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, pnIndices, sizeof(UINT) * m_nIndices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_INDEX_BUFFER, &m_pd3dIndexUploadBuffer);
+
+		m_d3dIndexBufferView.BufferLocation = m_pd3dIndexBuffer->GetGPUVirtualAddress();
+		m_d3dIndexBufferView.Format = DXGI_FORMAT_R32_UINT;
+		m_d3dIndexBufferView.SizeInBytes = sizeof(UINT) * m_nIndices;
+	}
+}
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 CAnimationMesh::CAnimationMesh(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList) : CMeshIlluminatedTexturedTBN(pd3dDevice, pd3dCommandList)
 {
 
@@ -665,8 +716,23 @@ float CHeightMapImage::GetHeight(float fx, float fz, bool bReverseQuad)
 	return(fHeight);
 }
 
-CHeightMapGridMesh::CHeightMapGridMesh(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, int xStart, int zStart, int nWidth, int nLength, XMFLOAT3 xmf3Scale, XMFLOAT4 xmf4Color, void *pContext) : CMesh(pd3dDevice, pd3dCommandList)
+CHeightMapGridMesh::CHeightMapGridMesh(PxPhysics* pPxPhysicsSDK, PxScene* pPxScene, PxControllerManager* pPxControllerManager, PxCooking* pCooking, PxRigidActor* PhysXRigidActor, PxTriangleMesh* PhysXTriangleMesh, PxMaterial* PhysXMeterial, ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList,
+	int xStart, int zStart,int nWidth, int nLength, XMFLOAT3 xmf3Scale, XMFLOAT4 xmf4Color, void *pContext) : CMesh(pd3dDevice, pd3dCommandList)
 {
+	const PxReal heightScale = 0.01f;
+
+	PxU32 hfNumVerts = nWidth * nLength;
+
+	PxHeightFieldSample* samples = (PxHeightFieldSample*)malloc(sizeof(PxHeightFieldSample)*hfNumVerts);
+	memset(samples, 0, hfNumVerts * sizeof(PxHeightFieldSample));
+
+
+
+	//PhysXRigidActor = 
+	//PhysXTriangleMesh = pCooking->createTriangleMesh(meshDesc, pPxPhysicsSDK->getPhysicsInsertionCallback());
+	PhysXMeterial = pPxPhysicsSDK->createMaterial(0.5f, 0.5f, 0.2f);
+
+
 	m_nVertices = nWidth * nLength;
 	//	m_nStride = sizeof(CTexturedVertex);
 	m_nStride = sizeof(CDiffused2TexturedTBN2Vertex);
@@ -704,8 +770,42 @@ CHeightMapGridMesh::CHeightMapGridMesh(ID3D12Device *pd3dDevice, ID3D12GraphicsC
 				fMinHeight = fHeight;
 			if (fHeight > fMaxHeight) 
 				fMaxHeight = fHeight;
+
+			// [PhysX] Shape만들기
+			//PxMeshScale scale(PxVec3((x*m_xmf3Scale.x), fHeight, (z*m_xmf3Scale.z)), PxQuat(PxIdentity));
+			//PxTriangleMeshGeometry geom(PhysXTriangleMesh, scale);
+			//PxShape* myTriMeshShape = PhysXRigidActor->createShape(geom, *PhysXMeterial);
+			PxI32 h = fHeight;
+			PX_ASSERT(h <= 0xffff);
+			samples[x + z * nWidth].height = (PxI16)(h);
+			samples[x + z * nWidth].setTessFlag();
+			samples[x + z * nWidth].materialIndex0 = 1;
+			samples[x + z * nWidth].materialIndex1 = 1;
+
 		}
 	}
+	PxHeightFieldDesc hfDesc;
+	hfDesc.format = PxHeightFieldFormat::eS16_TM;
+	hfDesc.nbColumns = nWidth;
+	hfDesc.nbRows = nLength;
+	hfDesc.samples.data = samples;
+	hfDesc.samples.stride = sizeof(PxHeightFieldSample);
+
+	PxHeightField* heightField = pPxPhysicsSDK->createHeightField(hfDesc);
+
+	PxTransform pose = PxTransform(PxIdentity);
+	pose.p = PxVec3(-(nWidth / 2), 0, -(nLength / 2));
+	
+	PxRigidStatic* hfActor = pPxPhysicsSDK->createRigidStatic(pose);
+
+	PxHeightFieldGeometry hfGeom(heightField, PxMeshGeometryFlags(), heightScale, 1, 1);
+	PxShape* hfShape = hfActor->createShape(hfGeom, *PhysXMeterial);
+
+	
+	pPxScene->addActor(*hfActor);
+
+
+	///////////////////////
 
 	m_pd3dVertexBuffer = CreateBufferResource(pd3dDevice, pd3dCommandList, pVertices, m_nStride * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dVertexUploadBuffer);
 

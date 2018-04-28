@@ -435,19 +435,19 @@ void CTerrainShader::CreateShader(ID3D12Device *pd3dDevice, ID3D12RootSignature 
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-CTestShader::CTestShader()
+CRendererMeshShader::CRendererMeshShader()
 {
 
 }
 
-CTestShader::~CTestShader()
+CRendererMeshShader::~CRendererMeshShader()
 {
 
 }
 
-D3D12_INPUT_LAYOUT_DESC CTestShader::CreateInputLayout()
+D3D12_INPUT_LAYOUT_DESC CRendererMeshShader::CreateInputLayout()
 {
-	UINT nInputElementDescs = 4;
+	UINT nInputElementDescs = 5;
 	D3D12_INPUT_ELEMENT_DESC *pd3dInputElementDescs = new D3D12_INPUT_ELEMENT_DESC[nInputElementDescs];
 	//정점 정보를 위한 입력 원소이다. 
 
@@ -455,6 +455,7 @@ D3D12_INPUT_LAYOUT_DESC CTestShader::CreateInputLayout()
 	pd3dInputElementDescs[1] = { "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
 	pd3dInputElementDescs[2] = { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 24, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
 	pd3dInputElementDescs[3] = { "TANGENT", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 32, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+	pd3dInputElementDescs[4] = { "INDEX", 0, DXGI_FORMAT_R32_UINT, 0, 44, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
 
 	D3D12_INPUT_LAYOUT_DESC d3dInputLayoutDesc;
 	d3dInputLayoutDesc.pInputElementDescs = pd3dInputElementDescs;
@@ -462,17 +463,17 @@ D3D12_INPUT_LAYOUT_DESC CTestShader::CreateInputLayout()
 	return(d3dInputLayoutDesc);
 }
 
-D3D12_SHADER_BYTECODE CTestShader::CreateVertexShader(ID3DBlob **ppd3dShaderBlob)
+D3D12_SHADER_BYTECODE CRendererMeshShader::CreateVertexShader(ID3DBlob **ppd3dShaderBlob)
 {
-	return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "Test_VS", "vs_5_1", ppd3dShaderBlob));
+	return(CShader::CompileShaderFromFile(L"Animation.hlsl", "RendererMesh_VS", "vs_5_1", ppd3dShaderBlob));
 }
 
-D3D12_SHADER_BYTECODE CTestShader::CreatePixelShader(ID3DBlob **ppd3dShaderBlob)
+D3D12_SHADER_BYTECODE CRendererMeshShader::CreatePixelShader(ID3DBlob **ppd3dShaderBlob)
 {
-	return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "Test_PS", "ps_5_1", ppd3dShaderBlob));
+	return(CShader::CompileShaderFromFile(L"Animation.hlsl", "RendererMesh_PS", "ps_5_1", ppd3dShaderBlob));
 }
 
-void CTestShader::CreateShader(ID3D12Device *pd3dDevice, ID3D12RootSignature *pd3dGraphicsRootSignature, UINT nRenderTargets)
+void CRendererMeshShader::CreateShader(ID3D12Device *pd3dDevice, ID3D12RootSignature *pd3dGraphicsRootSignature, UINT nRenderTargets)
 {
 	m_nPipelineStates = 1;
 	m_ppd3dPipelineStates = new ID3D12PipelineState*[m_nPipelineStates];
@@ -480,110 +481,6 @@ void CTestShader::CreateShader(ID3D12Device *pd3dDevice, ID3D12RootSignature *pd
 	CShader::CreateShader(pd3dDevice, pd3dGraphicsRootSignature, nRenderTargets);
 }
 
-void CTestShader::CreateShaderVariables(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList)
-{
-	UINT ncbElementBytes = ((sizeof(CB_GAMEOBJECT_INFO) + 255) & ~255); //256의 배수
-	m_pd3dcbGameObjects = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes * m_nTestObject, 
-		D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
-
-	m_pd3dcbGameObjects->Map(0, NULL, (void **)&m_pcbMappedGameObjects);
-}
-
-void CTestShader::UpdateShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList)
-{
-	UINT ncbElementBytes = ((sizeof(CB_GAMEOBJECT_INFO) + 255) & ~255);
-	for (int j = 0; j < m_nTestObject; j++)
-	{
-		CB_GAMEOBJECT_INFO *pbMappedcbGameObject = (CB_GAMEOBJECT_INFO *)((UINT8 *)m_pcbMappedGameObjects + (j * ncbElementBytes));
-		XMStoreFloat4x4(&pbMappedcbGameObject->m_xmf4x4World, XMMatrixTranspose(XMLoadFloat4x4(&m_ppTestObjects[j]->m_xmf4x4World)));
-		if (m_pMaterial) 
-			pbMappedcbGameObject->m_nMaterial = m_pMaterial->m_nReflection;
-	}
-}
-
-void CTestShader::ReleaseShaderVariables()
-{
-	if (m_pd3dcbGameObjects)
-	{
-		m_pd3dcbGameObjects->Unmap(0, NULL);
-		m_pd3dcbGameObjects->Release();
-	}
-
-	CShader::ReleaseShaderVariables();
-}
-void CTestShader::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, int iIndex, void *pContext)
-{
-	m_nTestObject = 60;
-
-	CTexture *pTexture = new CTexture(2, RESOURCE_TEXTURE2D, 0);
-	pTexture->LoadTextureFromFile(pd3dDevice, pd3dCommandList, L"../Assets/Image/Test/rock3.dds", 0);
-	pTexture->LoadTextureFromFile(pd3dDevice, pd3dCommandList, L"../Assets/Image/Test/rock3Normal.dds", 1);
-
-	UINT ncbElementBytes = ((sizeof(CB_GAMEOBJECT_INFO) + 255) & ~255);
-
-	CreateCbvAndSrvDescriptorHeaps(pd3dDevice, pd3dCommandList, m_nTestObject, 2);
-	CreateShaderVariables(pd3dDevice, pd3dCommandList);
-	CreateConstantBufferViews(pd3dDevice, pd3dCommandList, m_nTestObject, m_pd3dcbGameObjects, ncbElementBytes);
-	CreateShaderResourceViews(pd3dDevice, pd3dCommandList, pTexture, 3, true);
-	
-	m_pMaterial = new CMaterial();
-	m_pMaterial->SetTexture(pTexture);
-	m_pMaterial->SetReflection(0);
-
-	CCubeMeshIlluminatedTBNTextured *pCubeMesh = new CCubeMeshIlluminatedTBNTextured(pd3dDevice, pd3dCommandList, 52.0f, 52.0f, 52.0f);
-	m_ppTestObjects = new CGameObject*[m_nTestObject];
-	CGameObject *pRotatingObject = NULL;
-	for (int i = 0; i < m_nTestObject; i++)
-	{
-		pRotatingObject = new CGameObject(1);
-		pRotatingObject->SetMesh(0, pCubeMesh);
-		XMFLOAT3 newPosition;
-		newPosition.x = rand() % 2000;
-		newPosition.z = rand() % 2000;
-		newPosition.y = rand() % 100 + 300;
-
-		pRotatingObject->SetPosition(newPosition);
-		pRotatingObject->SetCbvGPUDescriptorHandlePtr(m_d3dCbvGPUDescriptorStartHandle.ptr + (::gnCbvSrvDescriptorIncrementSize * i));
-		m_ppTestObjects[i] = pRotatingObject;
-	}
-}
-void CTestShader::FrustumCulling(CCamera* pCamera)
-{
-	for (int i = 0; i < m_nTestObject; i++)
-	{
-		bool bActive =true;
-
-
-
-		m_ppTestObjects[i]->m_bActive = bActive;
-	}
-}
-void CTestShader::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera)
-{
-	CShader::Render(pd3dCommandList, pCamera);
-
-	if (m_pMaterial)
-		m_pMaterial->UpdateShaderVariables(pd3dCommandList);
-
-	for (int j = 0; j < m_nTestObject; j++)
-	{
-		if (m_ppTestObjects[j]->m_bActive)
-			m_ppTestObjects[j]->Render(pd3dCommandList, 2, pCamera);
-	}
-}
-
-void CTestShader::ReleaseUploadBuffers()
-{
-	if (m_ppTestObjects)
-	{
-		for (int j = 0; j < m_nTestObject; j++)
-			if (m_ppTestObjects[j]) 
-				m_ppTestObjects[j]->ReleaseUploadBuffers();
-	}
-
-	if (m_pMaterial) 
-		m_pMaterial->ReleaseUploadBuffers();
-}
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

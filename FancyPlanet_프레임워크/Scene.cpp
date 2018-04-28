@@ -2,7 +2,12 @@
 #include "Scene.h"
 #include <stack>
 
-CScene::CScene()
+CScene::CScene(PxPhysics* pPxPhysicsSDK, PxScene* pPxScene, PxControllerManager* pPxControllerManager, PxCooking* pCooking)
+	: m_pPxPhysicsSDK(pPxPhysicsSDK)
+	, m_pPxScene(pPxScene)
+	, m_pPxControllerManager(pPxControllerManager)
+	, m_pPxMaterial(NULL)
+	, m_pCooking(pCooking)
 {
 }
 
@@ -46,9 +51,13 @@ void CScene::FrustumCulling(CCamera* pCamera)
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-TerrainAndSkyBoxScene::TerrainAndSkyBoxScene()
+TerrainAndSkyBoxScene::TerrainAndSkyBoxScene(PxPhysics* pPxPhysicsSDK, PxScene* pPxScene, PxControllerManager* pPxControllerManager, PxCooking* pCooking)
+	: CScene(pPxPhysicsSDK, pPxScene, pPxControllerManager, pCooking)
 {
-
+	m_pPxPhysicsSDK = pPxPhysicsSDK;
+	m_pPxScene = pPxScene;
+	m_pPxControllerManager = pPxControllerManager;
+	m_pCooking = pCooking;
 }
 TerrainAndSkyBoxScene::~TerrainAndSkyBoxScene()
 {
@@ -62,7 +71,8 @@ void TerrainAndSkyBoxScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12Graphic
 	XMFLOAT4 xmf4Color(0.0f, 0.5f, 0.0f, 0.0f);
 
 	m_pTerrain = new CHeightMapTerrain(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature,
-		_T("../Assets/Image/Terrain/HeightMap2.raw"), 257, 257, 257, 257, xmf3Scale, xmf4Color);
+		_T("../Assets/Image/Terrain/HeightMap2.raw"), 257, 257, 257, 257, xmf3Scale, xmf4Color,
+		m_pPxPhysicsSDK, m_pPxScene, m_pPxControllerManager, m_pCooking);
 
 	m_pSkyBox = new CSkyBox(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
 }
@@ -74,7 +84,7 @@ void TerrainAndSkyBoxScene::ReleaseObjects()
 	if (m_pTerrain)
 		delete m_pTerrain;
 
-	if (m_pSkyBox) 
+	if (m_pSkyBox)
 		delete m_pSkyBox;
 }
 void TerrainAndSkyBoxScene::ReleaseUploadBuffers()
@@ -82,7 +92,7 @@ void TerrainAndSkyBoxScene::ReleaseUploadBuffers()
 	if (m_pTerrain)
 		m_pTerrain->ReleaseUploadBuffers();
 
-	if (m_pSkyBox) 
+	if (m_pSkyBox)
 		m_pSkyBox->ReleaseUploadBuffers();
 }
 void TerrainAndSkyBoxScene::AnimateObjects(float fTimeElapsed, CCamera *pCamera)
@@ -202,7 +212,7 @@ ID3D12RootSignature *TerrainAndSkyBoxScene::CreateGraphicsRootSignature(ID3D12De
 	pd3dSamplerDescs[1].MinLOD = D3D12_FLOAT32_MAX;
 	pd3dSamplerDescs[1].MaxLOD = D3D12_FLOAT32_MAX;
 	pd3dSamplerDescs[1].ShaderRegister = 1;
-	pd3dSamplerDescs[1].RegisterSpace = 0; 
+	pd3dSamplerDescs[1].RegisterSpace = 0;
 	pd3dSamplerDescs[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
 	D3D12_ROOT_SIGNATURE_FLAGS d3dRootSignatureFlags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT | D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS | D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS | D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS;
@@ -233,11 +243,7 @@ ID3D12RootSignature *TerrainAndSkyBoxScene::CreateGraphicsRootSignature(ID3D12De
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 PhysXScene::PhysXScene(PxPhysics* pPxPhysicsSDK, PxScene* pPxScene, PxControllerManager* pPxControllerManager, PxCooking* pCooking)
-	: m_pPxPhysicsSDK(pPxPhysicsSDK)
-	, m_pPxScene(pPxScene)
-	, m_pPxControllerManager(pPxControllerManager)
-	, m_pPxMaterial(NULL)
-	, m_pCooking(pCooking)
+	: CScene(pPxPhysicsSDK, pPxScene, pPxControllerManager, pCooking)
 {
 }
 PhysXScene::~PhysXScene()
@@ -271,7 +277,7 @@ void PhysXScene::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCa
 	pCamera->UpdateShaderVariables(pd3dCommandList);
 
 	FrustumCulling(pCamera);
-		
+
 	//for (int i = 0; i < m_nShaders; i++)
 	//{
 	//	if (m_ppShaders[i])
@@ -329,7 +335,7 @@ ID3D12RootSignature *PhysXScene::CreateGraphicsRootSignature(ID3D12Device *pd3dD
 	pd3dRootParameters[4].DescriptorTable.pDescriptorRanges = &pd3dDescriptorRanges[2];//Test
 	pd3dRootParameters[4].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
-	
+
 	D3D12_STATIC_SAMPLER_DESC d3dSamplerDescs[2];
 	::ZeroMemory(&d3dSamplerDescs, sizeof(D3D12_STATIC_SAMPLER_DESC));
 
@@ -382,7 +388,8 @@ ID3D12RootSignature *PhysXScene::CreateGraphicsRootSignature(ID3D12Device *pd3dD
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-CharacterScene::CharacterScene()
+CharacterScene::CharacterScene(PxPhysics* pPxPhysicsSDK, PxScene* pPxScene, PxControllerManager* pPxControllerManager, PxCooking* pCooking)
+	: CScene(pPxPhysicsSDK, pPxScene, pPxControllerManager, pCooking)
 {
 	m_ppAnimationController = new AnimationController*[MESH_NUM];
 	m_ppSampleObjects = new CAnimationObject*[MESH_NUM];
@@ -396,23 +403,23 @@ void CharacterScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsComman
 	m_pd3dGraphicsRootSignature = CreateGraphicsRootSignature(pd3dDevice);
 
 	m_nObjects = 2;
-	
+
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
 	m_ppSampleObjects[0] = new CAnimationObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, 0, L"../Assets/Astronaut.bss", m_ppAnimationController[0]);
-	
+
 	m_ppSoldierObjects = new CAnimationObject*[m_nObjects];
 
 	CopyObject(m_ppSampleObjects[0], m_ppSoldierObjects, m_nObjects - 1);
 	m_ppSoldierObjects[m_nObjects - 1] = m_ppSampleObjects[0];
 	m_ppSoldierObjects[m_nObjects - 1]->SetPlayer(m_pPlayer);
 	m_pPlayer->SetRenderObject(m_ppSoldierObjects[m_nObjects - 1]);
-	
+
 	for (int i = 0; i < m_nObjects; i++)
 	{
- 		m_ppSoldierObjects[i]->m_pAnimationFactors->SetBoneObject(m_ppSoldierObjects[i]);
-		//m_ppSoldierObjects[i]->SetPosition(rand() % 3000, rand() % 100 + 300, rand() % 3000);
-		m_ppSoldierObjects[i]->SetPosition(100, 300 , 100);
+		m_ppSoldierObjects[i]->m_pAnimationFactors->SetBoneObject(m_ppSoldierObjects[i]);
+		m_ppSoldierObjects[i]->SetPosition(rand() % 3000, rand() % 100 + 300, rand() % 3000);
+		//m_ppSoldierObjects[i]->SetPosition(100, 300 , 100);
 		if (i != m_nObjects - 1)
 			m_ppSoldierObjects[i]->SetScale(50.0f, 50.0f, 50.0f);
 		else
@@ -431,7 +438,7 @@ void CharacterScene::CopyObject(CAnimationObject* pSample, CAnimationObject** pp
 	CAnimationObject** ppChildObjects = new CAnimationObject*[nSize];
 	CAnimationObject** ppEmptyObjects = new CAnimationObject*[nSize];
 	CAnimationObject* TargetFrame = NULL;
-	 // -1 = 루트, 0 = 형제, 1 = 자식
+	// -1 = 루트, 0 = 형제, 1 = 자식
 
 	for (int i = 0; i < nSize; i++)
 	{
@@ -451,7 +458,7 @@ void CharacterScene::CopyObject(CAnimationObject* pSample, CAnimationObject** pp
 	{
 		if (FrameStack.empty())
 			break;
-		
+
 		TargetFrame = FrameStack.top();
 		FrameStack.pop();
 		for (int i = 0; i < nSize; i++)
@@ -515,7 +522,7 @@ void CharacterScene::ReleaseObjects()
 {
 	if (m_ppSampleObjects)
 	{
-		for(int i=0;i<MESH_NUM; i++)
+		for (int i = 0; i<MESH_NUM; i++)
 			delete m_ppSampleObjects[i];
 
 		delete[] m_ppSampleObjects;
@@ -552,11 +559,12 @@ void CharacterScene::UpdateShaderVariables(ID3D12GraphicsCommandList *pd3dComman
 {
 	UINT ncbElementBytes = ((sizeof(BONE_TRANSFORMS) + 255) & ~255);
 	UINT ncbElementBytes2 = ((sizeof(BONE_TRANSFORMS2) + 255) & ~255);
+	UINT ncbElementBytes3 = ((sizeof(BONE_TRANSFORMS3) + 255) & ~255);
 
 	pd3dCommandList->SetGraphicsRootShaderResourceView(8, m_pd3dcbGameObjects->GetGPUVirtualAddress());
 	pd3dCommandList->SetGraphicsRootShaderResourceView(9, m_pd3dcbGameObjects2->GetGPUVirtualAddress());
 	pd3dCommandList->SetGraphicsRootShaderResourceView(10, m_pd3dcbGameObjects3->GetGPUVirtualAddress());
-	
+
 	for (int i = 0; i < m_nObjects; i++)
 	{
 		BONE_TRANSFORMS *pbMappedcbGameObject = (BONE_TRANSFORMS *)((UINT8 *)m_pcbMappedGameObjects + (i * ncbElementBytes));
@@ -565,26 +573,37 @@ void CharacterScene::UpdateShaderVariables(ID3D12GraphicsCommandList *pd3dComman
 
 		BONE_TRANSFORMS2*pbMappedcbGameObject2 = (BONE_TRANSFORMS2 *)((UINT8 *)m_pcbMappedGameObjects2 + (i * ncbElementBytes2));
 		::memcpy(pbMappedcbGameObject2->m_xmf4x4BoneTransform, &m_ppSoldierObjects[i]->m_BoneTransforms2->m_xmf4x4BoneTransform, sizeof(XMFLOAT4X4) * BONE_TRANSFORM_NUM2);
-		//
-		//m_ppSoldierObjects[i]->m_BoneTransforms2->m_xmf4x4BoneTransform[62 - BONE_TRANSFORM_NUM]._24 *= 5;
-		//m_ppSoldierObjects[i]->m_BoneTransforms2->m_xmf4x4BoneTransform[62 - BONE_TRANSFORM_NUM]._34 *= 5;
-		//m_ppSoldierObjects[i]->m_BoneTransforms2->m_xmf4x4BoneTransform[62 - BONE_TRANSFORM_NUM]._14 *= 5;
-		//
-		//m_ppSoldierObjects[i]->m_BoneTransforms3->m_xmf4x4BoneTransform[65 - (BONE_TRANSFORM_NUM2 + BONE_TRANSFORM_NUM)]._24 *= 3;
-		//m_ppSoldierObjects[i]->m_BoneTransforms3->m_xmf4x4BoneTransform[65 - (BONE_TRANSFORM_NUM2 + BONE_TRANSFORM_NUM)]._34 *= 3;
-		//m_ppSoldierObjects[i]->m_BoneTransforms3->m_xmf4x4BoneTransform[65 - (BONE_TRANSFORM_NUM2 + BONE_TRANSFORM_NUM)]._14 *= 3;
-		//
-		//m_ppSoldierObjects[i]->m_BoneTransforms3->m_xmf4x4BoneTransform[63 - (BONE_TRANSFORM_NUM2 + BONE_TRANSFORM_NUM)]._24 /= 50;
-		//m_ppSoldierObjects[i]->m_BoneTransforms3->m_xmf4x4BoneTransform[63 - (BONE_TRANSFORM_NUM2 + BONE_TRANSFORM_NUM)]._34 /= 50;
-		//m_ppSoldierObjects[i]->m_BoneTransforms3->m_xmf4x4BoneTransform[63 - (BONE_TRANSFORM_NUM2 + BONE_TRANSFORM_NUM)]._14 /= 50;
-		//
-		//m_ppSoldierObjects[i]->m_BoneTransforms3->m_xmf4x4BoneTransform[64 - (BONE_TRANSFORM_NUM2 + BONE_TRANSFORM_NUM)]._24 *= 2;
-		//m_ppSoldierObjects[i]->m_BoneTransforms3->m_xmf4x4BoneTransform[64 - (BONE_TRANSFORM_NUM2 + BONE_TRANSFORM_NUM)]._34 *= 2;
-		//m_ppSoldierObjects[i]->m_BoneTransforms3->m_xmf4x4BoneTransform[64 - (BONE_TRANSFORM_NUM2 + BONE_TRANSFORM_NUM)]._14 *= 2;
-		//
-		BONE_TRANSFORMS2*pbMappedcbGameObject3 = (BONE_TRANSFORMS2 *)((UINT8 *)m_pcbMappedGameObjects3 + (i * ncbElementBytes2));
-		::memcpy(pbMappedcbGameObject3->m_xmf4x4BoneTransform, &m_ppSoldierObjects[i]->m_BoneTransforms3->m_xmf4x4BoneTransform, sizeof(XMFLOAT4X4) * BONE_TRANSFORM_NUM2);
+
+		BONE_TRANSFORMS3*pbMappedcbGameObject3 = (BONE_TRANSFORMS3 *)((UINT8 *)m_pcbMappedGameObjects3 + (i * ncbElementBytes3));
+		::memcpy(pbMappedcbGameObject3->m_xmf4x4BoneTransform, &m_ppSoldierObjects[i]->m_BoneTransforms3->m_xmf4x4BoneTransform, sizeof(XMFLOAT4X4) * BONE_TRANSFORM_NUM3);
+		for (int k = 0; k < RENDERER_MESH_WORLD_TRANSFORM; k++)
+		{
+			CAnimationObject* RendererMeshObject = FindMeshRendererObject(m_ppSoldierObjects[i], k);
+			if(RendererMeshObject)
+   				XMStoreFloat4x4(&pbMappedcbGameObject3->m_xmf4x4RedererMeshWorld[k], XMMatrixTranspose(XMLoadFloat4x4(&RendererMeshObject->m_xmf4x4ToRootTransform)));
+		}
 	}
+}
+CAnimationObject* CharacterScene::FindMeshRendererObject(CAnimationObject* pRootObject, UINT nRendererMesh)
+{
+	stack<CAnimationObject*> FrameStack;
+
+	FrameStack.push(pRootObject);
+
+	while (!FrameStack.empty())
+	{
+		CAnimationObject* pFindObject = FrameStack.top();
+		FrameStack.pop();
+
+		if (pFindObject->IsRendererMesh() && nRendererMesh == pFindObject->GetRendererMeshNum())
+			return pFindObject;
+
+		if (pFindObject->m_pChild)
+			FrameStack.push(pFindObject->m_pChild);
+		if (pFindObject->m_pSibling)
+			FrameStack.push(pFindObject->m_pSibling);
+	}
+	return NULL;
 }
 void CharacterScene::AnimateObjects(float fTimeElapsed, CCamera *pCamera)
 {
@@ -598,7 +617,11 @@ void CharacterScene::ChangeAnimation(int newState)
 	for (int i = 0; i < m_nObjects; i++)
 	{
 		if (m_ppSoldierObjects[i]->m_pAnimationFactors->m_iState == newState)
+		{
+			if(newState != 0)
+				printf("현재: %d\t뉴:%d\n", m_ppSoldierObjects[i]->m_pAnimationFactors->m_iState, newState);
 			return;
+		}
 		if (m_ppSoldierObjects[i]->m_pAnimationFactors->m_iState == CHANG_INDEX)
 			return;
 
@@ -613,6 +636,7 @@ void CharacterScene::ChangeAnimation(int newState)
 			return;
 
 		m_ppSoldierObjects[i]->m_pAnimationController->SetObject(m_ppSoldierObjects[i]);
+		printf("새로 이걸로 바뀜 %d\t현재:%d\n", newState, m_ppSoldierObjects[i]->m_pAnimationFactors->m_iState);
 		m_ppSoldierObjects[i]->ChangeAnimation(newState);
 	}
 }
@@ -629,6 +653,7 @@ void CharacterScene::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera 
 
 	for (int i = 0; i < m_nObjects; i++)
 	{
+		m_ppSoldierObjects[i]->m_pAnimationController->SetBindPoses(m_ppSampleObjects[0]->GetBindPoses());
 		m_ppSoldierObjects[i]->m_pAnimationController->SetObject(m_ppSoldierObjects[i]);
 		m_ppSoldierObjects[i]->m_pAnimationController->AdvanceAnimation(pd3dCommandList);
 
@@ -639,7 +664,6 @@ void CharacterScene::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera 
 			Scale._11 = Scale._22 = Scale._33 = m_ppSoldierObjects[m_nObjects - 1]->GetPlayerScale();
 			m_ppSoldierObjects[m_nObjects - 1]->m_xmf4x4ToParentTransform = Matrix4x4::Multiply(Scale, m_ppSoldierObjects[m_nObjects - 1]->m_xmf4x4ToParentTransform);
 		}
-		m_ppSoldierObjects[i]->UpdateTransform(NULL);
 	}
 
 	UpdateShaderVariables(pd3dCommandList);
@@ -796,7 +820,8 @@ ID3D12RootSignature *CharacterScene::CreateGraphicsRootSignature(ID3D12Device *p
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-ObjectScene::ObjectScene()
+ObjectScene::ObjectScene(PxPhysics* pPxPhysicsSDK, PxScene* pPxScene, PxControllerManager* pPxControllerManager, PxCooking* pCooking)
+	: CScene(pPxPhysicsSDK, pPxScene, pPxControllerManager, pCooking)
 {
 
 }
@@ -879,7 +904,7 @@ ID3D12RootSignature *ObjectScene::CreateGraphicsRootSignature(ID3D12Device *pd3d
 	pd3dRootParameters[4].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
 	D3D12_STATIC_SAMPLER_DESC pd3dSamplerDescs[1];
-	
+
 	pd3dSamplerDescs[0].Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
 	pd3dSamplerDescs[0].AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
 	pd3dSamplerDescs[0].AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
@@ -900,7 +925,7 @@ ID3D12RootSignature *ObjectScene::CreateGraphicsRootSignature(ID3D12Device *pd3d
 
 	D3D12_ROOT_SIGNATURE_DESC d3dRootSignatureDesc;
 	::ZeroMemory(&d3dRootSignatureDesc, sizeof(D3D12_ROOT_SIGNATURE_DESC));
-	d3dRootSignatureDesc.NumParameters = _countof(pd3dRootParameters);
+	d3dRootSignatureDesc.NumParameters = _countof(pd3dRootParameters); 
 	d3dRootSignatureDesc.pParameters = pd3dRootParameters;
 	d3dRootSignatureDesc.NumStaticSamplers = _countof(pd3dSamplerDescs);
 	d3dRootSignatureDesc.pStaticSamplers = pd3dSamplerDescs;
@@ -909,7 +934,7 @@ ID3D12RootSignature *ObjectScene::CreateGraphicsRootSignature(ID3D12Device *pd3d
 	ID3DBlob *pd3dSignatureBlob = NULL;
 	ID3DBlob *pd3dErrorBlob = NULL;
 	D3D12SerializeRootSignature(&d3dRootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &pd3dSignatureBlob, &pd3dErrorBlob);
-	HRESULT hresult =  pd3dDevice->CreateRootSignature(0, pd3dSignatureBlob->GetBufferPointer(), pd3dSignatureBlob->GetBufferSize()
+	HRESULT hresult = pd3dDevice->CreateRootSignature(0, pd3dSignatureBlob->GetBufferPointer(), pd3dSignatureBlob->GetBufferSize()
 		, __uuidof(ID3D12RootSignature), (void **)&pd3dGraphicsRootSignature);
 
 	if (pd3dSignatureBlob)

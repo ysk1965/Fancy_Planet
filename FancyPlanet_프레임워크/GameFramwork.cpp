@@ -13,12 +13,12 @@ CGameFramework::CGameFramework()
 	m_pdxgiSwapChain = NULL;
 	m_pd3dDevice = NULL;
 
-	for (int i = 0; i < m_nRenderTargetBuffers; i++) 
+	for (int i = 0; i < m_nRenderTargetBuffers; i++)
 		m_ppd3dRenderTargetBuffers[i] = NULL;
-	for (int i = 0; i < m_nSwapChainBuffers; i++) 
+	for (int i = 0; i < m_nSwapChainBuffers; i++)
 		m_ppd3dSwapChainBackBuffers[i] = NULL;
 	m_nSwapChainBufferIndex = 0;
-	
+
 	for (int i = 0; i < NUM_COMMANDLIST; i++)
 	{
 		m_ppd3dCommandAllocators = new ID3D12CommandAllocator*[NUM_COMMANDLIST];
@@ -70,7 +70,7 @@ void CGameFramework::BuildThreadsAndEvents()
 			FALSE,
 			FALSE,
 			NULL);
-	
+
 		m_threadParameters[i].threadIndex = i;
 
 		struct threadwrapper
@@ -379,14 +379,14 @@ void CGameFramework::OnResizeBackBuffers()
 	m_pd3dScreenCommandList->Reset(m_pd3dScreenCommandAllocator, NULL);
 
 	for (int i = 0; i < m_nRenderTargetBuffers; i++)
-		if (m_ppd3dRenderTargetBuffers[i]) 
+		if (m_ppd3dRenderTargetBuffers[i])
 			m_ppd3dRenderTargetBuffers[i]->Release();
 
-	for (int i = 0; i < m_nSwapChainBuffers; i++) 
-		if (m_ppd3dSwapChainBackBuffers[i]) 
+	for (int i = 0; i < m_nSwapChainBuffers; i++)
+		if (m_ppd3dSwapChainBackBuffers[i])
 			m_ppd3dSwapChainBackBuffers[i]->Release();
 
-	if (m_pd3dDepthStencilBuffer) 
+	if (m_pd3dDepthStencilBuffer)
 		m_pd3dDepthStencilBuffer->Release();
 #ifdef _WITH_ONLY_RESIZE_BACKBUFFERS
 	DXGI_SWAP_CHAIN_DESC dxgiSwapChainDesc;
@@ -415,7 +415,7 @@ void CGameFramework::OnResizeBackBuffers()
 void CGameFramework::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
 {
 	if (m_ppScenes)
-		for(int i = 0;i<NUM_SUBSETS; i++)
+		for (int i = 0; i<NUM_SUBSETS; i++)
 			m_ppScenes[i]->OnProcessingMouseMessage(hWnd, nMessageID, wParam, lParam);
 	switch (nMessageID)
 	{
@@ -432,13 +432,14 @@ void CGameFramework::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM
 		break;
 	default:
 		break;
+
 	}
 }
 
 void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
 {
 	if (m_ppScenes)
-		for (int i = 0; i<NUM_SUBSETS; i++)
+		for (int i = 0; i < NUM_SUBSETS; i++)
 			m_ppScenes[i]->OnProcessingKeyboardMessage(hWnd, nMessageID, wParam, lParam);
 	switch (nMessageID)
 	{
@@ -479,10 +480,96 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 			break;
 		default:
 			break;
+		case 'W':
+		{
+			is_fowardmove = false;
+			cs_packet_pos * my_pos_packet = reinterpret_cast<cs_packet_pos *>(send_buffer);
+			my_pos_packet->size = sizeof(cs_packet_pos);
+			send_wsabuf.len = sizeof(cs_packet_pos);
+			my_pos_packet->type = CS_POS;
+			my_pos_packet->m_pos = GetPlayerMatrix();
+			my_pos_packet->roomnumb = g_my_info.roomnumb;
+
+			g_my_info.pos = GetPlayerMatrix();
+			DWORD iobyte;
+			printf("packet: Move Character! %f , %f , %f\n", my_pos_packet->m_pos._41, my_pos_packet->m_pos._42, my_pos_packet->m_pos._43);
+			WSASend(g_mysocket, &send_wsabuf, 1, &iobyte, 0, NULL, NULL);
+
+			break;
 		}
-		break;
+		case 'A':
+		{
+			is_fowardmove = false;
+			cs_packet_pos * my_pos_packet = reinterpret_cast<cs_packet_pos *>(send_buffer);
+			my_pos_packet->size = sizeof(cs_packet_pos);
+			send_wsabuf.len = sizeof(cs_packet_pos);
+			my_pos_packet->type = CS_POS;
+			my_pos_packet->m_pos = GetPlayerMatrix();
+			send_wsabuf.buf = reinterpret_cast<char *>(my_pos_packet);
+			g_my_info.pos = GetPlayerMatrix();
+			DWORD iobyte;
+			printf("packet: Move Character! %f , %f , %f\n", my_pos_packet->m_pos._41, my_pos_packet->m_pos._42, my_pos_packet->m_pos._43);
+			WSASend(g_mysocket, &send_wsabuf, 1, &iobyte, 0, NULL, NULL);
+
+			break;
+		}
+		case 'S':
+		{
+			is_fowardmove = false;
+			cs_packet_pos * my_pos_packet = reinterpret_cast<cs_packet_pos *>(send_buffer);
+			my_pos_packet->size = sizeof(cs_packet_pos);
+			send_wsabuf.len = sizeof(cs_packet_pos);
+			my_pos_packet->type = CS_POS;
+			my_pos_packet->m_pos = GetPlayerMatrix();
+			send_wsabuf.buf = reinterpret_cast<char *>(my_pos_packet);
+			g_my_info.pos = GetPlayerMatrix();
+			DWORD iobyte;
+			printf("packet: Move Character! %f , %f , %f\n", my_pos_packet->m_pos._41, my_pos_packet->m_pos._42, my_pos_packet->m_pos._43);
+			WSASend(g_mysocket, &send_wsabuf, 1, &iobyte, 0, NULL, NULL);
+
+			break;
+		}
+		case 'D':
+		{
+			is_fowardmove = false;
+			cs_packet_pos * my_pos_packet = reinterpret_cast<cs_packet_pos *>(send_buffer);
+			my_pos_packet->size = sizeof(cs_packet_pos);
+			send_wsabuf.len = sizeof(cs_packet_pos);
+			my_pos_packet->type = CS_POS;
+			my_pos_packet->m_pos = GetPlayerMatrix();
+			send_wsabuf.buf = reinterpret_cast<char *>(my_pos_packet);
+			g_my_info.pos = GetPlayerMatrix();
+			DWORD iobyte;
+			printf("packet: Move Character! %f , %f , %f\n", my_pos_packet->m_pos._41, my_pos_packet->m_pos._42, my_pos_packet->m_pos._43);
+			WSASend(g_mysocket, &send_wsabuf, 1, &iobyte, 0, NULL, NULL);
+
+			break;
+		}
+		case 'R':
+		{
+			cs_packet_ready * my_packet = reinterpret_cast<cs_packet_ready *>(send_buffer);
+			my_packet->size = sizeof(my_packet);
+			send_wsabuf.len = sizeof(my_packet);
+			my_packet->type = CS_READY;
+			my_packet->state = g_my_info.m_isready;
+			DWORD iobyte;
+			printf("packet : READY  \n");
+			if (g_my_info.m_scene == 0)//레디패킷은 로비일대만
+			{
+				int ret = WSASend(g_mysocket, &send_wsabuf, 1, &iobyte, 0, NULL, NULL);
+
+				if (ret) {
+					int error_code = WSAGetLastError();
+					printf("Error while sending packet [%d]", error_code);
+				}
+			}
+			break;
+		}
+		}
+
 	default:
 		break;
+
 	}
 }
 
@@ -527,26 +614,26 @@ void CGameFramework::OnDestroy()
 	if (m_pd3dDebugController) m_pd3dDebugController->Release();
 #endif
 
-	if (m_pd3dDepthStencilBuffer) 
+	if (m_pd3dDepthStencilBuffer)
 		m_pd3dDepthStencilBuffer->Release();
-	if (m_pd3dDsvDescriptorHeap) 
+	if (m_pd3dDsvDescriptorHeap)
 		m_pd3dDsvDescriptorHeap->Release();
 
-	for (int i = 0; i < m_nRenderTargetBuffers; i++) 
-		if (m_ppd3dRenderTargetBuffers[i]) 
+	for (int i = 0; i < m_nRenderTargetBuffers; i++)
+		if (m_ppd3dRenderTargetBuffers[i])
 			m_ppd3dRenderTargetBuffers[i]->Release();
-	for (int i = 0; i < m_nSwapChainBuffers; i++) 
-		if (m_ppd3dSwapChainBackBuffers[i]) 
+	for (int i = 0; i < m_nSwapChainBuffers; i++)
+		if (m_ppd3dSwapChainBackBuffers[i])
 			m_ppd3dSwapChainBackBuffers[i]->Release();
-	if (m_pd3dRtvDescriptorHeap) 
+	if (m_pd3dRtvDescriptorHeap)
 		m_pd3dRtvDescriptorHeap->Release();
 
 	if (m_ppd3dCommandAllocators)
 	{
-		for(int i=0;i<NUM_COMMANDLIST; i++)
+		for (int i = 0; i<NUM_COMMANDLIST; i++)
 			m_ppd3dCommandAllocators[i]->Release();
 	}
-	if (m_pd3dCommandQueue) 
+	if (m_pd3dCommandQueue)
 		m_pd3dCommandQueue->Release();
 	if (m_ppd3dCommandLists)
 	{
@@ -556,11 +643,11 @@ void CGameFramework::OnDestroy()
 	if (m_pd3dFence) m_pd3dFence->Release();
 
 	m_pdxgiSwapChain->SetFullscreenState(FALSE, NULL);
-	if (m_pdxgiSwapChain) 
+	if (m_pdxgiSwapChain)
 		m_pdxgiSwapChain->Release();
-	if (m_pd3dDevice) 
+	if (m_pd3dDevice)
 		m_pd3dDevice->Release();
-	if (m_pdxgiFactory) 
+	if (m_pdxgiFactory)
 		m_pdxgiFactory->Release();
 
 	//Physx SDK Release=======================
@@ -570,7 +657,7 @@ void CGameFramework::OnDestroy()
 
 void CGameFramework::BuildObjects()
 {
-	for(int i=0; i<NUM_SUBSETS;i++)
+	for (int i = 0; i<NUM_SUBSETS; i++)
 		m_ppd3dCommandLists[i]->Reset(m_ppd3dCommandAllocators[i], NULL);
 
 	m_nDivision = 10;
@@ -583,26 +670,26 @@ void CGameFramework::BuildObjects()
 	//	pScene->BuildObjects(m_pd3dDevice, m_ppd3dCommandLists[i]);
 	//	m_ppScenes[i] = pScene;
 	//}
-	
+
 	int i = 0;
 
-	TerrainAndSkyBoxScene *pTScene = new TerrainAndSkyBoxScene();
+	TerrainAndSkyBoxScene *pTScene = new TerrainAndSkyBoxScene(m_pPxPhysicsSDK, m_pPxScene, m_pPxControllerManager, m_pCooking);
 	pTScene->BuildObjects(m_pd3dDevice, m_ppd3dCommandLists[i]);
 	m_ppScenes[i++] = pTScene;
-	
+
 	PhysXScene *pPScene = new PhysXScene(m_pPxPhysicsSDK, m_pPxScene, m_pPxControllerManager, m_pCooking);
 	m_ppScenes[i++] = pPScene;
-	
-	CharacterScene *pCScene = new CharacterScene();
+
+	CharacterScene *pCScene = new CharacterScene(m_pPxPhysicsSDK, m_pPxScene, m_pPxControllerManager, m_pCooking);
 	m_ppScenes[i++] = pCScene;
-	
-	ObjectScene *pOScene = new ObjectScene();
+
+	ObjectScene *pOScene = new ObjectScene(m_pPxPhysicsSDK, m_pPxScene, m_pPxControllerManager, m_pCooking);
 	m_ppScenes[i++] = pOScene;
 
 	m_ppScenes[TERRAIN]->m_pPlayer = m_pPlayer = new CPlayer(m_pd3dDevice, m_ppd3dCommandLists[2], m_ppScenes[0]->GetGraphicsRootSignature(), m_ppScenes[TERRAIN]->GetTerrain(), 0);
-	m_pPlayer->BuildObject(m_pPxPhysicsSDK, m_pPxScene, m_pPxMaterial, m_pPxControllerManager); 
+	m_pPlayer->BuildObject(m_pPxPhysicsSDK, m_pPxScene, m_pPxMaterial, m_pPxControllerManager);
 	m_pPlayer->ChangeCamera(THIRD_PERSON_CAMERA, 0.0f);
-	
+
 	for (int j = PHYSICS; j < NUM_SUBSETS; j++)
 	{
 		m_ppScenes[j]->m_pPlayer = m_pPlayer;
@@ -623,15 +710,15 @@ void CGameFramework::BuildObjects()
 	{
 		m_ppd3dCommandLists[i]->Close();
 	}
-	ID3D12CommandList *ppd3dCommandLists[] = { m_ppd3dCommandLists[0],  m_ppd3dCommandLists[1],  m_ppd3dCommandLists[2], m_ppd3dCommandLists[3]};
+	ID3D12CommandList *ppd3dCommandLists[] = { m_ppd3dCommandLists[0],  m_ppd3dCommandLists[1],  m_ppd3dCommandLists[2], m_ppd3dCommandLists[3] };
 	m_pd3dCommandQueue->ExecuteCommandLists(NUM_SUBSETS, ppd3dCommandLists);
 
 	WaitForGpuComplete();
 
-	if (m_pPlayer) 
+	if (m_pPlayer)
 		m_pPlayer->ReleaseUploadBuffers();
-	
-	if (m_ppScenes) 
+
+	if (m_ppScenes)
 		for (int i = 0; i<NUM_SUBSETS; i++)
 			m_ppScenes[i]->ReleaseUploadBuffers();
 
@@ -640,7 +727,7 @@ void CGameFramework::BuildObjects()
 
 void CGameFramework::ReleaseObjects()
 {
-	if (m_pPlayer) 
+	if (m_pPlayer)
 		delete m_pPlayer;
 
 	if (m_ppScenes)
@@ -680,13 +767,48 @@ void CGameFramework::ProcessInput()
 		DWORD dwDirection = 0;
 		if (pKeysBuffer[87] & 0xF0)
 		{
+
 			dwDirection |= DIR_FORWARD;
+			if (false == is_fowardmove)
+			{
+				cs_packet_pos * my_pos_packet = reinterpret_cast<cs_packet_pos *>(send_buffer);
+				my_pos_packet->size = sizeof(cs_packet_pos);
+				send_wsabuf.len = sizeof(cs_packet_pos);
+				my_pos_packet->m_pos = GetPlayerMatrix();
+				my_pos_packet->type = CS_POS;
+				my_pos_packet->roomnumb = g_my_info.roomnumb;
+				send_wsabuf.buf = reinterpret_cast<char *>(my_pos_packet);
+				g_my_info.pos = GetPlayerMatrix();
+				DWORD iobyte;
+				printf("packet: Move Character! %f , %f , %f\n", my_pos_packet->m_pos._41, my_pos_packet->m_pos._42, my_pos_packet->m_pos._43);
+				int ret = WSASend(g_mysocket, &send_wsabuf, 1, &iobyte, 0, NULL, NULL);
+				if (ret) {
+					int error_code = WSAGetLastError();
+					printf("Error while sending packet [%d]", error_code);
+				}
+				is_fowardmove = true;
+			}
+
 			m_ppScenes[CHARACTER]->ChangeAnimation(2);
 			IsInput = true;
 		}
 		if (pKeysBuffer[83] & 0xF0)
 		{
 			dwDirection |= DIR_BACKWARD;
+			if (false == is_fowardmove)
+			{
+				cs_packet_pos * my_pos_packet = reinterpret_cast<cs_packet_pos *>(send_buffer);
+				my_pos_packet->size = sizeof(cs_packet_pos);
+				send_wsabuf.len = sizeof(cs_packet_pos);
+				my_pos_packet->type = CS_POS;
+				my_pos_packet->m_pos = GetPlayerMatrix();
+				send_wsabuf.buf = reinterpret_cast<char *>(my_pos_packet);
+				g_my_info.pos = GetPlayerMatrix();
+				DWORD iobyte;
+				printf("packet: Move Character! %f , %f , %f\n", my_pos_packet->m_pos._41, my_pos_packet->m_pos._42, my_pos_packet->m_pos._43);
+				WSASend(g_mysocket, &send_wsabuf, 1, &iobyte, 0, NULL, NULL);
+				is_fowardmove = true;
+			}
 			m_ppScenes[CHARACTER]->ChangeAnimation(-2);
 			IsInput = true;
 		}
@@ -694,6 +816,20 @@ void CGameFramework::ProcessInput()
 		{
 			//dwDirection |= DIR_LEFT;
 			m_pPlayer->Rotate(0.0f, -0.6f, 0.0f);
+			if (false == is_fowardmove)
+			{
+				cs_packet_pos * my_pos_packet = reinterpret_cast<cs_packet_pos *>(send_buffer);
+				my_pos_packet->size = sizeof(cs_packet_pos);
+				send_wsabuf.len = sizeof(cs_packet_pos);
+				my_pos_packet->type = CS_POS;
+				my_pos_packet->m_pos = GetPlayerMatrix();
+				send_wsabuf.buf = reinterpret_cast<char *>(my_pos_packet);
+				g_my_info.pos = GetPlayerMatrix();
+				DWORD iobyte;
+				printf("packet: Move Character! %f , %f , %f\n", my_pos_packet->m_pos._41, my_pos_packet->m_pos._42, my_pos_packet->m_pos._43);
+				WSASend(g_mysocket, &send_wsabuf, 1, &iobyte, 0, NULL, NULL);
+
+			}
 			//m_ppScenes[CHARACTER]->ChangeAnimation(1);
 			//IsInput = true;
 		}
@@ -701,13 +837,22 @@ void CGameFramework::ProcessInput()
 		{
 			//dwDirection |= DIR_RIGHT;
 			m_pPlayer->Rotate(0.0f, 0.6f, 0.0f);
+			if (false == is_fowardmove)
+			{
+				cs_packet_pos * my_pos_packet = reinterpret_cast<cs_packet_pos *>(send_buffer);
+				my_pos_packet->size = sizeof(cs_packet_pos);
+				send_wsabuf.len = sizeof(cs_packet_pos);
+				my_pos_packet->type = CS_POS;
+				my_pos_packet->m_pos = GetPlayerMatrix();
+				send_wsabuf.buf = reinterpret_cast<char *>(my_pos_packet);
+				g_my_info.pos = GetPlayerMatrix();
+				DWORD iobyte;
+				printf("packet: Move Character! %f , %f , %f\n", my_pos_packet->m_pos._41, my_pos_packet->m_pos._42, my_pos_packet->m_pos._43);
+				WSASend(g_mysocket, &send_wsabuf, 1, &iobyte, 0, NULL, NULL);
+
+			}
 			//m_ppScenes[CHARACTER]->ChangeAnimation(1);
 			//IsInput = true;
-		}
-		if (pKeysBuffer[VK_PRIOR] & 0xF0)
-		{
-			dwDirection |= DIR_UP;
-			IsInput = true;
 		}
 		if (pKeysBuffer[VK_NEXT] & 0xF0)
 		{
@@ -716,7 +861,7 @@ void CGameFramework::ProcessInput()
 		}
 		if (pKeysBuffer[VK_SPACE] & 0xF0)
 		{
-			m_ppScenes[CHARACTER]->ChangeAnimation(5);
+			m_ppScenes[CHARACTER]->ChangeAnimation(3);
 			IsInput = true;
 		}
 		float cxDelta = 0.0f, cyDelta = 0.0f;
@@ -753,7 +898,7 @@ void CGameFramework::ProcessInput()
 void CGameFramework::AnimateObjects()
 {
 	float fTimeElapsed = m_GameTimer.GetTimeElapsed();
-	if (m_pPlayer) 
+	if (m_pPlayer)
 		m_pPlayer->Animate(fTimeElapsed);
 }
 
@@ -849,14 +994,14 @@ void CGameFramework::FrameAdvance()
 
 	for (int i = 0; i < NUM_SUBSETS; i++)
 	{
-		SetEvent(m_workerBeginRenderFrame[i]); 
+		SetEvent(m_workerBeginRenderFrame[i]);
 	}
 	WaitForMultipleObjects(NUM_SUBSETS, m_workerFinishedRenderFrame, TRUE, INFINITE);
-	
+
 	ID3D12CommandList *ppd3dCommandLists[] = { m_ppd3dCommandLists[0],  m_ppd3dCommandLists[1],  m_ppd3dCommandLists[2], m_ppd3dCommandLists[3] };
 	for (int i = 0; i<NUM_COMMANDLIST; i++)
 		HRESULT hResult = m_ppd3dCommandLists[i]->Close();
-	m_pd3dCommandQueue->ExecuteCommandLists(NUM_SUBSETS, ppd3dCommandLists); 
+	m_pd3dCommandQueue->ExecuteCommandLists(NUM_SUBSETS, ppd3dCommandLists);
 	WaitForGpuComplete();
 
 	HRESULT hResult = m_pd3dScreenCommandList->Close();
@@ -872,7 +1017,7 @@ void CGameFramework::FrameAdvance()
 	::SynchronizeResourceTransition(m_pd3dScreenCommandList, m_ppd3dRenderTargetBuffers[1], D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ);
 	::SynchronizeResourceTransition(m_pd3dScreenCommandList, m_ppd3dRenderTargetBuffers[2], D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ);
 	::SynchronizeResourceTransition(m_pd3dScreenCommandList, m_ppd3dRenderTargetBuffers[3], D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ);
-												  
+
 	::SynchronizeResourceTransition(m_pd3dScreenCommandList, m_ppd3dSwapChainBackBuffers[m_nSwapChainBufferIndex], D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 
 	m_pd3dScreenCommandList->ClearDepthStencilView(m_d3dDsvDepthStencilBufferCPUHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, NULL);
@@ -880,7 +1025,7 @@ void CGameFramework::FrameAdvance()
 	m_pd3dScreenCommandList->OMSetRenderTargets(1, &m_pd3dRtvSwapChainBackBufferCPUHandles[m_nSwapChainBufferIndex], TRUE, &m_d3dDsvDepthStencilBufferCPUHandle);
 	//원래대로 백버퍼에 그린다.
 	m_pUIShader->Render(m_pd3dScreenCommandList, m_pCamera);
-	m_pScreenShader->Render(m_pd3dScreenCommandList,  m_pCamera);
+	m_pScreenShader->Render(m_pd3dScreenCommandList, m_pCamera);
 #ifdef _WITH_PLAYER_TOP
 	m_pd3dCommandList->ClearDepthStencilView(m_d3dDsvDepthStencilBufferCPUHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, NULL);
 #endif
@@ -978,10 +1123,193 @@ void CGameFramework::InitializePhysxEngine()
 
 void CGameFramework::ReleasePhysxEngine()
 {
-	if (m_pPVDConnection) m_pPVDConnection->release();
-	if (m_pPxControllerManager) m_pPxControllerManager->release();
-	if (m_pPxScene) m_pPxScene->release();
-	if (m_pPxFoundation) m_pPxFoundation->release();
-	if (m_pPxPhysicsSDK) m_pPxPhysicsSDK->release();
-	if (m_pCooking) m_pCooking->release();
+	if (m_pPVDConnection)
+		m_pPVDConnection->release();
+	if (m_pPxControllerManager)
+		m_pPxControllerManager->release();
+	if (m_pPxScene)
+		m_pPxScene->release();
+	if (m_pPxFoundation)
+		m_pPxFoundation->release();
+	if (m_pPxPhysicsSDK)
+		m_pPxPhysicsSDK->release();
+	if (m_pCooking)
+		m_pCooking->release();
+}
+void CGameFramework::InitNetwork(HWND main_window)
+{
+	string s_ip;
+	//원속함수들을 세팅합니다.
+	WSADATA	wsadata;
+	WSAStartup(MAKEWORD(2, 2), &wsadata);
+
+	printf("Server IP INPUT : ");
+	//scanf("%s", s_ip);
+
+	g_mysocket = WSASocket(AF_INET, SOCK_STREAM, IPPROTO_TCP, NULL, 0, 0);
+
+	SOCKADDR_IN ServerAddr;
+	ZeroMemory(&ServerAddr, sizeof(SOCKADDR_IN));
+	ServerAddr.sin_family = AF_INET;
+	ServerAddr.sin_port = htons(MY_SERVER_PORT);
+	ServerAddr.sin_addr.s_addr = inet_addr("127.0.0.1");
+
+	int Result = WSAConnect(g_mysocket, (sockaddr *)&ServerAddr, sizeof(ServerAddr), NULL, NULL, NULL, NULL);
+
+	int retval = WSAAsyncSelect(g_mysocket, main_window, WM_SOCKET, FD_CLOSE | FD_READ);
+	if (retval) {
+		int err_code = WSAGetLastError();
+		printf("AsyncSelect Error [%d]\n", err_code);
+	}
+	printf("retval : %d\n", retval);
+
+	send_wsabuf.buf = send_buffer;
+	send_wsabuf.len = 4000;
+	recv_wsabuf.buf = recv_buffer;
+	recv_wsabuf.len = 4000;
+}
+
+void CGameFramework::ProcessPacket(char *ptr)
+{
+
+	static bool first_time = true;
+
+	switch (ptr[1])//패킷의 1번 인덱스에는 패킷의 종류에 대한 정보가 들어있습니다.
+	{
+	case SC_PUT_PLAYER://클라이언트 정보에 대한 패킷.
+	{
+		sc_packet_put_player *my_packet = reinterpret_cast<sc_packet_put_player *>(ptr);
+		int id = my_packet->id;
+
+		if (first_time) //패킷을 처음 주고 받았을 때 == 내가 접속했을 때
+		{
+			first_time = false; //이젠 처음이 아니므로 false로 전환
+			g_myid = id; //그렇다면 내 아이디는 패킷의 아이디와 같겠죠.
+		}
+		if (id == g_myid) { // 내 아이디와 패킷의 아이디가 같다면? == 위의 조건문을 돌았다 == 내 정보
+			g_my_info.pos = my_packet->m_pos; // 내 플레이어 구조체에 패킷의 좌표값을 저장합니다.
+			g_my_info.roomnumb = my_packet->roomnumb;
+			printf("My Roomnumber is [%d]\n", g_my_info.roomnumb);
+		}
+		else {
+			g_player_info[id].m_isconnected = true;
+			g_player_info[id].pos = my_packet->m_pos;
+			g_player_info[id].roomnumb = my_packet->roomnumb;
+			printf("Other Client [%d] is Connect to Server", id);
+		}
+		break;
+	}
+	case SC_POS://좌표값에대한 패킷.
+	{
+		sc_packet_pos *my_packet = reinterpret_cast<sc_packet_pos *>(ptr);
+		int id = my_packet->id;
+		if (id == g_myid) {//내 캐릭터에 대한 패킷이라면
+
+		}
+		else //다른 캐릭터의 패킷이라면
+		{
+			g_player_info[id].pos = my_packet->m_pos;
+			printf("packet: Move Character! %f , %f , %f\n", my_packet->m_pos._41, my_packet->m_pos._42, my_packet->m_pos._43);
+		}
+		break;
+	}
+
+	case SC_REMOVE_PLAYER://접속 종료에 따른 패킷
+	{
+		sc_packet_remove_player *my_packet = reinterpret_cast<sc_packet_remove_player *>(ptr);
+		int id = my_packet->id;
+		if (id == g_myid) {//내 캐릭터의 종료라면??
+
+		}
+		else {//다른 캐릭터의 종료라면??
+
+			g_player_info[id].m_isconnected = false;
+
+		}
+		break;
+	}
+	case SC_READY://레디상태에 대한 체크
+	{
+		sc_packet_ready *my_packet = reinterpret_cast<sc_packet_ready *>(ptr);
+		int id = my_packet->id;
+		if (id == g_myid)
+		{
+			g_my_info.m_isready = my_packet->state;
+			if (true == g_my_info.m_isready)
+				printf("My Client is Ready\n");
+			else
+				printf("My Client is Not Ready\n");
+		}
+		else
+		{//다른 캐릭터의 준비 패킷이라면?
+			g_player_info[id].m_isready = my_packet->state;
+			{
+				if (true == g_player_info[id].m_isready)
+					printf("Client [%d] is Ready\n", id);
+				else
+					printf("Client [%d] is Not Ready\n", id);
+			}
+		}
+		break;
+	}
+	case SC_SCENE_CHANGE:
+	{
+		sc_packet_scene_change *my_packet = reinterpret_cast<sc_packet_scene_change *>(ptr);
+		g_my_info.m_scene = my_packet->scenestate;
+		printf("씬 체인지!\n");
+		break;
+	}
+
+	/*case SC_CHAT:
+	{
+	sc_packet_chat *my_packet = reinterpret_cast<sc_packet_chat *>(ptr);
+	int other_id = my_packet->id;
+	if (other_id == g_myid) {
+	wcsncpy_s(player.message, my_packet->message, 256);
+	player.message_time = GetTickCount();
+	}
+	else if (other_id < NPC_START) {
+	wcsncpy_s(skelaton[other_id].message, my_packet->message, 256);
+	skelaton[other_id].message_time = GetTickCount();
+	}
+	else {
+	wcsncpy_s(npc[other_id - NPC_START].message, my_packet->message, 256);
+	npc[other_id - NPC_START].message_time = GetTickCount();
+	}
+	break;
+
+	}*/
+	default:
+		printf("Unknown PACKET type [%d]\n", ptr[1]);
+	}
+}
+
+void CGameFramework::ReadPacket(SOCKET sock)
+{
+	DWORD iobyte, ioflag = 0;
+
+	int ret = WSARecv(sock, &recv_wsabuf, 1, &iobyte, &ioflag, NULL, NULL);
+	if (ret) {
+		int err_code = WSAGetLastError();
+		printf("Recv Error [%d]\n", err_code);
+	}
+
+	BYTE *ptr = reinterpret_cast<BYTE *>(recv_buffer);
+
+	while (0 != iobyte) {
+		if (0 == in_packet_size) in_packet_size = ptr[0];
+		if (iobyte + saved_packet_size >= in_packet_size) {
+			memcpy(packet_buffer + saved_packet_size, ptr, in_packet_size - saved_packet_size);
+			ProcessPacket(packet_buffer);
+			ptr += in_packet_size - saved_packet_size;
+			iobyte -= in_packet_size - saved_packet_size;
+			in_packet_size = 0;
+			saved_packet_size = 0;
+		}
+		else {
+			memcpy(packet_buffer + saved_packet_size, ptr, iobyte);
+			saved_packet_size += iobyte;
+			iobyte = 0;
+		}
+	}
 }

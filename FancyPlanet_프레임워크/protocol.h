@@ -1,6 +1,10 @@
 #pragma once
+#include <d3d12.h>
+#include <dxgi1_4.h>
+#include <D3Dcompiler.h>
+#include <DirectXMath.h>
 
-#include"stdafx.h"
+using namespace DirectX;
 
 #define	BUF_SIZE				1024
 #define	WM_SOCKET				WM_USER + 1
@@ -32,6 +36,7 @@
 #define SC_PUT_PLAYER    2
 #define SC_REMOVE_PLAYER 3
 #define SC_READY		4
+#define SC_SCENE_CHANGE 5
 
 #pragma pack (push, 1)
 
@@ -39,17 +44,21 @@ struct cs_packet_pos {
 	unsigned char size;
 	unsigned char type;
 	XMFLOAT4X4 m_pos;
+	int roomnumb = 0;
+
 };
 
 struct cs_packet_ready {
 	unsigned char size;
 	unsigned char type;
+	int roomnumb = 0;
 	bool state;
 };
 
 struct cs_packet_chat {
 	unsigned char size;
 	unsigned char type;
+	int roomnumb = 0;
 	wchar_t message[MAX_STR_SIZE];
 };
 
@@ -57,6 +66,8 @@ struct sc_packet_pos {
 	unsigned char size;
 	unsigned char type;
 	unsigned short id;
+	int animstate = 0;
+	int roomnumb = 0;
 	XMFLOAT4X4 m_pos;
 };
 
@@ -64,18 +75,21 @@ struct sc_packet_put_player {
 	unsigned char size;
 	unsigned char type;
 	unsigned short id;
-	XMFLOAT4X4 m_pos;
+
 	int roomnumb;
+	XMFLOAT4X4 m_pos;
 };
 struct sc_packet_remove_player {
 	unsigned char size;
 	unsigned char type;
 	unsigned short id;
+	int roomnumb = 0;
 };
 struct sc_packet_ready {
 	unsigned char size;
 	unsigned char type;
 	unsigned short id;
+	int roomnumb = 0;
 	bool state;
 };
 
@@ -83,10 +97,19 @@ struct sc_packet_chat {
 	unsigned char size;
 	unsigned char type;
 	unsigned short id;
+	int roomnumb = 0;
 	wchar_t message[MAX_STR_SIZE];
 };
+struct sc_packet_scene_change
+{
+	unsigned char size;
+	unsigned char type;
+	unsigned short id;
+	int roomnumb = 0;
+	int scenestate = 0;
 
-#pragma pack (pop)
+};
+
 
 // basic unsigned types
 typedef unsigned short USHORT;
@@ -111,6 +134,8 @@ typedef struct PLAYER_INFO
 
 	bool m_isconnected = false;
 	bool m_isready = false;
+	int roomnumb = 0;
+	int m_scene = 0;
 
 } PLAYER_INFO, *PLAYER_INFO_PTR;
 

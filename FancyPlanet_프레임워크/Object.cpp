@@ -9,8 +9,7 @@
 
 using namespace std;
 
-AnimationController::AnimationController(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, UINT nAnimation,
-	XMFLOAT4X4* pBindPoses) : m_nAnimation(nAnimation), m_pBindPoses(pBindPoses)
+AnimationController::AnimationController(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, UINT nAnimation) : m_nAnimation(nAnimation)
 {
 	m_pAnimation = new ANIMATION[m_nAnimation];
 }
@@ -18,6 +17,10 @@ void AnimationController::SetObject(CAnimationObject* pObject)
 {
 	m_pRootObject = pObject;
 	m_ppBoneObject = pObject->m_pAnimationFactors->m_ppBoneObject;
+}
+void AnimationController::SetBindPoses(XMFLOAT4X4* pBindPoses)
+{
+	m_pBindPoses = pBindPoses;
 }
 AnimationController::~AnimationController()
 {
@@ -33,14 +36,14 @@ void AnimationController::ChangeAnimation(int iNewState)
 		m_pRootObject->m_pAnimationFactors->m_fSaveLastFrame = m_pRootObject->m_pAnimationFactors->m_fCurrentFrame;
 		m_pRootObject->m_pAnimationFactors->m_iNewState = iNewState;
 
-		if(m_pRootObject->m_pAnimationFactors->m_iState > 0)
+		if (m_pRootObject->m_pAnimationFactors->m_iState > 0)
 			m_pRootObject->m_pAnimationFactors->m_iSaveState = m_pRootObject->m_pAnimationFactors->m_iState;
 		else
 			m_pRootObject->m_pAnimationFactors->m_iSaveState = -m_pRootObject->m_pAnimationFactors->m_iState;
 
 		m_pRootObject->m_pAnimationFactors->m_iState = CHANG_INDEX;
 	}
-	else if(iNewState == CHANG_INDEX)
+	else if (iNewState == CHANG_INDEX)
 	{
 		m_pRootObject->m_pAnimationFactors->m_iState = m_pRootObject->m_pAnimationFactors->m_iNewState;
 	}
@@ -206,7 +209,7 @@ SRT AnimationController::Interpolate(int iBoneNum, float fTime)
 		b = m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iSaveState].pFrame[m_nBone*(UINT)m_pRootObject->m_pAnimationFactors->m_fSaveLastFrame + iBoneNum].Translation.z;
 		result.T.z = m * fTimeRate + b;
 	}
-	else if (m_pRootObject->m_pAnimationFactors->m_iNewState < 0 )
+	else if (m_pRootObject->m_pAnimationFactors->m_iNewState < 0)
 	{
 		XMStoreFloat4(&result.R, XMQuaternionSlerp(XMLoadFloat4(&m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iSaveState].pFrame[m_nBone*(UINT)m_pRootObject->m_pAnimationFactors->m_fSaveLastFrame + iBoneNum].RotationQuat)
 			, XMLoadFloat4(&m_pAnimation[-m_pRootObject->m_pAnimationFactors->m_iNewState].pFrame[m_nBone*m_pAnimation[-m_pRootObject->m_pAnimationFactors->m_iNewState].nFrame + iBoneNum].RotationQuat), fTimeRate));
@@ -231,7 +234,7 @@ void AnimationController::SetToParentTransforms()
 	FrameStack.push(m_pRootObject);
 
 	float fTime = std::chrono::duration_cast<std::chrono::milliseconds>(chrono::system_clock::now() - m_pRootObject->m_pAnimationFactors->m_chronoStart).count() / 1000.0f;
-	
+
 	if (m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].fTime < fTime)
 	{
 		if (m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].nType == ALL)
@@ -248,10 +251,10 @@ void AnimationController::SetToParentTransforms()
 
 	if (m_pRootObject->m_pAnimationFactors->m_iState == CHANG_INDEX && (fTime > CHANGE_TIME))
 		ChangeAnimation(CHANG_INDEX);
-	
+
 	if (m_pRootObject->m_pAnimationFactors->m_iState != CHANG_INDEX)
 		GetCurrentFrame(); // 현재 프레임 계산
-	
+
 	for (int i = 0;; i++)
 	{
 		if (FrameStack.empty())
@@ -288,6 +291,7 @@ void AnimationController::SetToRootTransforms()
 {
 	stack<CAnimationObject*> FrameStack;
 	FrameStack.push(m_pRootObject->m_pChild);
+	m_pRootObject->m_xmf4x4ToRootTransform = m_pRootObject->m_xmf4x4ToParentTransform;
 
 	while (1)
 	{
@@ -297,7 +301,7 @@ void AnimationController::SetToRootTransforms()
 		CAnimationObject* TargetFrame = FrameStack.top();
 		FrameStack.pop();
 
-		if (TargetFrame->m_pParent != NULL && TargetFrame != m_pRootObject->m_pChild)
+		if (TargetFrame->m_pParent != NULL)
 			TargetFrame->m_xmf4x4ToRootTransform = Matrix4x4::Multiply(TargetFrame->m_xmf4x4ToParentTransform, TargetFrame->m_pParent->m_xmf4x4ToRootTransform);
 		else
 			TargetFrame->m_xmf4x4ToRootTransform = TargetFrame->m_xmf4x4ToParentTransform;
@@ -320,17 +324,13 @@ void AnimationController::AdvanceAnimation(ID3D12GraphicsCommandList* pd3dComman
 		XMMATRIX toRoot = XMLoadFloat4x4(&m_ppBoneObject[i]->m_xmf4x4ToRootTransform);
 		XMMATRIX finalTransform = XMMatrixMultiply(XMMatrixTranspose(offset), (toRoot));
 
-		if(i < BONE_TRANSFORM_NUM)
+		if (i < BONE_TRANSFORM_NUM)
 			XMStoreFloat4x4(&m_pRootObject->m_BoneTransforms->m_xmf4x4BoneTransform[i], XMMatrixTranspose(finalTransform));
-		else if(i >= BONE_TRANSFORM_NUM && i < (BONE_TRANSFORM_NUM2 + BONE_TRANSFORM_NUM))
+		else if (i >= BONE_TRANSFORM_NUM && i < (BONE_TRANSFORM_NUM2 + BONE_TRANSFORM_NUM))
 			XMStoreFloat4x4(&m_pRootObject->m_BoneTransforms2->m_xmf4x4BoneTransform[i - BONE_TRANSFORM_NUM], XMMatrixTranspose(finalTransform));
 		else
 			XMStoreFloat4x4(&m_pRootObject->m_BoneTransforms3->m_xmf4x4BoneTransform[i - (BONE_TRANSFORM_NUM2 + BONE_TRANSFORM_NUM)], XMMatrixTranspose(finalTransform));
 	}
-	//m_pRootObject->m_BoneTransforms2->m_xmf4x4BoneTransform[62 - BONE_TRANSFORM_NUM] = Matrix4x4::Identity();
-	//m_pRootObject->m_BoneTransforms3->m_xmf4x4BoneTransform[63 - (BONE_TRANSFORM_NUM2 + BONE_TRANSFORM_NUM)] = Matrix4x4::Identity();
-	//m_pRootObject->m_BoneTransforms3->m_xmf4x4BoneTransform[64 - (BONE_TRANSFORM_NUM2 + BONE_TRANSFORM_NUM)] = Matrix4x4::Identity();
-	//m_pRootObject->m_BoneTransforms3->m_xmf4x4BoneTransform[65 - (BONE_TRANSFORM_NUM2 + BONE_TRANSFORM_NUM)] = Matrix4x4::Identity();
 }
 
 
@@ -790,8 +790,15 @@ TCHAR* char2tchar(char * asc)
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-CHeightMapTerrain::CHeightMapTerrain(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature, LPCTSTR pFileName, int nWidth, int nLength, int nBlockWidth, int nBlockLength, XMFLOAT3 xmf3Scale, XMFLOAT4 xmf4Color) : CGameObject(0)
+CHeightMapTerrain::CHeightMapTerrain(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature, LPCTSTR pFileName, int nWidth, int nLength, int nBlockWidth, int nBlockLength, XMFLOAT3 xmf3Scale, XMFLOAT4 xmf4Color,
+	PxPhysics* pPxPhysicsSDK, PxScene* pPxScene, PxControllerManager* pPxControllerManager, PxCooking* pCooking) : CGameObject(0)
 {
+	// PxHeightField : x축을 따라 x축, y축을 따라... z축을 따라... 스케일 된 PxTriangleMesh로 모양을 만든다.
+	// 먼저 만들어야 할 것들
+	PxRigidActor* myActor = NULL;
+	PxTriangleMesh* myTriMesh = NULL;
+	PxMaterial* myMaterial = NULL;
+
 	m_nWidth = nWidth;
 	m_nLength = nLength;
 
@@ -818,7 +825,8 @@ CHeightMapTerrain::CHeightMapTerrain(ID3D12Device *pd3dDevice, ID3D12GraphicsCom
 		{
 			xStart = x * (nBlockWidth - 1);
 			zStart = z * (nBlockLength - 1);
-			pHeightMapGridMesh = new CHeightMapGridMesh(pd3dDevice, pd3dCommandList, xStart, zStart, nBlockWidth, nBlockLength, xmf3Scale, xmf4Color, m_pHeightMapImage);
+			pHeightMapGridMesh = new CHeightMapGridMesh(pPxPhysicsSDK, pPxScene, pPxControllerManager, pCooking, myActor, myTriMesh, myMaterial,
+				pd3dDevice, pd3dCommandList, xStart, zStart, nBlockWidth, nBlockLength, xmf3Scale, xmf4Color, m_pHeightMapImage);
 			SetMesh(x + (z*cxBlocks), pHeightMapGridMesh);
 		}
 	}
@@ -1001,8 +1009,6 @@ void CAnimationObject::Render(ID3D12GraphicsCommandList *pd3dCommandList, int iR
 		{
 			m_pMaterial->m_pShader->Render(pd3dCommandList, pCamera);
 			m_pMaterial->m_pShader->UpdateShaderVariables(pd3dCommandList);
-
-			UpdateShaderVariables(pd3dCommandList);
 		}
 		if (m_pMaterial->m_pTexture)
 		{
@@ -1032,6 +1038,7 @@ void CAnimationObject::Render(ID3D12GraphicsCommandList *pd3dCommandList, int iR
 	if (m_pChild)
 		m_pChild->Render(pd3dCommandList, 2, pCamera);
 }
+
 void CAnimationObject::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera, UINT nInstances)
 {
 	OnPrepareRender();
@@ -1081,8 +1088,7 @@ void CAnimationObject::LoadAnimation(ID3D12Device *pd3dDevice, ID3D12GraphicsCom
 	if (pFindObjecct)
 	{
 		InFile.read((char*)&nAnimation, sizeof(UINT)); // 애니메이션 수
-		pAnimationController = new AnimationController(pd3dDevice, pd3dCommandList, nAnimation
-			, pFindObjecct->m_pBindPoses);
+		pAnimationController = new AnimationController(pd3dDevice, pd3dCommandList, nAnimation);
 		InFile.read((char*)&pAnimationController->m_nBone, sizeof(UINT)); // 본의 갯수
 
 		pFindObjecct->m_pAnimationFactors->SetBoneObject(pFindObjecct);
@@ -1091,7 +1097,7 @@ void CAnimationObject::LoadAnimation(ID3D12Device *pd3dDevice, ID3D12GraphicsCom
 		{
 			InFile.read((char*)&pAnimationController->m_pAnimation[i].nFrame, sizeof(UINT)); // 프레임 수 
 			InFile.read((char*)&pAnimationController->m_pAnimation[i].fTime, sizeof(float)); // 애니메이션 시간 (30fps 기준)
-			InFile.read((char*)&pAnimationController->m_pAnimation[i].nType , sizeof(UINT)); // 애니메이션 타입
+			InFile.read((char*)&pAnimationController->m_pAnimation[i].nType, sizeof(UINT)); // 애니메이션 타입
 
 			pAnimationController->m_pAnimation[i].pFrame
 				= new FRAME[(pAnimationController->m_pAnimation[i].nFrame + 1) * pAnimationController->m_nBone];
@@ -1103,21 +1109,28 @@ void CAnimationObject::LoadAnimation(ID3D12Device *pd3dDevice, ID3D12GraphicsCom
 	}
 }
 void CAnimationObject::LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList,
-	ID3D12RootSignature *pd3dGraphicsRootSignature, ifstream& InFile, UINT nFrame, UINT nSub)
+	ID3D12RootSignature *pd3dGraphicsRootSignature, ifstream& InFile, UINT nSub)
 {
 	int nType = -1;
 	int nSubMesh = 0;
+	static UINT nRendererMesh = 0;
 
-	if (nSub == 1)
+	if (nSub == GET_TYPE)
 		InFile.read((char*)&nType, sizeof(int)); // 타입 받기
 	else
 	{
-		nType = 0;
+		nType = SKINNEDMESH;
 	}
 	XMFLOAT3 *pxmf3ParentsPosition = NULL;
 
-	if (nType == 0)
+	if (nType == SKINNEDMESH || nType == RENDERMESH)
 	{
+		if (nType == RENDERMESH)
+		{
+			m_bRendererMesh = true;
+			m_nRendererMesh = nRendererMesh++;
+		}
+
 		ResizeMeshes(1);
 
 		XMFLOAT3 *pxmf3Positions = NULL;
@@ -1129,7 +1142,7 @@ void CAnimationObject::LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, ID3D
 
 		char* pstrAlbedoTextureName = NULL;
 		char* pstrNormalTextureName = NULL;
-		UINT *pnIndices = NULL;
+		UINT *pIndices = NULL;
 
 		int nVertices = 0, nIndices = 0;
 
@@ -1140,6 +1153,9 @@ void CAnimationObject::LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, ID3D
 		InFile.read((char*)&GetRootObject()->m_nDrawType, sizeof(int)); // 그리기 타입 받기
 
 		InFile.read((char*)&nVertices, sizeof(int)); // 정점 갯수 받기
+		InFile.read((char*)&nIndices, sizeof(int)); // 정점 갯수 받기
+
+		pIndices = new UINT[nIndices];
 		pxmf3Positions = new XMFLOAT3[nVertices];
 		pxmf2TextureCoords0 = new XMFLOAT2[nVertices];
 		pxmf3Normals = new XMFLOAT3[nVertices];
@@ -1147,6 +1163,7 @@ void CAnimationObject::LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, ID3D
 		pxmf3BoneWeights = new XMFLOAT3[nVertices];
 		pxmi4BoneIndices = new XMINT4[nVertices];
 
+		InFile.read((char*)pIndices, sizeof(UINT) * nIndices); // 인덱스 받기
 		InFile.read((char*)pxmf3Positions, sizeof(XMFLOAT3) * nVertices); // 정점 받기
 		InFile.read((char*)pxmf2TextureCoords0, sizeof(XMFLOAT2) * nVertices); // uv 받기
 
@@ -1155,24 +1172,23 @@ void CAnimationObject::LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, ID3D
 			InFile.read((char*)pxmf3Normals, sizeof(XMFLOAT3) * nVertices); // 법선 받기
 			InFile.read((char*)pxmf3Tangents, sizeof(XMFLOAT3) * nVertices); // 탄젠트 받기
 		}
-		InFile.read((char*)pxmf3BoneWeights, sizeof(XMFLOAT3) * nVertices); // 본가중치 받기
-		InFile.read((char*)pxmi4BoneIndices, sizeof(XMINT4) * nVertices); // 본인덱스 받기
-
-		if (GetRootObject()->m_pAnimationFactors != NULL)
+		if (nType == SKINNEDMESH)
 		{
-			delete GetRootObject()->m_pAnimationFactors;
+			InFile.read((char*)pxmf3BoneWeights, sizeof(XMFLOAT3) * nVertices); // 본가중치 받기
+			InFile.read((char*)pxmi4BoneIndices, sizeof(XMINT4) * nVertices); // 본인덱스 받기
+
+			int nBindPoses;
+
+			InFile.read((char*)&nBindPoses, sizeof(int)); // 본포즈 길이 받기
+
+			if (GetRootObject()->m_pAnimationFactors == NULL)
+				GetRootObject()->m_pAnimationFactors = new AnimationFactors(nBindPoses);
+
+			GetRootObject()->m_pBindPoses = new XMFLOAT4X4[nBindPoses];
+
+			InFile.read((char*)GetRootObject()->m_pBindPoses, sizeof(XMFLOAT4X4) * nBindPoses); // 본포즈 받기
 		}
-		
-		int nBindPoses;
-		
-		InFile.read((char*)&nBindPoses, sizeof(int)); // 본포즈 길이 받기
-		
-		GetRootObject()->m_pAnimationFactors = new AnimationFactors(nBindPoses);
-		
-		GetRootObject()->m_pBindPoses = new XMFLOAT4X4[nBindPoses];
-		
-		InFile.read((char*)GetRootObject()->m_pBindPoses, sizeof(XMFLOAT4X4) *nBindPoses); // 본포즈 받기
-		
+
 		int Namesize;
 
 		InFile.read((char*)&Namesize, sizeof(int)); // 디퓨즈맵이름 받기
@@ -1188,11 +1204,13 @@ void CAnimationObject::LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, ID3D
 
 		CMesh* pMesh = NULL;
 
-		if (nVertices > 0 && GetRootObject()->m_nDrawType > 1)
+		if (nVertices > 0 && GetRootObject()->m_nDrawType > 1 && nType == SKINNEDMESH)
 			pMesh = new CAnimationMesh(pd3dDevice, pd3dCommandList, nVertices, pxmf3Positions, pxmf3Tangents
-				, pxmf3Normals, pxmf2TextureCoords0, pxmf3BoneWeights, pxmi4BoneIndices, nIndices, pnIndices);
-		else if (nVertices > 0)
-			pMesh = new CMeshAnimationTextured(pd3dDevice, pd3dCommandList, nVertices, pxmf3Positions, pxmf2TextureCoords0, pxmf3BoneWeights, pxmi4BoneIndices, nIndices, pnIndices);
+				, pxmf3Normals, pxmf2TextureCoords0, pxmf3BoneWeights, pxmi4BoneIndices, nIndices, pIndices);
+		else if (nVertices > 0 && nType == SKINNEDMESH)
+			pMesh = new CMeshAnimationTextured(pd3dDevice, pd3dCommandList, nVertices, pxmf3Positions, pxmf2TextureCoords0, pxmf3BoneWeights, pxmi4BoneIndices, nIndices, pIndices);
+		else if (nType == RENDERMESH)
+			pMesh = new CRendererMesh(pd3dDevice, pd3dCommandList, nVertices, pxmf3Positions, pxmf3Tangents, pxmf3Normals, pxmf2TextureCoords0, m_nRendererMesh, nIndices, pIndices);
 
 		if (pMesh)
 			SetMesh(0, pMesh);
@@ -1211,8 +1229,8 @@ void CAnimationObject::LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, ID3D
 		if (pxmf3Tangents)
 			delete[] pxmf3Tangents;
 
-		if (pnIndices)
-			delete[] pnIndices;
+		if (pIndices)
+			delete[] pIndices;
 
 		pMaterial = new CMaterial();
 
@@ -1248,10 +1266,12 @@ void CAnimationObject::LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, ID3D
 
 		CShader* pShader = NULL;
 
-		if (GetRootObject()->m_nDrawType == 1)
+		if (GetRootObject()->m_nDrawType == 1 && nType == SKINNEDMESH)
 			pShader = new CDefferredTexturedShader();
-		else if (GetRootObject()->m_nDrawType == 2)
+		else if (GetRootObject()->m_nDrawType == 2 && nType == SKINNEDMESH)
 			pShader = new CDefferredLightingTexturedShader();
+		else if (GetRootObject()->m_nDrawType == 2 && nType == RENDERMESH)
+			pShader = new CRendererMeshShader();
 
 		pShader->CreateShader(pd3dDevice, pd3dGraphicsRootSignature, 4);
 		pShader->CreateCbvAndSrvDescriptorHeaps(pd3dDevice, pd3dCommandList, 0, GetRootObject()->m_nDrawType);
@@ -1263,7 +1283,7 @@ void CAnimationObject::LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, ID3D
 		if (pMaterial)
 			SetMaterial(pMaterial);
 	}
-	if (nType <= 1)
+	if (nType <= LAYER)
 	{
 		if (nSubMesh <= nSub)
 		{
@@ -1278,7 +1298,7 @@ void CAnimationObject::LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, ID3D
 			_tcscat_s(m_strFrameName, 128, pstrFileName);
 
 			InFile.read((char*)&m_iBoneIndex, sizeof(int)); // 본 인덱스 받기
-
+			
 			delete[] pstrFrameName;
 
 			bool bChild = false;
@@ -1293,7 +1313,7 @@ void CAnimationObject::LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, ID3D
 				{
 					CAnimationObject *pChild = new CAnimationObject(0);
 					SetChild(pChild);
-					pChild->LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, InFile, nFrame + 1, 1);
+					pChild->LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, InFile, GET_TYPE);
 				}
 			}
 		}
@@ -1301,7 +1321,7 @@ void CAnimationObject::LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, ID3D
 		{
 			CAnimationObject *pSibling = new CAnimationObject(0);
 			SetChild(pSibling);
-			pSibling->LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, InFile, nFrame + 1, nSub + 1);
+			pSibling->LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, InFile, SKINNEDMESH);
 
 		}
 	}
@@ -1322,7 +1342,7 @@ void CAnimationObject::LoadGeometryFromFile(ID3D12Device *pd3dDevice, ID3D12Grap
 	m_BoneTransforms2 = new BONE_TRANSFORMS2();
 	m_BoneTransforms3 = new BONE_TRANSFORMS2();
 
-	LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, fi, 0, 1);
+	LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, fi, GET_TYPE);
 	LoadAnimation(pd3dDevice, pd3dCommandList, fi, pAnimationController);
 	fi.close(); // 파일 닫기
 }
@@ -1349,22 +1369,6 @@ void CAnimationObject::UpdateTransform(XMFLOAT4X4 *pxmf4x4Parent)
 		m_pSibling->UpdateTransform(pxmf4x4Parent);
 	if (m_pChild)
 		m_pChild->UpdateTransform(&m_xmf4x4World);
-}
-
-CAnimationObject *CAnimationObject::FindObject()
-{
-	CAnimationObject *pFrameObject = NULL;
-	if (m_nMeshes > 0)
-		return(this);
-
-	if (m_pSibling)
-		if (pFrameObject = m_pSibling->FindObject())
-			return(pFrameObject);
-	if (m_pChild)
-		if (pFrameObject = m_pChild->FindObject())
-			return(pFrameObject);
-
-	return(NULL);
 }
 
 void CAnimationObject::SetChild(CAnimationObject *pChild)
@@ -1448,3 +1452,104 @@ void CAnimationObject::ChangeAnimation(int newState)
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+CPhysXObject::CPhysXObject(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature) : CGameObject(1)
+{
+	XMStoreFloat4x4(&m_xmf4x4World, XMMatrixIdentity());
+}
+
+CPhysXObject::~CPhysXObject()
+{
+}
+
+void CPhysXObject::SetShader(CShader *pShader)
+{
+	if (m_pShader) m_pShader->Release();
+	m_pShader = pShader;
+	if (m_pShader) m_pShader->AddRef();
+}
+
+
+void CPhysXObject::SetMesh(CMesh *pMesh)
+{
+	if (m_pMesh) m_pMesh->Release();
+	m_pMesh = pMesh;
+	if (m_pMesh) m_pMesh->AddRef();
+}
+
+void CPhysXObject::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera)
+{
+	OnPrepareRender();
+
+	if (m_pShader)
+	{
+		//게임 객체의 월드 변환 행렬을 셰이더의 상수 버퍼로 전달(복사)한다.
+		m_pShader->UpdateShaderVariable(pd3dCommandList, &m_xmf4x4World);
+		m_pShader->Render(pd3dCommandList, pCamera);
+	}
+	if (m_pMesh) m_pMesh->Render(pd3dCommandList);
+}
+
+void CPhysXObject::SetPosition(XMFLOAT3& xmf3Position)
+{
+	PxTransform PxTransform = m_pPxActor->getGlobalPose();
+
+	PxTransform.p = PxVec3(xmf3Position.x, xmf3Position.y, xmf3Position.z);
+
+	m_pPxActor->setGlobalPose(PxTransform);
+}
+
+void CPhysXObject::SetRotation(XMFLOAT4& pxmf4Quaternion)
+{
+	PxTransform PxTransform = m_pPxActor->getGlobalPose();
+
+	PxTransform.q *= PxQuat(pxmf4Quaternion.x, PxVec3(1, 0, 0));
+	PxTransform.q *= PxQuat(pxmf4Quaternion.z, PxVec3(0, 1, 0));
+	PxTransform.q *= PxQuat(pxmf4Quaternion.y, PxVec3(0, 0, 1));
+
+	m_pPxActor->setGlobalPose(PxTransform);
+}
+
+int CPhysXObject::Update(const float& fTimeDelta)
+{
+
+	CPhysXObject::Update(fTimeDelta);
+
+	PhysXUpdate(fTimeDelta);
+
+	return 0;
+}
+
+void CPhysXObject::PhysXUpdate(const float & fTimeDelta)
+{
+	PxTransform pT = m_pPxActor->getGlobalPose();
+	PxMat44 m = PxMat44(pT);
+	PxVec3 RotatedOffset = m.rotate(PxVec3(0.0f, 0.0f, 0.0f));
+	m.setPosition(PxVec3(m.getPosition() + RotatedOffset));
+
+}
+
+void CPhysXObject::BuildObject(PxPhysics* pPxPhysics, PxScene* pPxScene, PxMaterial *pPxMaterial, XMFLOAT3 vScale, PxCooking* pCooking)
+{
+	//바운딩박스
+	XMFLOAT3 vMin = (XMFLOAT3(2, 2, 2));
+
+
+	vMin.x *= vScale.x;	 vMin.y *= vScale.y;  vMin.z *= vScale.z;
+
+
+	XMFLOAT3 vMax = (XMFLOAT3(2, 2, 2));
+	vMax.x *= vScale.x;	 vMax.y *= vScale.y;  vMax.z *= vScale.z;
+
+
+	XMFLOAT3 _d3dxvExtents =
+		XMFLOAT3((abs(vMin.x) + abs(vMax.x)) / 2, (abs(vMin.y) + abs(vMax.y)) / 2, (abs(vMin.z) + abs(vMax.z)) / 2);
+
+	//객체의 최종행렬
+	PxTransform _PxTransform(0, 0, 0);
+
+	PxBoxGeometry _PxBoxGeometry(_d3dxvExtents.x, _d3dxvExtents.y, _d3dxvExtents.z);
+	m_pPxActor = PxCreateDynamic(*pPxPhysics, _PxTransform, _PxBoxGeometry, *pPxMaterial, 4000.0f);
+
+	pPxScene->addActor(*m_pPxActor);
+}
