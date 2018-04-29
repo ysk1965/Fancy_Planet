@@ -157,8 +157,6 @@ A_VS_OUTPUT ANIMATION_VS(A_VS_INPUT input, uint nInstanceID : SV_InstanceID)
 	float3 position = float3(0.0f, 0.0f, 0.0f);
 	float3 normal = float3(0.0f, 0.0f, 0.0f);
 	float3 tangent = float3(0.0f, 0.0f, 0.0f);
-	//float4x4 qwe = float4x4(1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f);
-
 
 	for (int i = 0; i < 4; i++)
 	{
@@ -280,7 +278,7 @@ PS_TEXTURED_DEFFERREDLIGHTING_OUTPUT RendererMesh_PS(VS_OUTPUT input) : SV_TARGE
 	
 	output.depth = float4(input.positionW, 1.0f);
 	
-	output.specular = float4(1.0f, 1.0f, 1.0f, 64.0f / 255.0f);
+	output.specular = float4(0.1f, 0.1f, 0.1f, 64.0f / 255.0f);
 	
 	return output;
 }

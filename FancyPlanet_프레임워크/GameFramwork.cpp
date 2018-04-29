@@ -306,10 +306,21 @@ void CGameFramework::CreateRenderTargetViews()
 	m_pScreenShader->CreateShader(m_pd3dDevice, m_pScreenShader->GetGraphicsRootSignature(), 4);
 	m_pScreenShader->BuildObjects(m_pd3dDevice, m_pd3dScreenCommandList, m_pPlayer, pTexture);
 
-	m_pUIShader = new UIShader(m_pPlayer);
-	m_pUIShader->CreateGraphicsRootSignature(m_pd3dDevice);
-	m_pUIShader->CreateShader(m_pd3dDevice, m_pUIShader->GetGraphicsRootSignature(), 4);
-	m_pUIShader->BuildObjects(m_pd3dDevice, m_pd3dScreenCommandList);
+	CreateUIShader();
+}
+
+void CGameFramework::CreateUIShader()
+{
+	m_pMiniMapShader = new MiniMapShader(m_pPlayer);
+	m_pMiniMapShader->CreateGraphicsRootSignature(m_pd3dDevice);
+	m_pMiniMapShader->CreateShader(m_pd3dDevice, m_pMiniMapShader->GetGraphicsRootSignature(), 4);
+	m_pMiniMapShader->BuildObjects(m_pd3dDevice, m_pd3dScreenCommandList);
+
+
+	m_pArrowShader = new ArrowShader(m_pPlayer);
+	m_pArrowShader->CreateGraphicsRootSignature(m_pd3dDevice);
+	m_pArrowShader->CreateShader(m_pd3dDevice, m_pArrowShader->GetGraphicsRootSignature(), 4);
+	m_pArrowShader->BuildObjects(m_pd3dDevice, m_pd3dScreenCommandList);
 }
 
 void CGameFramework::CreateSwapChainRenderTargetViews()
@@ -744,11 +755,17 @@ void CGameFramework::ReleaseObjects()
 	if (m_pScreenShader)
 		delete m_pScreenShader;
 
-	if (m_pUIShader)
-		m_pUIShader->ReleaseObjects();
+	if (m_pMiniMapShader)
+		m_pMiniMapShader->ReleaseObjects();
 
-	if (m_pUIShader)
-		delete m_pUIShader;
+	if (m_pMiniMapShader)
+		delete m_pMiniMapShader;
+
+	if (m_pArrowShader)
+		m_pArrowShader->ReleaseObjects();
+
+	if (m_pArrowShader)
+		delete m_pArrowShader;
 }
 
 void CGameFramework::ProcessInput()
@@ -885,7 +902,7 @@ void CGameFramework::ProcessInput()
 					m_pPlayer->Rotate(cyDelta, cxDelta, 0.0f);
 			}
 			if (dwDirection)
-				m_pPlayer->Move(dwDirection, 100.0f * m_GameTimer.GetTimeElapsed(), true);
+				m_pPlayer->Move(dwDirection, 50.0f * m_GameTimer.GetTimeElapsed(), true);
 		}
 	}
 
@@ -977,6 +994,12 @@ void CGameFramework::PrepareFrame()
 	}
 }
 
+void CGameFramework::RenderUI()
+{
+	m_pMiniMapShader->Render(m_pd3dScreenCommandList, m_pCamera);
+	m_pArrowShader->Render(m_pd3dScreenCommandList, m_pCamera);
+}
+
 void CGameFramework::FrameAdvance()
 {
 	// PhysX Update
@@ -1024,7 +1047,9 @@ void CGameFramework::FrameAdvance()
 	m_pd3dScreenCommandList->ClearRenderTargetView(m_pd3dRtvSwapChainBackBufferCPUHandles[m_nSwapChainBufferIndex], Colors::Azure, 0, NULL);
 	m_pd3dScreenCommandList->OMSetRenderTargets(1, &m_pd3dRtvSwapChainBackBufferCPUHandles[m_nSwapChainBufferIndex], TRUE, &m_d3dDsvDepthStencilBufferCPUHandle);
 	//원래대로 백버퍼에 그린다.
-	m_pUIShader->Render(m_pd3dScreenCommandList, m_pCamera);
+
+	RenderUI();
+
 	m_pScreenShader->Render(m_pd3dScreenCommandList, m_pCamera);
 #ifdef _WITH_PLAYER_TOP
 	m_pd3dCommandList->ClearDepthStencilView(m_d3dDsvDepthStencilBufferCPUHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, NULL);

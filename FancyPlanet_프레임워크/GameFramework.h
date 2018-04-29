@@ -38,6 +38,7 @@ public:
 	void CreateRenderTargetViews();
 	void CreateDepthStencilView();
 	void CreateCommandQueueAndList();
+	void CreateUIShader();
 
 	void OnResizeBackBuffers();
 
@@ -54,6 +55,7 @@ public:
 
 	void SpaceDivision();
 	void RenderSubset(int iIndex);
+	void RenderUI();
 
 	void OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
 	void OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
@@ -68,7 +70,10 @@ public:
 private:
 	ID3D12GraphicsCommandList * m_pd3dScreenCommandList;
 	CTextureToFullScreenShader *m_pScreenShader = NULL;
-	UIShader * m_pUIShader = NULL;
+	
+	MiniMapShader* m_pMiniMapShader = NULL;
+	ArrowShader* m_pArrowShader = NULL;
+
 	ID3D12CommandAllocator		*m_pd3dScreenCommandAllocator;
 
 	HINSTANCE					m_hInstance;

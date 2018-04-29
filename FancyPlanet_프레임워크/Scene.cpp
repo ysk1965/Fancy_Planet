@@ -402,7 +402,7 @@ void CharacterScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsComman
 {
 	m_pd3dGraphicsRootSignature = CreateGraphicsRootSignature(pd3dDevice);
 
-	m_nObjects = 2;
+	m_nObjects = 3;
 
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
@@ -419,9 +419,8 @@ void CharacterScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsComman
 	{
 		m_ppSoldierObjects[i]->m_pAnimationFactors->SetBoneObject(m_ppSoldierObjects[i]);
 		m_ppSoldierObjects[i]->SetPosition(rand() % 3000, rand() % 100 + 300, rand() % 3000);
-		//m_ppSoldierObjects[i]->SetPosition(100, 300 , 100);
 		if (i != m_nObjects - 1)
-			m_ppSoldierObjects[i]->SetScale(50.0f, 50.0f, 50.0f);
+			m_ppSoldierObjects[i]->SetScale(5.0f, 5.0f, 5.0f);
 		else
 			m_ppSoldierObjects[m_nObjects - 1]->SetPlayerScale(5);
 	}
@@ -433,6 +432,7 @@ void CharacterScene::CopyObject(CAnimationObject* pSample, CAnimationObject** pp
 
 	stack<CAnimationObject*> FrameStack;
 	stack<CAnimationObject*> ObjectsStack;
+
 	FrameStack.push(pSample);
 	CAnimationObject** ppSiblingObjects = new CAnimationObject*[nSize];
 	CAnimationObject** ppChildObjects = new CAnimationObject*[nSize];
@@ -618,8 +618,6 @@ void CharacterScene::ChangeAnimation(int newState)
 	{
 		if (m_ppSoldierObjects[i]->m_pAnimationFactors->m_iState == newState)
 		{
-			if(newState != 0)
-				printf("현재: %d\t뉴:%d\n", m_ppSoldierObjects[i]->m_pAnimationFactors->m_iState, newState);
 			return;
 		}
 		if (m_ppSoldierObjects[i]->m_pAnimationFactors->m_iState == CHANG_INDEX)
@@ -636,7 +634,6 @@ void CharacterScene::ChangeAnimation(int newState)
 			return;
 
 		m_ppSoldierObjects[i]->m_pAnimationController->SetObject(m_ppSoldierObjects[i]);
-		printf("새로 이걸로 바뀜 %d\t현재:%d\n", newState, m_ppSoldierObjects[i]->m_pAnimationFactors->m_iState);
 		m_ppSoldierObjects[i]->ChangeAnimation(newState);
 	}
 }
