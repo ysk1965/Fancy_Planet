@@ -37,15 +37,16 @@ using namespace DirectX;
 #define SC_REMOVE_PLAYER 3
 #define SC_READY		4
 #define SC_SCENE_CHANGE 5
-
+#define SC_TIME 6
 #pragma pack (push, 1)
 
 struct cs_packet_pos {
 	unsigned char size;
 	unsigned char type;
-	XMFLOAT4X4 m_pos;
+	unsigned short id;
+	int animstate = 0;
 	int roomnumb = 0;
-
+	XMFLOAT4X4 m_pos;
 };
 
 struct cs_packet_ready {
@@ -110,6 +111,13 @@ struct sc_packet_scene_change
 
 };
 
+struct sc_packet_time
+{
+	unsigned char size;
+	unsigned char type;
+	int roomnumb = 0;
+	float m_ftime = 0;
+};
 
 // basic unsigned types
 typedef unsigned short USHORT;
