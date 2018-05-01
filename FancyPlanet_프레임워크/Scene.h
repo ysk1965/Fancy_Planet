@@ -1,6 +1,7 @@
 #pragma once
 #include "UIShader.h"
 #include "Camera.h"
+#include "protocol.h"
 
 #define MESH_NUM 1
 class CMesh;
@@ -30,6 +31,7 @@ public:
 	virtual void AnimateObjects(float fTimeElapsed, CCamera *pCamera) = 0;
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera = NULL) = 0;
 	virtual void SkyBoxRender(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera) {}
+	virtual void ModelsSetPosition(const array <PLAYER_INFO, MAX_USER>& PlayerArray) {};
 	virtual void ReleaseUploadBuffers();
 	virtual void ChangeAnimation(int newState) = 0;
 	virtual CHeightMapTerrain * GetTerrain() { return NULL; };
@@ -125,6 +127,8 @@ public:
 	void UpdateShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList);
 	void CopyObject(CAnimationObject* pSample, CAnimationObject** ppObjects, UINT nSize);
 	CAnimationObject* FindMeshRendererObject(CAnimationObject* pRootObject, UINT nRendererMesh);
+	virtual void ModelsSetPosition(const array <PLAYER_INFO, MAX_USER>& PlayerArray);
+
 	CharacterScene(PxPhysics* pPxPhysicsSDK, PxScene* pPxScene, PxControllerManager* pPxControllerManager, PxCooking* pCooking);
 	~CharacterScene();
 

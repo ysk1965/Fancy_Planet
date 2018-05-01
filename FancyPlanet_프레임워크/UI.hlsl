@@ -13,8 +13,7 @@ cbuffer UI_INFO : register(b0)
 	float2 uv1;
 	float2 uv2;
 	float2 xmf2Degree;
-	float2 xmf2Arrow1;
-	float2 xmf2Arrow2;
+	float2 xmf2Arrow;
 };
 
 VS_UI_OUTPUT UIVS(uint nVertexID : SV_VertexID)
@@ -75,6 +74,8 @@ VS_UI_OUTPUT ARROW_VS(uint nVertexID : SV_VertexID)
 	for (int i = 0; i < 4; i++)
 	{
 		pos[i] = mul(pos[i], Rotation);
+		pos[i].x += xmf2Arrow.x;
+		pos[i].y += xmf2Arrow.y;
 	}
 	
 	if (nVertexID == 0) 

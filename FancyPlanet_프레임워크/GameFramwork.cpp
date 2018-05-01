@@ -229,11 +229,12 @@ void CGameFramework::CreateDirect3DDevice()
 	m_bMsaa4xEnable = (m_nMsaa4xQualityLevels > 1) ? true : false;
 
 	hResult = m_pd3dDevice->CreateFence(0, D3D12_FENCE_FLAG_NONE, __uuidof(ID3D12Fence), (void **)&m_pd3dFence);
-	for (UINT i = 0; i < m_nSwapChainBuffers; i++) m_nFenceValues[i] = 1;
+	for (UINT i = 0; i < m_nSwapChainBuffers; i++) 
+		m_nFenceValues[i] = 1;
 	m_hFenceEvent = ::CreateEvent(NULL, FALSE, FALSE, NULL);
 
 	::gnCbvSrvDescriptorIncrementSize = m_pd3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-
+	
 	if (pd3dAdapter) pd3dAdapter->Release();
 }
 
@@ -651,7 +652,8 @@ void CGameFramework::OnDestroy()
 		for (int i = 0; i<NUM_COMMANDLIST; i++)
 			m_ppd3dCommandLists[i]->Release();
 	}
-	if (m_pd3dFence) m_pd3dFence->Release();
+	if (m_pd3dFence) 
+		m_pd3dFence->Release();
 
 	m_pdxgiSwapChain->SetFullscreenState(FALSE, NULL);
 	if (m_pdxgiSwapChain)
@@ -674,13 +676,6 @@ void CGameFramework::BuildObjects()
 	m_nDivision = 10;
 
 	m_ppScenes = new CScene*[NUM_SUBSETS];
-
-	//for (int i = 0; i < NUM_SUBSETS; i++)
-	//{
-	//	TerrainAndSkyBoxScene *pScene = new TerrainAndSkyBoxScene();
-	//	pScene->BuildObjects(m_pd3dDevice, m_ppd3dCommandLists[i]);
-	//	m_ppScenes[i] = pScene;
-	//}
 
 	int i = 0;
 
@@ -996,8 +991,8 @@ void CGameFramework::PrepareFrame()
 
 void CGameFramework::RenderUI()
 {
-	m_pMiniMapShader->Render(m_pd3dScreenCommandList, m_pCamera);
 	m_pArrowShader->Render(m_pd3dScreenCommandList, m_pCamera);
+	m_pMiniMapShader->Render(m_pd3dScreenCommandList, m_pCamera);
 }
 
 void CGameFramework::FrameAdvance()
@@ -1014,6 +1009,8 @@ void CGameFramework::FrameAdvance()
 	AnimateObjects();
 	PrepareFrame();
 	SpaceDivision();
+	
+	//m_ppScenes[CHARACTER]->ModelsSetPosition(g_player_info);
 
 	for (int i = 0; i < NUM_SUBSETS; i++)
 	{

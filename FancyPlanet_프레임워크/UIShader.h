@@ -3,14 +3,15 @@
 
 #define MAP_SIZE 2056.0f
 #define PLAYER_MAP_RANGE 200.0f
+#define MINI_MAP_SIZE 0.25f;
+#define ARROW_CENTER -0.75f
 
 struct UI_INFO
 {
 	XMFLOAT2 xmf2Map1;
 	XMFLOAT2 xmf2Map2;
 	XMFLOAT2 xmf2Degree;
-	XMFLOAT2 xmf2Arrow1;
-	XMFLOAT2 xmf2Arrow2;
+	XMFLOAT2 xmf2Arrow;
 };
 
 class MiniMapShader : public CShader

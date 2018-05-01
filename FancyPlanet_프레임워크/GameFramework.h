@@ -6,7 +6,6 @@
 #include "Timer.h"
 #include "Player.h"
 #include "Scene.h"
-#include "protocol.h"
 enum
 {
 	NUM_SUBSETS = 4,

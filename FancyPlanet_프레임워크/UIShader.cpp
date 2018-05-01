@@ -141,8 +141,6 @@ void MiniMapShader::ReleaseObjects()
 }
 void MiniMapShader::CalculateMiniMap()
 {
-	MAP_SIZE, PLAYER_MAP_RANGE;
-
 	XMFLOAT3 xmf3Position = m_pPlayer->GetPosition();
 
 	if ((xmf3Position.x >= 0 && xmf3Position.x < PLAYER_MAP_RANGE) &&  // 1
@@ -415,12 +413,82 @@ void ArrowShader::CalculateArrow()
 		m_ui.xmf2Degree.x = xmf3Result.x;
 		m_ui.xmf2Degree.y = fSin;
 	}
+	
+	XMFLOAT3 xmf3Position = m_pPlayer->GetPosition();
 
-	m_ui.xmf2Arrow1.x = 0;
-	m_ui.xmf2Arrow1.y = 0;
+	if ((xmf3Position.x >= 0 && xmf3Position.x < PLAYER_MAP_RANGE) &&  // 1
+		(xmf3Position.z >= (MAP_SIZE - PLAYER_MAP_RANGE) && xmf3Position.z < MAP_SIZE))
+	{
+		float fx = (1.0f - (xmf3Position.x / PLAYER_MAP_RANGE)) * MINI_MAP_SIZE;
+		float fz = ((xmf3Position.z - (MAP_SIZE - PLAYER_MAP_RANGE)) / PLAYER_MAP_RANGE) * MINI_MAP_SIZE;
+		
+		m_ui.xmf2Arrow.x = ARROW_CENTER - fx;
+		m_ui.xmf2Arrow.y = ARROW_CENTER + fz;
+	}
+	else if ((xmf3Position.x >= PLAYER_MAP_RANGE && xmf3Position.x < (MAP_SIZE - PLAYER_MAP_RANGE)) && // 2
+		(xmf3Position.z >= (MAP_SIZE - PLAYER_MAP_RANGE) && xmf3Position.z < MAP_SIZE))
+	{
+		float fz = ((xmf3Position.z - (MAP_SIZE - PLAYER_MAP_RANGE)) / PLAYER_MAP_RANGE) * MINI_MAP_SIZE;
 
-	m_ui.xmf2Arrow2.x = 0;
-	m_ui.xmf2Arrow2.y = 0;
+		m_ui.xmf2Arrow.x = ARROW_CENTER;
+		m_ui.xmf2Arrow.y = ARROW_CENTER + fz;
+	}
+	else if ((xmf3Position.x >= (MAP_SIZE - PLAYER_MAP_RANGE) && xmf3Position.x < MAP_SIZE) && // 3
+		(xmf3Position.z >= (MAP_SIZE - PLAYER_MAP_RANGE) && xmf3Position.z < MAP_SIZE))
+	{
+		float fx = ((xmf3Position.x - (MAP_SIZE - PLAYER_MAP_RANGE)) / PLAYER_MAP_RANGE) * MINI_MAP_SIZE;
+		float fz = ((xmf3Position.z - (MAP_SIZE - PLAYER_MAP_RANGE)) / PLAYER_MAP_RANGE) * MINI_MAP_SIZE;
+
+		m_ui.xmf2Arrow.x = ARROW_CENTER + fx;
+		m_ui.xmf2Arrow.y = ARROW_CENTER + fz;
+	}
+	else if ((xmf3Position.x >= (MAP_SIZE - PLAYER_MAP_RANGE) && xmf3Position.x < MAP_SIZE) && // 4
+		(xmf3Position.z >= PLAYER_MAP_RANGE && xmf3Position.z < (MAP_SIZE - PLAYER_MAP_RANGE)))
+	{
+		float fx = ((xmf3Position.x - (MAP_SIZE - PLAYER_MAP_RANGE)) / PLAYER_MAP_RANGE) * MINI_MAP_SIZE;
+
+		m_ui.xmf2Arrow.x = ARROW_CENTER + fx;
+		m_ui.xmf2Arrow.y = ARROW_CENTER;
+	}
+	else if ((xmf3Position.x >= (MAP_SIZE - PLAYER_MAP_RANGE) && xmf3Position.x < MAP_SIZE) && // 5
+		(xmf3Position.z >= 0 && xmf3Position.z < PLAYER_MAP_RANGE))
+	{
+		float fx = ((xmf3Position.x - (MAP_SIZE - PLAYER_MAP_RANGE)) / PLAYER_MAP_RANGE) * MINI_MAP_SIZE;
+		float fz = (1.0f - (xmf3Position.z / PLAYER_MAP_RANGE)) * MINI_MAP_SIZE;
+
+		m_ui.xmf2Arrow.x = ARROW_CENTER + fx;
+		m_ui.xmf2Arrow.y = ARROW_CENTER - fz;
+	}
+	else if ((xmf3Position.x >= PLAYER_MAP_RANGE && xmf3Position.x < (MAP_SIZE - PLAYER_MAP_RANGE)) && // 6
+		(xmf3Position.z >= 0 && xmf3Position.z < PLAYER_MAP_RANGE))
+	{
+		float fz = (1.0f - (xmf3Position.z / PLAYER_MAP_RANGE)) * MINI_MAP_SIZE;
+
+		m_ui.xmf2Arrow.x = ARROW_CENTER;
+		m_ui.xmf2Arrow.y = ARROW_CENTER - fz;
+	}
+	else if ((xmf3Position.x >= 0 && xmf3Position.x < PLAYER_MAP_RANGE) && // 7
+		(xmf3Position.z >= 0 && xmf3Position.z < PLAYER_MAP_RANGE))
+	{
+		float fx = (1.0f - (xmf3Position.x / PLAYER_MAP_RANGE)) * MINI_MAP_SIZE;
+		float fz = (1.0f - (xmf3Position.z / PLAYER_MAP_RANGE)) * MINI_MAP_SIZE;
+
+		m_ui.xmf2Arrow.x = ARROW_CENTER - fx;
+		m_ui.xmf2Arrow.y = ARROW_CENTER - fz;
+	}
+	else if ((xmf3Position.x >= 0 && xmf3Position.x < PLAYER_MAP_RANGE) && // 8
+		(xmf3Position.z >= PLAYER_MAP_RANGE && xmf3Position.z < (MAP_SIZE - PLAYER_MAP_RANGE)))
+	{
+		float fx = (1.0f - (xmf3Position.x / PLAYER_MAP_RANGE)) * MINI_MAP_SIZE;
+
+		m_ui.xmf2Arrow.x = ARROW_CENTER - fx;
+		m_ui.xmf2Arrow.y = ARROW_CENTER;
+	}
+	else // 9
+	{
+		m_ui.xmf2Arrow.x = ARROW_CENTER;
+		m_ui.xmf2Arrow.y = ARROW_CENTER;
+	}
 }
 
 void ArrowShader::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera)

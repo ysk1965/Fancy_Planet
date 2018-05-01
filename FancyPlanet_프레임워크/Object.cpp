@@ -291,7 +291,6 @@ void AnimationController::SetToRootTransforms()
 {
 	stack<CAnimationObject*> FrameStack;
 	FrameStack.push(m_pRootObject->m_pChild);
-	m_pRootObject->m_xmf4x4ToRootTransform = m_pRootObject->m_xmf4x4ToParentTransform;
 
 	while (1)
 	{
@@ -301,7 +300,7 @@ void AnimationController::SetToRootTransforms()
 		CAnimationObject* TargetFrame = FrameStack.top();
 		FrameStack.pop();
 
-		if (TargetFrame->m_pParent != NULL)
+		if (TargetFrame->m_pParent != NULL && TargetFrame != m_pRootObject->m_pChild)
 			TargetFrame->m_xmf4x4ToRootTransform = Matrix4x4::Multiply(TargetFrame->m_xmf4x4ToParentTransform, TargetFrame->m_pParent->m_xmf4x4ToRootTransform);
 		else
 			TargetFrame->m_xmf4x4ToRootTransform = TargetFrame->m_xmf4x4ToParentTransform;
