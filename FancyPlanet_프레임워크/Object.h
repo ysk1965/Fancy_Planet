@@ -20,7 +20,8 @@ enum
 	RENDERMESH = 1,
 	LAYER = 2,
 	END = 3,
-	GET_TYPE = 4
+	GET_TYPE = 4,
+	SKIP = 5
 };
 #define DIR_FORWARD					0x01
 #define DIR_BACKWARD				0x02
@@ -37,8 +38,8 @@ enum
 
 #define BONE_TRANSFORM_NUM 31
 #define BONE_TRANSFORM_NUM2 32
-#define BONE_TRANSFORM_NUM3 26
-#define RENDERER_MESH_WORLD_TRANSFORM 6
+#define BONE_TRANSFORM_NUM3 24
+#define RENDERER_MESH_WORLD_TRANSFORM 8
 
 #define CHANGE_TIME 0.2f
 
@@ -116,8 +117,8 @@ public:
 	AnimationController(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, UINT nAnimation);
 	~AnimationController();
 	void GetCurrentFrame();
-	SRT Interpolate(int iBoneNum);
-	SRT Interpolate(int iBoneNum, float fTime);
+	SRT Interpolate(int iBoneNum, float fRendererScale);
+	SRT Interpolate(int iBoneNum, float fTime, float fRendererScale);
 	void SetToParentTransforms();
 	//해당하는 본인덱스의 오브젝트를 리턴한다.
 	void SetToRootTransforms();
@@ -216,7 +217,7 @@ public:
 
 private:
 	int								m_nReferences = 0;
-
+	
 public:
 	void AddRef() 
 	{
@@ -229,7 +230,7 @@ public:
 	}
 
 public:
-
+	XMFLOAT3					m_Direction;
 	bool							m_bActive = true;
 
 	XMFLOAT4X4						m_xmf4x4World;
@@ -281,6 +282,9 @@ public:
 	virtual void SetRotation(XMFLOAT4& pxmf4Quaternion);
 	
 	virtual void MoveStrafe(float fDistance = 1.0f);
+
+
+	
 	void MoveUp(float fDistance = 1.0f);
 	void MoveForward(float fDistance = 1.0f);
 
@@ -298,7 +302,12 @@ private:
 	bool m_bRendererMesh = false;
 	XMFLOAT4X4* m_pBindPoses = NULL;
 	UINT m_nRendererMesh = 0;
+	float m_RndererScale = 1;
 public:
+	void Move(float fSpeed)
+	{
+		SetPosition(m_xmf4x4ToParentTransform._41 + m_Direction.x * fSpeed, m_xmf4x4ToParentTransform._42 + m_Direction.y * fSpeed, m_xmf4x4ToParentTransform._43 + m_Direction.z * fSpeed);
+	}
 	void SetRendererMeshNum(UINT index)
 	{
 		m_nRendererMesh = index;
@@ -327,7 +336,14 @@ public:
 	{
 		m_pPlayer = pPlayer;
 	}
-
+	void SetRndererScale(float fScale)
+	{
+		m_RndererScale = fScale;
+	}
+	float GetRndererScale()
+	{
+		return m_RndererScale;
+	}
 	CAnimationObject(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature,
 		UINT nMeshes, TCHAR *pstrFileName, AnimationController* pAnimationController);
 	CAnimationObject(int nMeshes) : CGameObject(nMeshes)
@@ -341,7 +357,7 @@ public:
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera, UINT nInstances);
 	void LoadAnimation(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ifstream& InFile, AnimationController* pAnimationController);
 	void LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList,
-		ID3D12RootSignature *pd3dGraphicsRootSignature, ifstream& InFile, UINT nSub);
+		ID3D12RootSignature *pd3dGraphicsRootSignature, ifstream& InFile, UINT nType, UINT nSub);
 	void LoadGeometryFromFile(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature
 		, TCHAR *pstrFileName, AnimationController* pAnimationController);
 	virtual void UpdateTransform(XMFLOAT4X4 *pxmf4x4Parent = NULL);
@@ -391,6 +407,7 @@ public:
 		m_iBoneIndex = other.m_iBoneIndex;
 		SetRendererMesh(other.IsRendererMesh());
 		SetRendererMeshNum(other.GetRendererMeshNum());
+		SetRndererScale(other.GetRndererScale());
 		if (other.m_pAnimationController)
 			m_pAnimationController = other.m_pAnimationController;
 
@@ -501,6 +518,11 @@ public:
 	virtual void SetPosition(XMFLOAT3& xmf3Position);
 	virtual void SetRotation(XMFLOAT4& pxmf4Quaternion);
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera = NULL);
+
+	void shooting(float fpower);
+	void AddForceAtLocalPos(PxRigidBody & body, const PxVec3 & force, const PxVec3 & pos, PxForceMode::Enum mode, bool wakeup);
+	void AddForceAtPosInternal(PxRigidBody & body, const PxVec3 & force, const PxVec3 & pos, PxForceMode::Enum mode, bool wakeup);
+
 
 	// Px
 	virtual void	BuildObject(PxPhysics* pPxPhysics, PxScene* pPxScene, PxMaterial *pPxMaterial, XMFLOAT3 vScale, PxCooking* pCooking);

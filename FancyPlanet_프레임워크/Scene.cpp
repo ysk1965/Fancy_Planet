@@ -245,6 +245,7 @@ ID3D12RootSignature *TerrainAndSkyBoxScene::CreateGraphicsRootSignature(ID3D12De
 PhysXScene::PhysXScene(PxPhysics* pPxPhysicsSDK, PxScene* pPxScene, PxControllerManager* pPxControllerManager, PxCooking* pCooking)
 	: CScene(pPxPhysicsSDK, pPxScene, pPxControllerManager, pCooking)
 {
+	m_ppObjects = new CPhysXObject*[MESH_NUM];
 }
 PhysXScene::~PhysXScene()
 {
@@ -259,6 +260,10 @@ void PhysXScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLis
 																	   //Plane바닥 생성
 	PxRigidStatic* groundPlane = PxCreatePlane(*m_pPxPhysicsSDK, PxPlane(0, 1, 0, 0), *m_pPxMaterial);
 	m_pPxScene->addActor(*groundPlane);
+
+	m_ppObjects[0] = new CPhysXObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
+	m_ppObjects[0]->BuildObject(m_pPxPhysicsSDK, m_pPxScene, m_pPxMaterial, XMFLOAT3(1, 1, 1), m_pCooking);
+	//m_ppObjects[0]->SetPosition(XMFLOAT3(m_pPlayer->GetPosition().x + 40, m_pPlayer->GetPosition().y + 10, m_pPlayer->GetPosition().z + 40));
 }
 void PhysXScene::ReleaseObjects()
 {
@@ -268,6 +273,12 @@ void PhysXScene::ReleaseUploadBuffers()
 }
 void PhysXScene::AnimateObjects(float fTimeElapsed, CCamera *pCamera)
 {
+	m_ppObjects[0]->shooting(10.0f);
+}
+void PhysXScene::SetProjectile(XMFLOAT3& xmf3Direction)
+{
+	m_ppObjects[0]->SetPosition(XMFLOAT3(m_pPlayer->GetPosition().x, m_pPlayer->GetPosition().y + 25, m_pPlayer->GetPosition().z));
+	m_ppObjects[0]->m_Direction = xmf3Direction;
 }
 void PhysXScene::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera)
 {
@@ -402,11 +413,11 @@ void CharacterScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsComman
 {
 	m_pd3dGraphicsRootSignature = CreateGraphicsRootSignature(pd3dDevice);
 
-	m_nObjects = 2;
+	m_nObjects = 3;
 
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
-	m_ppSampleObjects[0] = new CAnimationObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, 0, L"../Assets/Astronaut.bss", m_ppAnimationController[0]);
+	m_ppSampleObjects[0] = new CAnimationObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, 0, L"../Assets/NewAstronaut.bss", m_ppAnimationController[0]);
 
 	m_ppSoldierObjects = new CAnimationObject*[m_nObjects];
 
@@ -418,12 +429,17 @@ void CharacterScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsComman
 	for (int i = 0; i < m_nObjects; i++)
 	{
 		m_ppSoldierObjects[i]->m_pAnimationFactors->SetBoneObject(m_ppSoldierObjects[i]);
-		m_ppSoldierObjects[i]->SetPosition(rand() % 3000, rand() % 100 + 300, rand() % 3000);
+		m_ppSoldierObjects[i]->SetPosition(1000, 500, 1000);
 		if (i != m_nObjects - 1)
-			m_ppSoldierObjects[i]->SetScale(50.0f, 50.0f, 50.0f);
+			m_ppSoldierObjects[i]->SetScale(5.0f, 5.0f, 5.0f);
 		else
 			m_ppSoldierObjects[m_nObjects - 1]->SetPlayerScale(5);
 	}
+}
+void CharacterScene::SetProjectile(XMFLOAT3& xmf3Direction)
+{
+	m_ppSoldierObjects[0]->SetPosition(m_pPlayer->GetPosition());
+	m_ppSoldierObjects[0]->m_Direction = xmf3Direction;
 }
 void CharacterScene::ModelsSetPosition(const array <PLAYER_INFO, MAX_USER>& PlayerArray)
 {
@@ -590,7 +606,7 @@ void CharacterScene::UpdateShaderVariables(ID3D12GraphicsCommandList *pd3dComman
 			if (RendererMeshObject)
 			{
 				XMFLOAT4X4 result = Matrix4x4::Multiply(RendererMeshObject->m_xmf4x4ToRootTransform, m_ppSoldierObjects[i]->m_xmf4x4World);
-					
+				
 				XMStoreFloat4x4(&pbMappedcbGameObject3->m_xmf4x4RedererMeshWorld[k], XMMatrixTranspose(XMLoadFloat4x4(&result)));
 			}
 		}
@@ -619,35 +635,30 @@ CAnimationObject* CharacterScene::FindMeshRendererObject(CAnimationObject* pRoot
 }
 void CharacterScene::AnimateObjects(float fTimeElapsed, CCamera *pCamera)
 {
-	for (int i = 0; i < m_nObjects; i++)
-	{
-		m_ppSoldierObjects[i]->Animate(fTimeElapsed);
-	}
+	m_ppSoldierObjects[0]->Move(50.0f);
 }
 void CharacterScene::ChangeAnimation(int newState)
 {
-	for (int i = 0; i < m_nObjects; i++)
+	if (m_ppSoldierObjects[m_nObjects - 1]->m_pAnimationFactors->m_iState == newState)
 	{
-		if (m_ppSoldierObjects[i]->m_pAnimationFactors->m_iState == newState)
-		{
-			return;
-		}
-		if (m_ppSoldierObjects[i]->m_pAnimationFactors->m_iState == CHANG_INDEX)
-			return;
-
-		if (newState < 0) // 뒤로 재생되어야 하는 애니메이션이 맞는지 확인
-		{
-			if (m_ppSoldierObjects[i]->m_pAnimationController->m_pAnimation[-newState].nType != CAN_BACK_PLAY)
-				return;
-		}
-		if (m_ppSoldierObjects[i]->m_pAnimationController->m_pAnimation[m_ppSoldierObjects[i]->m_pAnimationFactors->m_iState].nType == ALL)
-			return;
-		if (m_ppSoldierObjects[i]->m_pAnimationController->m_pAnimation[m_ppSoldierObjects[i]->m_pAnimationFactors->m_iState].nType == CONTINUOUS_PLAYBACK)
-			return;
-
-		m_ppSoldierObjects[i]->m_pAnimationController->SetObject(m_ppSoldierObjects[i]);
-		m_ppSoldierObjects[i]->ChangeAnimation(newState);
+		return;
 	}
+	if (m_ppSoldierObjects[m_nObjects - 1]->m_pAnimationFactors->m_iState == CHANG_INDEX)
+		return;
+
+	if (newState < 0) // 뒤로 재생되어야 하는 애니메이션이 맞는지 확인
+	{
+		if (m_ppSoldierObjects[m_nObjects - 1]->m_pAnimationController->m_pAnimation[-newState].nType != CAN_BACK_PLAY)
+			return;
+	}
+	if (m_ppSoldierObjects[m_nObjects - 1]->m_pAnimationController->m_pAnimation[m_ppSoldierObjects[m_nObjects - 1]->m_pAnimationFactors->m_iState].nType == ALL)
+		return;
+	if (m_ppSoldierObjects[m_nObjects - 1]->m_pAnimationController->m_pAnimation[m_ppSoldierObjects[m_nObjects - 1]->m_pAnimationFactors->m_iState].nType == CONTINUOUS_PLAYBACK)
+		return;
+
+	m_ppSoldierObjects[m_nObjects - 1]->m_pAnimationController->SetObject(m_ppSoldierObjects[m_nObjects - 1]);
+	m_ppSoldierObjects[m_nObjects - 1]->ChangeAnimation(newState);
+
 }
 void CharacterScene::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera)
 {

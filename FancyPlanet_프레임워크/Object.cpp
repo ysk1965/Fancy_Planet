@@ -71,14 +71,14 @@ void AnimationController::GetCurrentFrame()
 		m_pRootObject->m_pAnimationFactors->m_fCurrentFrame = (fCurrentTime / m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].fTime - (UINT)fQuotient) * m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].nFrame;
 	}
 }
-SRT AnimationController::Interpolate(int iBoneNum)
+SRT AnimationController::Interpolate(int iBoneNum, float fRendererScale)
 {
 	SRT result;
 
 	float prev;
 	float next;
 
-	result.S = XMFLOAT3(1.0f, 1.0f, 1.0f);
+	result.S = XMFLOAT3(fRendererScale, fRendererScale, fRendererScale);
 
 	if (m_pRootObject->m_pAnimationFactors->m_iState > 0)
 	{
@@ -180,7 +180,7 @@ SRT AnimationController::Interpolate(int iBoneNum)
 	}
 	return result;
 }
-SRT AnimationController::Interpolate(int iBoneNum, float fTime)
+SRT AnimationController::Interpolate(int iBoneNum, float fTime, float fRendererScale)
 {
 	SRT result;
 	float fTimeRate = fTime / CHANGE_TIME; // 0 ~ 1사이값
@@ -188,7 +188,7 @@ SRT AnimationController::Interpolate(int iBoneNum, float fTime)
 	float m;
 	float b;
 
-	result.S = XMFLOAT3(1.0f, 1.0f, 1.0f);
+	result.S = XMFLOAT3(fRendererScale, fRendererScale, fRendererScale);
 
 	if (m_pRootObject->m_pAnimationFactors->m_iNewState >= 0)
 	{
@@ -266,11 +266,12 @@ void AnimationController::SetToParentTransforms()
 		if (TargetFrame != m_pRootObject)
 		{
 			SRT srt;
+			float fRendererScale = TargetFrame->GetRndererScale();
 
 			if (m_pRootObject->m_pAnimationFactors->m_iState != CHANG_INDEX)
-				srt = Interpolate(i);
+				srt = Interpolate(i, fRendererScale);
 			else
-				srt = Interpolate(i, fTime);
+				srt = Interpolate(i, fTime, fRendererScale);
 
 			XMVECTOR S = XMLoadFloat3(&srt.S);
 			XMVECTOR P = XMLoadFloat3(&srt.T);
@@ -291,7 +292,7 @@ void AnimationController::SetToRootTransforms()
 {
 	stack<CAnimationObject*> FrameStack;
 	FrameStack.push(m_pRootObject->m_pChild);
-
+	
 	while (1)
 	{
 		if (FrameStack.empty())
@@ -1108,23 +1109,23 @@ void CAnimationObject::LoadAnimation(ID3D12Device *pd3dDevice, ID3D12GraphicsCom
 	}
 }
 void CAnimationObject::LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList,
-	ID3D12RootSignature *pd3dGraphicsRootSignature, ifstream& InFile, UINT nSub)
+	ID3D12RootSignature *pd3dGraphicsRootSignature, ifstream& InFile, UINT nType, UINT nSub)
 {
-	int nType = -1;
+	int m_nType = -1;
 	int nSubMesh = 0;
 	static UINT nRendererMesh = 0;
 
-	if (nSub == GET_TYPE)
-		InFile.read((char*)&nType, sizeof(int)); // 타입 받기
+	if (nType != SKIP)
+		InFile.read((char*)&m_nType, sizeof(int)); // 타입 받기
 	else
 	{
-		nType = SKINNEDMESH;
+		m_nType = SKINNEDMESH;
 	}
 	XMFLOAT3 *pxmf3ParentsPosition = NULL;
 
-	if (nType == SKINNEDMESH || nType == RENDERMESH)
+	if (m_nType == SKINNEDMESH || m_nType == RENDERMESH)
 	{
-		if (nType == RENDERMESH)
+		if (m_nType == RENDERMESH)
 		{
 			m_bRendererMesh = true;
 			m_nRendererMesh = nRendererMesh++;
@@ -1171,7 +1172,7 @@ void CAnimationObject::LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, ID3D
 			InFile.read((char*)pxmf3Normals, sizeof(XMFLOAT3) * nVertices); // 법선 받기
 			InFile.read((char*)pxmf3Tangents, sizeof(XMFLOAT3) * nVertices); // 탄젠트 받기
 		}
-		if (nType == SKINNEDMESH)
+		if (m_nType == SKINNEDMESH)
 		{
 			InFile.read((char*)pxmf3BoneWeights, sizeof(XMFLOAT3) * nVertices); // 본가중치 받기
 			InFile.read((char*)pxmi4BoneIndices, sizeof(XMINT4) * nVertices); // 본인덱스 받기
@@ -1203,12 +1204,12 @@ void CAnimationObject::LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, ID3D
 
 		CMesh* pMesh = NULL;
 
-		if (nVertices > 0 && GetRootObject()->m_nDrawType > 1 && nType == SKINNEDMESH)
+		if (nVertices > 0 && GetRootObject()->m_nDrawType > 1 && m_nType == SKINNEDMESH)
 			pMesh = new CAnimationMesh(pd3dDevice, pd3dCommandList, nVertices, pxmf3Positions, pxmf3Tangents
 				, pxmf3Normals, pxmf2TextureCoords0, pxmf3BoneWeights, pxmi4BoneIndices, nIndices, pIndices);
-		else if (nVertices > 0 && nType == SKINNEDMESH)
+		else if (nVertices > 0 && m_nType == SKINNEDMESH)
 			pMesh = new CMeshAnimationTextured(pd3dDevice, pd3dCommandList, nVertices, pxmf3Positions, pxmf2TextureCoords0, pxmf3BoneWeights, pxmi4BoneIndices, nIndices, pIndices);
-		else if (nType == RENDERMESH)
+		else if (m_nType == RENDERMESH)
 			pMesh = new CRendererMesh(pd3dDevice, pd3dCommandList, nVertices, pxmf3Positions, pxmf3Tangents, pxmf3Normals, pxmf2TextureCoords0, m_nRendererMesh, nIndices, pIndices);
 
 		if (pMesh)
@@ -1265,11 +1266,11 @@ void CAnimationObject::LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, ID3D
 
 		CShader* pShader = NULL;
 
-		if (GetRootObject()->m_nDrawType == 1 && nType == SKINNEDMESH)
+		if (GetRootObject()->m_nDrawType == 1 && m_nType == SKINNEDMESH)
 			pShader = new CDefferredTexturedShader();
-		else if (GetRootObject()->m_nDrawType == 2 && nType == SKINNEDMESH)
+		else if (GetRootObject()->m_nDrawType == 2 && m_nType == SKINNEDMESH)
 			pShader = new CDefferredLightingTexturedShader();
-		else if (GetRootObject()->m_nDrawType == 2 && nType == RENDERMESH)
+		else if (GetRootObject()->m_nDrawType == 2 && m_nType == RENDERMESH)
 			pShader = new CRendererMeshShader();
 
 		pShader->CreateShader(pd3dDevice, pd3dGraphicsRootSignature, 4);
@@ -1282,24 +1283,29 @@ void CAnimationObject::LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, ID3D
 		if (pMaterial)
 			SetMaterial(pMaterial);
 	}
-	if (nType <= LAYER)
+	
 	{
+		if (m_nType == RENDERMESH)
+		{
+			InFile.read((char*)&m_RndererScale, sizeof(float));
+		}
+
+		char* pstrFrameName = NULL;
+		UINT nFrameNameSize;
+		InFile.read((char*)&nFrameNameSize, sizeof(UINT));
+
+		pstrFrameName = new char[nFrameNameSize];
+		InFile.read(pstrFrameName, sizeof(char)*nFrameNameSize); // 프레임 이름 사이즈 받기
+
+		TCHAR* pstrFileName = char2tchar(pstrFrameName);// 프레임 이름 받기
+		_tcscat_s(m_strFrameName, 128, pstrFileName);
+
+		InFile.read((char*)&m_iBoneIndex, sizeof(int)); // 본 인덱스 받기
+		
+		delete[] pstrFrameName;
+
 		if (nSubMesh <= nSub)
 		{
-			char* pstrFrameName = NULL;
-			UINT nFrameNameSize;
-			InFile.read((char*)&nFrameNameSize, sizeof(UINT));
-
-			pstrFrameName = new char[nFrameNameSize];
-			InFile.read(pstrFrameName, sizeof(char)*nFrameNameSize); // 프레임 이름 사이즈 받기
-
-			TCHAR* pstrFileName = char2tchar(pstrFrameName);// 프레임 이름 받기
-			_tcscat_s(m_strFrameName, 128, pstrFileName);
-
-			InFile.read((char*)&m_iBoneIndex, sizeof(int)); // 본 인덱스 받기
-			
-			delete[] pstrFrameName;
-
 			bool bChild = false;
 			InFile.read((char*)&bChild, sizeof(bool));
 
@@ -1312,7 +1318,7 @@ void CAnimationObject::LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, ID3D
 				{
 					CAnimationObject *pChild = new CAnimationObject(0);
 					SetChild(pChild);
-					pChild->LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, InFile, GET_TYPE);
+					pChild->LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, InFile, GET_TYPE, 1);
 				}
 			}
 		}
@@ -1320,7 +1326,7 @@ void CAnimationObject::LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, ID3D
 		{
 			CAnimationObject *pSibling = new CAnimationObject(0);
 			SetChild(pSibling);
-			pSibling->LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, InFile, SKINNEDMESH);
+			pSibling->LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, InFile, SKIP, ++nSub);
 
 		}
 	}
@@ -1341,7 +1347,7 @@ void CAnimationObject::LoadGeometryFromFile(ID3D12Device *pd3dDevice, ID3D12Grap
 	m_BoneTransforms2 = new BONE_TRANSFORMS2();
 	m_BoneTransforms3 = new BONE_TRANSFORMS2();
 
-	LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, fi, GET_TYPE);
+	LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, fi, GET_TYPE, 1);
 	LoadAnimation(pd3dDevice, pd3dCommandList, fi, pAnimationController);
 	fi.close(); // 파일 닫기
 }
@@ -1402,7 +1408,6 @@ void CAnimationObject::SetPosition(float x, float y, float z)
 	m_xmf4x4ToParentTransform._42 = y;
 	m_xmf4x4ToParentTransform._43 = z;
 }
-
 void CAnimationObject::SetPosition(XMFLOAT3& xmf3Position)
 {
 	SetPosition(xmf3Position.x, xmf3Position.y, xmf3Position.z);
@@ -1551,4 +1556,52 @@ void CPhysXObject::BuildObject(PxPhysics* pPxPhysics, PxScene* pPxScene, PxMater
 	m_pPxActor = PxCreateDynamic(*pPxPhysics, _PxTransform, _PxBoxGeometry, *pPxMaterial, 4000.0f);
 
 	pPxScene->addActor(*m_pPxActor);
+}
+
+void CPhysXObject::shooting(float fpower) {
+	PxVec3 m_PxDirection;
+	m_PxDirection.x = m_Direction.x * fpower;
+	m_PxDirection.y = m_Direction.y * fpower;
+	m_PxDirection.z = m_Direction.z * fpower;
+	
+	m_pPxActor->setLinearVelocity(m_PxDirection);
+
+	//m_pPxActor->addForce(m_PxDirection, PxForceMode::eFORCE);
+
+	//PxRaycastBuffer Gunhit;
+	//PxQueryFilterData Gunfd;
+	//Gunfd.flags |= PxQueryFlag::ePOSTFILTER;
+
+	//bool m_bTwoCheck = false;
+
+	//PxVec3 StartPos = PxVec3();
+
+
+	//PxVec3 BulletDir = m_PxDirection;
+
+	//m_bTwoCheck = m_pScene->raycast(StartPos, BulletDir, 100, Gunhit, PxHitFlags(PxHitFlag::eDEFAULT), Gunfd);
+
+	//m_pPxActor->addForce(m_PxDirection, PxForceMode::eFORCE);
+	//PxRigidDynamic* actor = Gunhit.block.actor->is<PxRigidDynamic>();
+	//const PxTransform globalPose = m_pPxActor->getGlobalPose();
+	//const PxVec3 localPos = globalPose.transformInv((Gunhit.block.position));
+	/*AddForceAtLocalPos(*m_pPxActor, m_PxDirection, localPos, PxForceMode::eACCELERATION, true);*/
+}
+
+void CPhysXObject::AddForceAtLocalPos(PxRigidBody & body, const PxVec3 & force, const PxVec3 & pos, PxForceMode::Enum mode, bool wakeup)
+{
+	//transform pos to world space
+	const PxVec3 globalForcePos = body.getGlobalPose().transform(pos);
+
+	AddForceAtPosInternal(body, force, globalForcePos, mode, wakeup);
+}
+
+void CPhysXObject::AddForceAtPosInternal(PxRigidBody & body, const PxVec3 & force, const PxVec3 & pos, PxForceMode::Enum mode, bool wakeup)
+{
+	const PxTransform globalPose = body.getGlobalPose();
+	const PxVec3 centerOfMass = globalPose.transform(body.getCMassLocalPose().p);
+
+	const PxVec3 torque = (pos - centerOfMass).cross(force);
+	body.addForce(force, mode, wakeup);
+	body.addTorque(torque, mode, wakeup);
 }

@@ -775,12 +775,12 @@ CHeightMapGridMesh::CHeightMapGridMesh(PxPhysics* pPxPhysicsSDK, PxScene* pPxSce
 			//PxMeshScale scale(PxVec3((x*m_xmf3Scale.x), fHeight, (z*m_xmf3Scale.z)), PxQuat(PxIdentity));
 			//PxTriangleMeshGeometry geom(PhysXTriangleMesh, scale);
 			//PxShape* myTriMeshShape = PhysXRigidActor->createShape(geom, *PhysXMeterial);
-			PxI32 h = fHeight;
+			PxI32 h = fHeight * 0.5;
 			PX_ASSERT(h <= 0xffff);
-			samples[x + z * nWidth].height = (PxI16)(h);
-			samples[x + z * nWidth].setTessFlag();
-			samples[x + z * nWidth].materialIndex0 = 1;
-			samples[x + z * nWidth].materialIndex1 = 1;
+			samples[z + x * nLength].height = (PxI16)(h);
+			samples[z + x * nLength].setTessFlag();
+			samples[z + x * nLength].materialIndex0 = 1;
+			samples[z + x * nLength].materialIndex1 = 1;
 
 		}
 	}
@@ -790,17 +790,16 @@ CHeightMapGridMesh::CHeightMapGridMesh(PxPhysics* pPxPhysicsSDK, PxScene* pPxSce
 	hfDesc.nbRows = nLength;
 	hfDesc.samples.data = samples;
 	hfDesc.samples.stride = sizeof(PxHeightFieldSample);
-
+	
 	PxHeightField* heightField = pPxPhysicsSDK->createHeightField(hfDesc);
 
 	PxTransform pose = PxTransform(PxIdentity);
-	pose.p = PxVec3(-(nWidth / 2), 0, -(nLength / 2));
+	pose.p = PxVec3(0, 0, 0);
 	
 	PxRigidStatic* hfActor = pPxPhysicsSDK->createRigidStatic(pose);
 
-	PxHeightFieldGeometry hfGeom(heightField, PxMeshGeometryFlags(), heightScale, 1, 1);
+	PxHeightFieldGeometry hfGeom(heightField, PxMeshGeometryFlags(), m_xmf3Scale.y, m_xmf3Scale.x, m_xmf3Scale.z);
 	PxShape* hfShape = hfActor->createShape(hfGeom, *PhysXMeterial);
-
 	
 	pPxScene->addActor(*hfActor);
 

@@ -42,6 +42,9 @@ protected:
 
 	CCamera						*m_pCamera = NULL;
 
+	float						m_fSpeed = 1.0f;
+	float						m_fTimeDelta = 0.0f;
+
 	//////////////////////////
 	//		   PhysX		//
 	//////////////////////////
@@ -53,7 +56,6 @@ private:
 	FLOAT m_fFallvelocity;
 	FLOAT m_fFallAcceleration;
 	CAnimationObject* m_pRenderObject;
-	bool IsOnGround(void);
 public:
 	void SetRenderObject(CAnimationObject* pRenderObject)
 	{
@@ -71,17 +73,23 @@ public:
 	virtual void onControllerHit(const PxControllersHit& hit) {}
 	virtual void onObstacleHit(const PxControllerObstacleHit& hit) {}
 
-	void	BuildObject(PxPhysics* pPxPhysics, PxScene* pPxScene, PxMaterial *pPxMaterial, PxControllerManager *pPxControllerManager);
+	void	BuildObject(PxPhysics* pPxPhysics, PxScene* pPxScene, PxMaterial *pPxMaterial, PxControllerManager *pPxControllerManager, void* pContext);
 
 	// Implements PxControllerBehaviorCallback
 	virtual PxControllerBehaviorFlags		getBehaviorFlags(const PxShape& shape, const PxActor& actor);
 	virtual PxControllerBehaviorFlags		getBehaviorFlags(const PxController& controller);
 	virtual PxControllerBehaviorFlags		getBehaviorFlags(const PxObstacle& obstacle);
 
+	bool IsOnGround(void);
+
 	void PxMove(float speed, float fTimeElapsed);
-	//////////////////////////
-	//		   PhysX		//
-	//////////////////////////
+
+	//enum STATE_PLAYER { IDLE, MOVE, LYING, JUMP, DEAD };
+	//DWORD			m_dwState;
+
+	//void setDwState(DWORD dwstate) { m_dwState = dwstate; }
+	//DWORD getDwState() { return m_dwState; }
+
 
 public:
 	CPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature
@@ -105,6 +113,11 @@ public:
 		return(m_xmf3Right);
 	}
 
+	float GetFallVelocity()
+	{
+		return(m_fFallvelocity);
+	}
+	void SetFallVelocity(float fVelocity) { m_fFallvelocity = fVelocity; }
 	void SetFriction(float fFriction) { m_fFriction = fFriction; }
 	void SetGravity(const XMFLOAT3& xmf3Gravity) { m_xmf3Gravity = xmf3Gravity; }
 	void SetMaxVelocityXZ(float fMaxVelocity) { m_fMaxVelocityXZ = fMaxVelocity; }

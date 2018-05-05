@@ -29,8 +29,8 @@ struct INSTANCEDGAMEOBJECTINFO2
 
 struct INSTANCEDGAMEOBJECTINFO3
 {
-	float4x4 gmtxBoneTransforms[26];
-	matrix	gmtxRendererMeshWorld[6];
+	float4x4 gmtxBoneTransforms[24];
+	matrix	gmtxRendererMeshWorld[8];
 };
 
 Texture2D<float4> gtxtDiffuse : register(t0);

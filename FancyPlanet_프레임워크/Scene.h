@@ -33,6 +33,9 @@ public:
 	virtual void SkyBoxRender(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera) {}
 	virtual void ModelsSetPosition(const array <PLAYER_INFO, MAX_USER>& PlayerArray) {};
 	virtual void ReleaseUploadBuffers();
+	virtual void SetProjectile(XMFLOAT3& xmf3Direction)
+	{
+	};
 	virtual void ChangeAnimation(int newState) = 0;
 	virtual CHeightMapTerrain * GetTerrain() { return NULL; };
 	void FrustumCulling(CCamera *pCamera);
@@ -96,6 +99,7 @@ public:
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera = NULL);
 	virtual void ReleaseUploadBuffers();
 	virtual void ChangeAnimation(int newState) {}
+	virtual void SetProjectile(XMFLOAT3& xmf3Direction);
 
 	PxPhysics*  GetPhysicsSDK(void) { return m_pPxPhysicsSDK; }
 	PxScene*	GetPhysicsScene(void) { return m_pPxScene; }
@@ -108,6 +112,7 @@ public:
 protected:
 	//씬은 게임 객체들의 집합이다. 게임 객체는 셰이더를 포함한다.
 	CPhysXObject * *m_ppObjects = NULL;
+	CAnimationObject **m_ppAniObjects = NULL;
 	int m_nObjects = 0;
 private:
 };
@@ -128,6 +133,7 @@ public:
 	void CopyObject(CAnimationObject* pSample, CAnimationObject** ppObjects, UINT nSize);
 	CAnimationObject* FindMeshRendererObject(CAnimationObject* pRootObject, UINT nRendererMesh);
 	virtual void ModelsSetPosition(const array <PLAYER_INFO, MAX_USER>& PlayerArray);
+	virtual void SetProjectile(XMFLOAT3& xmf3Direction);
 
 	CharacterScene(PxPhysics* pPxPhysicsSDK, PxScene* pPxScene, PxControllerManager* pPxControllerManager, PxCooking* pCooking);
 	~CharacterScene();

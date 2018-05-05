@@ -1,11 +1,12 @@
 #pragma once
 
-#define FRAME_BUFFER_WIDTH		640
-#define FRAME_BUFFER_HEIGHT		480
+#define FRAME_BUFFER_WIDTH      1024
+#define FRAME_BUFFER_HEIGHT      768
 
 #include "Timer.h"
 #include "Player.h"
 #include "Scene.h"
+#include <chrono>
 enum
 {
 	NUM_SUBSETS = 4,
@@ -15,7 +16,7 @@ enum
 enum
 {
 	TERRAIN,
-	PHYSICS,
+	PHYSX,
 	CHARACTER,
 	OBEJECT
 };
@@ -60,6 +61,7 @@ public:
 	void OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
 	LRESULT CALLBACK OnProcessingWindowMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
 
+	void CalculatePickRay(int MousePosX, int MousePosY);
 
 	XMFLOAT4X4& GetPlayerMatrix()
 	{
@@ -69,67 +71,71 @@ public:
 private:
 	ID3D12GraphicsCommandList * m_pd3dScreenCommandList;
 	CTextureToFullScreenShader *m_pScreenShader = NULL;
-	
+
 	MiniMapShader* m_pMiniMapShader = NULL;
 	ArrowShader* m_pArrowShader = NULL;
 
-	ID3D12CommandAllocator		*m_pd3dScreenCommandAllocator;
+	ID3D12CommandAllocator      *m_pd3dScreenCommandAllocator;
 
-	HINSTANCE					m_hInstance;
-	HWND						m_hWnd;
+	HINSTANCE               m_hInstance;
+	HWND                  m_hWnd;
 
-	int							m_nWndClientWidth;
-	int							m_nWndClientHeight;
+	int                     m_nWndClientWidth;
+	int                     m_nWndClientHeight;
 
-	IDXGIFactory4				*m_pdxgiFactory = NULL;
-	IDXGISwapChain3				*m_pdxgiSwapChain = NULL;
-	ID3D12Device				*m_pd3dDevice = NULL;
+	XMFLOAT3			xmf3PickDirection;
 
-	int							m_nDivision = 0;
+	IDXGIFactory4            *m_pdxgiFactory = NULL;
+	IDXGISwapChain3            *m_pdxgiSwapChain = NULL;
+	ID3D12Device            *m_pd3dDevice = NULL;
 
-	bool						**m_ppbDivision = NULL;
-	bool						m_bMsaa4xEnable = false;
-	UINT						m_nMsaa4xQualityLevels = 0;
+	int                     m_nDivision = 0;
+	bool					qwe = false;
+	XMFLOAT3				 pickRayDirection;
 
-	static const UINT				m_nSwapChainBuffers = 2;
-	UINT							m_nSwapChainBufferIndex;
+	bool                  **m_ppbDivision = NULL;
+	bool                  m_bMsaa4xEnable = false;
+	UINT                  m_nMsaa4xQualityLevels = 0;
 
-	D3D12_CPU_DESCRIPTOR_HANDLE		m_pd3dRtvSwapChainBackBufferCPUHandles[m_nSwapChainBuffers];
-	D3D12_CPU_DESCRIPTOR_HANDLE		m_d3dDsvDepthStencilBufferCPUHandle;
+	static const UINT            m_nSwapChainBuffers = 2;
+	UINT                     m_nSwapChainBufferIndex;
 
-	ID3D12Resource				*m_ppd3dSwapChainBackBuffers[m_nSwapChainBuffers];
-	ID3D12DescriptorHeap		*m_pd3dRtvDescriptorHeap = NULL;
-	UINT						m_nRtvDescriptorIncrementSize;
+	D3D12_CPU_DESCRIPTOR_HANDLE      m_pd3dRtvSwapChainBackBufferCPUHandles[m_nSwapChainBuffers];
+	D3D12_CPU_DESCRIPTOR_HANDLE      m_d3dDsvDepthStencilBufferCPUHandle;
 
-	ID3D12Resource				*m_pd3dDepthStencilBuffer = NULL;
-	ID3D12DescriptorHeap		*m_pd3dDsvDescriptorHeap = NULL;
-	UINT						m_nDsvDescriptorIncrementSize;
+	ID3D12Resource            *m_ppd3dSwapChainBackBuffers[m_nSwapChainBuffers];
+	ID3D12DescriptorHeap      *m_pd3dRtvDescriptorHeap = NULL;
+	UINT                  m_nRtvDescriptorIncrementSize;
 
-	ID3D12CommandAllocator		**m_ppd3dCommandAllocators;
-	ID3D12CommandQueue			*m_pd3dCommandQueue = NULL;
-	ID3D12GraphicsCommandList	**m_ppd3dCommandLists;
+	ID3D12Resource            *m_pd3dDepthStencilBuffer = NULL;
+	ID3D12DescriptorHeap      *m_pd3dDsvDescriptorHeap = NULL;
+	UINT                  m_nDsvDescriptorIncrementSize;
 
-	ID3D12Fence					*m_pd3dFence = NULL;
-	UINT64						m_nFenceValues[m_nSwapChainBuffers];
-	HANDLE						m_hFenceEvent;
+	ID3D12CommandAllocator      **m_ppd3dCommandAllocators;
+	ID3D12CommandQueue         *m_pd3dCommandQueue = NULL;
+	ID3D12GraphicsCommandList   **m_ppd3dCommandLists;
+
+	ID3D12Fence               *m_pd3dFence = NULL;
+	UINT64                  m_nFenceValues[m_nSwapChainBuffers];
+	HANDLE                  m_hFenceEvent;
 
 #if defined(_DEBUG)
-	ID3D12Debug					*m_pd3dDebugController;
+	ID3D12Debug               *m_pd3dDebugController;
 #endif
 
-	static const UINT				m_nRenderTargetBuffers = 4;
-	ID3D12Resource					*m_ppd3dRenderTargetBuffers[m_nRenderTargetBuffers];
-	D3D12_CPU_DESCRIPTOR_HANDLE		m_pd3dRtvRenderTargetBufferCPUHandles[m_nRenderTargetBuffers];
+	static const UINT            m_nRenderTargetBuffers = 4;
+	ID3D12Resource               *m_ppd3dRenderTargetBuffers[m_nRenderTargetBuffers];
+	D3D12_CPU_DESCRIPTOR_HANDLE      m_pd3dRtvRenderTargetBufferCPUHandles[m_nRenderTargetBuffers];
 
-	CGameTimer					m_GameTimer;
+	CGameTimer               m_GameTimer;
 
-	CScene						**m_ppScenes = NULL;
-	CPlayer						*m_pPlayer = NULL;
-	CCamera						*m_pCamera = NULL;
+	CScene                  **m_ppScenes = NULL;
+	CPlayer                  *m_pPlayer = NULL;
+	CCamera                  *m_pCamera = NULL;
 
-	POINT						m_ptOldCursorPos;
+	POINT                  m_ptOldCursorPos;
 
-	_TCHAR						m_pszFrameRate[50];
+	_TCHAR                  m_pszFrameRate[50];
 	static CGameFramework* Get()
 	{
 		return  m_pGFforMultiThreads;
@@ -148,15 +154,15 @@ private:
 	static CGameFramework* m_pGFforMultiThreads;
 
 	//Physx SDK Member Variables =========================
-	PxPhysics*						m_pPxPhysicsSDK;
-	PxScene*						m_pPxScene;
-	PxMaterial*						m_pPxMaterial;
-	PxControllerManager*			m_pPxControllerManager;
-	PxFoundation*					m_pPxFoundation;
-	PxDefaultErrorCallback			m_PxDefaultErrorCallback;
-	PxDefaultAllocator				m_PxDefaultAllocatorCallback;
+	PxPhysics*                  m_pPxPhysicsSDK;
+	PxScene*                  m_pPxScene;
+	PxMaterial*                  m_pPxMaterial;
+	PxControllerManager*         m_pPxControllerManager;
+	PxFoundation*               m_pPxFoundation;
+	PxDefaultErrorCallback         m_PxDefaultErrorCallback;
+	PxDefaultAllocator            m_PxDefaultAllocatorCallback;
 	PxVisualDebuggerConnection*     m_pPVDConnection;
-	PxCooking*						m_pCooking;
+	PxCooking*                  m_pCooking;
 	//====================================================
 public:
 	/////////////// Physx SDK Member Function ///////////////
@@ -167,24 +173,24 @@ public:
 private:
 
 	SOCKET g_mysocket;
-	WSABUF	send_wsabuf;
-	char 	send_buffer[BUF_SIZE];
-	WSABUF	recv_wsabuf;
-	char	recv_buffer[BUF_SIZE];
-	char	packet_buffer[BUF_SIZE];
-	DWORD		in_packet_size = 0;
-	int		saved_packet_size = 0;
-	int		g_myid; // 내 아이디
+	WSABUF   send_wsabuf;
+	char    send_buffer[BUF_SIZE];
+	WSABUF   recv_wsabuf;
+	char   recv_buffer[BUF_SIZE];
+	char   packet_buffer[BUF_SIZE];
+	DWORD      in_packet_size = 0;
+	int      saved_packet_size = 0;
+	int      g_myid; // 내 아이디
 	PLAYER_INFO g_my_info;
 	array <PLAYER_INFO, MAX_USER> g_player_info;
 
-	bool is_fowardmove = false;
+	bool keystate = false;
 
-
+	std::chrono::system_clock::time_point start;
+	bool istime = false;
 public:
 	void ProcessPacket(char *ptr);
 	void ReadPacket(SOCKET sock);
 	void InitNetwork(HWND main_window);
 
 };
-

@@ -6,10 +6,10 @@
 
 using namespace DirectX;
 
-#define	BUF_SIZE				1024
-#define	WM_SOCKET				WM_USER + 1
+#define   BUF_SIZE            1024
+#define   WM_SOCKET            WM_USER + 1
 
-#define MAX_BUFF_SIZE   4000
+#define MAX_BUFF_SIZE   1024
 #define MAX_PACKET_SIZE  255
 
 #define BOARD_WIDTH   8
@@ -30,14 +30,17 @@ using namespace DirectX;
 #define CS_READY  2
 #define CS_LEFT  3
 #define CS_RIGHT    4
-#define CS_CHAT		5
+#define CS_CHAT      5
+#define CS_SHOT      10
 
 #define SC_POS           1
 #define SC_PUT_PLAYER    2
 #define SC_REMOVE_PLAYER 3
-#define SC_READY		4
+#define SC_READY      4
 #define SC_SCENE_CHANGE 5
 #define SC_TIME 6
+#define SC_SHOT   10
+
 #pragma pack (push, 1)
 
 struct cs_packet_pos {
@@ -101,6 +104,17 @@ struct sc_packet_chat {
 	int roomnumb = 0;
 	wchar_t message[MAX_STR_SIZE];
 };
+struct cs_packet_shot {
+	unsigned char size;
+	unsigned char type;
+	unsigned short id;
+};
+struct sc_packet_shot {
+	unsigned char size;
+	unsigned char type;
+	unsigned short id;
+};
+
 struct sc_packet_scene_change
 {
 	unsigned char size;

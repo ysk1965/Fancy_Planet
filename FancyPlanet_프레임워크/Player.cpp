@@ -31,10 +31,13 @@ CPlayer::CPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dComman
 	if (m_pCamera) 
 		m_pCamera->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
-	CHeightMapTerrain *pTerrain = (CHeightMapTerrain *)pContext;
-	SetPosition(XMFLOAT3(0, pTerrain->GetHeight(200, 300), 0));
-	SetPlayerUpdatedContext(pTerrain);
-	SetCameraUpdatedContext(pTerrain);
+	// Px
+	m_fFallAcceleration = 4.0f;
+
+	//CHeightMapTerrain *pTerrain = (CHeightMapTerrain *)pContext;
+	//SetPosition(XMFLOAT3(0, pTerrain->GetHeight(200, 300), 0));
+	//SetPlayerUpdatedContext(pTerrain);
+	//SetCameraUpdatedContext(pTerrain);
 }
 
 CPlayer::~CPlayer()
@@ -78,7 +81,6 @@ void CPlayer::Move(DWORD dwDirection, float fDistance, bool bUpdateVelocity) // 
 		if (dwDirection & DIR_LEFT) xmf3Shift = Vector3::Add(xmf3Shift, m_xmf3Right, -fDistance);
 		if (dwDirection & DIR_UP) xmf3Shift = Vector3::Add(xmf3Shift, m_xmf3Up, fDistance);
 		if (dwDirection & DIR_DOWN) xmf3Shift = Vector3::Add(xmf3Shift, m_xmf3Up, -fDistance);
-
 		Move(xmf3Shift, bUpdateVelocity);
 	}
 }
@@ -87,21 +89,67 @@ void CPlayer::Move(const XMFLOAT3& xmf3Shift, bool bUpdateVelocity)
 {
 	if (bUpdateVelocity)
 	{
-		m_pPxCharacterController->move(PxVec3(xmf3Shift.x, xmf3Shift.y, xmf3Shift.z) * 0.2f, 0, NULL, PxControllerFilters()); //Pxplayer Move
-		m_xmf3Velocity = Vector3::Add(m_xmf3Velocity, xmf3Shift);
+		//m_pPxCharacterController->move(PxVec3(xmf3Shift.x, xmf3Shift.y, xmf3Shift.z) * m_fSpeed * m_fTimeDelta, 0, m_fTimeDelta, PxControllerFilters()); //Pxplayer Move
+		m_pPxCharacterController->move(PxVec3(xmf3Shift.x, xmf3Shift.y, xmf3Shift.z) * m_fSpeed, 0, NULL, PxControllerFilters()); //Pxplayer Move
+		//m_xmf3Velocity = Vector3::Add(m_xmf3Velocity, xmf3Shift);
 	}
 	else
 	{
-		m_xmf3Position = Vector3::Add(m_xmf3Position, xmf3Shift);
-		m_pCamera->Move(xmf3Shift);
+		//m_xmf3Position = Vector3::Add(m_xmf3Position, xmf3Shift);
+		//m_pCamera->Move(xmf3Shift);
 	}
 }
 
 void CPlayer::Rotate(float x, float y, float z)
 {
 	DWORD nCurrentCameraMode = m_pCamera->GetMode();
-
-	if ((nCurrentCameraMode == FIRST_PERSON_CAMERA) || (nCurrentCameraMode == THIRD_PERSON_CAMERA))
+	if ((nCurrentCameraMode == FIRST_PERSON_CAMERA))
+	{
+		if (x != 0.0f)
+		{
+			m_fPitch += x;
+			if (m_fPitch > +35.0f)
+			{
+				x -= (m_fPitch - 35.0f);
+				m_fPitch = +35.0f;
+			}
+			if (m_fPitch < -70.0f)
+			{
+				x -= (m_fPitch + 70.0f);
+				m_fPitch = -70.0f;
+			}
+		}
+		if (y != 0.0f)
+		{
+			m_fYaw += y;
+			if (m_fYaw > 360.0f)
+				m_fYaw -= 360.0f;
+			if (m_fYaw < 0.0f)
+				m_fYaw += 360.0f;
+		}
+		if (z != 0.0f)
+		{
+			m_fRoll += z;
+			if (m_fRoll > +20.0f)
+			{
+				z -= (m_fRoll - 20.0f);
+				m_fRoll = +20.0f;
+			}
+			if (m_fRoll < -20.0f)
+			{
+				z -= (m_fRoll + 20.0f);
+				m_fRoll = -20.0f;
+			}
+		}
+		m_pCamera->Rotate(x, y, z);
+		if (y != 0.0f)
+		{
+			XMMATRIX xmmtxRotate = XMMatrixRotationAxis(XMLoadFloat3(&m_xmf3Up), XMConvertToRadians(y));
+			m_xmf3Look = Vector3::TransformNormal(m_xmf3Look, xmmtxRotate);
+			m_xmf3Right = Vector3::TransformNormal(m_xmf3Right, xmmtxRotate);
+		}
+	}
+	if ((nCurrentCameraMode == THIRD_PERSON_CAMERA))
 	{
 		if (x != 0.0f)
 		{
@@ -177,42 +225,42 @@ void CPlayer::Rotate(float x, float y, float z)
 
 void CPlayer::Update(float fTimeElapsed)
 {
-	m_xmf3Velocity = Vector3::Add(m_xmf3Velocity, Vector3::ScalarProduct(m_xmf3Gravity, fTimeElapsed, false));
-	float fLength = sqrtf(m_xmf3Velocity.x * m_xmf3Velocity.x + m_xmf3Velocity.z * m_xmf3Velocity.z);
-	float fMaxVelocityXZ = m_fMaxVelocityXZ * fTimeElapsed;
-	if (fLength > m_fMaxVelocityXZ)
-	{
-		m_xmf3Velocity.x *= (fMaxVelocityXZ / fLength);
-		m_xmf3Velocity.z *= (fMaxVelocityXZ / fLength);
-	}
-	float fMaxVelocityY = m_fMaxVelocityY * fTimeElapsed;
-	fLength = sqrtf(m_xmf3Velocity.y * m_xmf3Velocity.y);
-	if (fLength > m_fMaxVelocityY) m_xmf3Velocity.y *= (fMaxVelocityY / fLength);
+	//m_xmf3Velocity = Vector3::Add(m_xmf3Velocity, Vector3::ScalarProduct(m_xmf3Gravity, fTimeElapsed, false));
+	//float fLength = sqrtf(m_xmf3Velocity.x * m_xmf3Velocity.x + m_xmf3Velocity.z * m_xmf3Velocity.z);
+	//float fMaxVelocityXZ = m_fMaxVelocityXZ * fTimeElapsed;
+	//if (fLength > m_fMaxVelocityXZ)
+	//{
+	//	m_xmf3Velocity.x *= (fMaxVelocityXZ / fLength);
+	//	m_xmf3Velocity.z *= (fMaxVelocityXZ / fLength);
+	//}
+	//float fMaxVelocityY = m_fMaxVelocityY * fTimeElapsed;
+	//fLength = sqrtf(m_xmf3Velocity.y * m_xmf3Velocity.y);
+	//if (fLength > m_fMaxVelocityY) m_xmf3Velocity.y *= (fMaxVelocityY / fLength);
 
-	Move(m_xmf3Velocity, false);
+	//Move(m_xmf3Velocity, false);
 
-	if (m_pPlayerUpdatedContext)
-		OnPlayerUpdateCallback(fTimeElapsed);
+	//if (m_pPlayerUpdatedContext)
+	//	OnPlayerUpdateCallback(fTimeElapsed);
 
-	//		Camera		//
-	DWORD nCurrentCameraMode = m_pCamera->GetMode();
+	////		Camera		//
+	//DWORD nCurrentCameraMode = m_pCamera->GetMode();
 
-	if (nCurrentCameraMode == THIRD_PERSON_CAMERA)
-		m_pCamera->Update(m_xmf3Position, fTimeElapsed);
-	if (m_pCameraUpdatedContext)
-		OnCameraUpdateCallback(fTimeElapsed);
-	if (nCurrentCameraMode == THIRD_PERSON_CAMERA)
-		m_pCamera->SetLookAt(m_xmf3Position);
+	//if (nCurrentCameraMode == THIRD_PERSON_CAMERA)
+	//	m_pCamera->Update(m_xmf3Position, fTimeElapsed);
+	//if (m_pCameraUpdatedContext)
+	//	OnCameraUpdateCallback(fTimeElapsed);
+	//if (nCurrentCameraMode == THIRD_PERSON_CAMERA)
+	//	m_pCamera->SetLookAt(m_xmf3Position);
 
-	m_pCamera->RegenerateViewMatrix();
-	//		Camera		//
+	//m_pCamera->RegenerateViewMatrix();
+	////		Camera		//
 
-	fLength = Vector3::Length(m_xmf3Velocity);
+	//fLength = Vector3::Length(m_xmf3Velocity);
 
-	float fDeceleration = (m_fFriction * fTimeElapsed);
-	if (fDeceleration > fLength)
-		fDeceleration = fLength;
-	m_xmf3Velocity = Vector3::Add(m_xmf3Velocity, Vector3::ScalarProduct(m_xmf3Velocity, -fDeceleration, true));
+	//float fDeceleration = (m_fFriction * fTimeElapsed);
+	//if (fDeceleration > fLength)
+	//	fDeceleration = fLength;
+	//m_xmf3Velocity = Vector3::Add(m_xmf3Velocity, Vector3::ScalarProduct(m_xmf3Velocity, -fDeceleration, true));
 
 	//////////////////////////////////////////////////////////////
 	//															//
@@ -220,51 +268,49 @@ void CPlayer::Update(float fTimeElapsed)
 	//															//
 	//////////////////////////////////////////////////////////////
 
-	////m_fTimeDelta = fTimeElapsed;
-	//
-	////PhysX에 값을 전달해준다. 중력
-	//m_fFallvelocity -= m_fFallAcceleration * fTimeElapsed * 50.f;
-	//
-	//if (m_fFallvelocity < -1000.f)
-	//	m_fFallvelocity = -1000.f;
-	//
-	//m_pPxCharacterController->move(PxVec3(0, 1.f, 0) * fTimeElapsed * m_fFallvelocity, 0, fTimeElapsed, PxControllerFilters());
-	//
-	//PxControllerState   m_pPxState;
-	//
-	////피직스 객체의 상태값을 m_pPxState에 넣어준다.
-	//m_pPxCharacterController->getState(m_pPxState);
-	//
-	////윗쪽 충돌하거나 아랫쪽 충돌하면 m_fFallvelocity = 0.0f
-	//if (m_pPxState.collisionFlags == PxControllerCollisionFlag::eCOLLISION_DOWN ||
-	//	m_pPxState.collisionFlags == PxControllerCollisionFlag::eCOLLISION_UP)
-	//	m_fFallvelocity = 0.f;
-	//
-	//////현재 PhysX의 값으로 객체의 월드행렬을 만들어준다.
-	//m_xmf3Position = XMFLOAT3((float)m_pPxCharacterController->getFootPosition().x, (float)m_pPxCharacterController->getFootPosition().y, (float)m_pPxCharacterController->getFootPosition().z); //컨트롤러의 발 위치 CCT 모양의 아래 부분
-	//
-	//float m_fRevice = 0.5f; //Player의 Y보정값(발이 지면에 안박히게 보정)
-	//
-	//XMMATRIX matTrans = XMMatrixTranslation(m_xmf3Position.x, m_xmf3Position.y + m_fRevice, m_xmf3Position.z);
-	//
-	//XMMATRIX matRotX = XMMatrixRotationX((float)D3DXToRadian(m_fPitch));
-	//XMMATRIX matRotY = XMMatrixRotationY((float)D3DXToRadian(m_fYaw));
-	//XMMATRIX matRotZ = XMMatrixRotationZ((float)D3DXToRadian(m_fRoll));
-	//
-	//XMStoreFloat4x4(&m_xmf4x4World, matRotX * matRotY * matRotZ * matTrans);
-	////m_pCamera->SetPosition(XMFLOAT3(m_xmf3Position.x, m_xmf3Position.y+14, m_xmf3Position.z));
-	////m_pCamera->Move(m_xmf3Position);
-	//
-	//DWORD nCurrentCameraMode = m_pCamera->GetMode();
-	//
-	//if (nCurrentCameraMode == THIRD_PERSON_CAMERA)
-	//	m_pCamera->Update(m_xmf3Position, fTimeElapsed);
-	//if (m_pCameraUpdatedContext)
-	//	OnCameraUpdateCallback(fTimeElapsed);
-	//if (nCurrentCameraMode == THIRD_PERSON_CAMERA)
-	//	m_pCamera->SetLookAt(m_xmf3Position);
-	//
-	//m_pCamera->RegenerateViewMatrix();
+	m_fTimeDelta = fTimeElapsed;
+	
+	//PhysX에 값을 전달해준다. 중력
+	m_fFallvelocity -= m_fFallAcceleration * fTimeElapsed * 50.f;
+	
+	if (m_fFallvelocity < -1000.f)
+		m_fFallvelocity = -1000.f;
+	
+	m_pPxCharacterController->move(PxVec3(0, 1.f, 0) * fTimeElapsed * m_fFallvelocity, 0, fTimeElapsed, PxControllerFilters());
+	
+	PxControllerState   m_pPxState;
+	
+	//피직스 객체의 상태값을 m_pPxState에 넣어준다.
+	m_pPxCharacterController->getState(m_pPxState);
+	
+	//윗쪽 충돌하거나 아랫쪽 충돌하면 m_fFallvelocity = 0.0f
+	if (m_pPxState.collisionFlags == PxControllerCollisionFlag::eCOLLISION_DOWN ||
+		m_pPxState.collisionFlags == PxControllerCollisionFlag::eCOLLISION_UP)
+		m_fFallvelocity = 0.f;
+	
+	////현재 PhysX의 값으로 객체의 월드행렬을 만들어준다.
+	m_xmf3Position = XMFLOAT3((float)m_pPxCharacterController->getFootPosition().x, (float)m_pPxCharacterController->getFootPosition().y, (float)m_pPxCharacterController->getFootPosition().z); //컨트롤러의 발 위치 CCT 모양의 아래 부분
+	
+	float m_fRevice = -100.0f; //Player의 Y보정값(발이 지면에 안박히게 보정)
+	
+	XMMATRIX matTrans = XMMatrixTranslation(m_xmf3Position.x, m_xmf3Position.y + m_fRevice, m_xmf3Position.z);
+	
+	XMMATRIX matRotX = XMMatrixRotationX((float)D3DXToRadian(m_fPitch));
+	XMMATRIX matRotY = XMMatrixRotationY((float)D3DXToRadian(m_fYaw));
+	XMMATRIX matRotZ = XMMatrixRotationZ((float)D3DXToRadian(m_fRoll));
+	
+	XMStoreFloat4x4(&m_xmf4x4World, matRotX * matRotY * matRotZ * matTrans);
+	
+	DWORD nCurrentCameraMode = m_pCamera->GetMode();
+	
+	if (nCurrentCameraMode == THIRD_PERSON_CAMERA || FIRST_PERSON_CAMERA)
+		m_pCamera->Update(m_xmf3Position, fTimeElapsed);
+	if (m_pCameraUpdatedContext)
+		OnCameraUpdateCallback(fTimeElapsed);
+	if (nCurrentCameraMode == THIRD_PERSON_CAMERA)
+		m_pCamera->SetLookAt(m_xmf3Position);
+	
+	m_pCamera->RegenerateViewMatrix();
 }
 
 CCamera *CPlayer::OnChangeCamera(DWORD nNewCameraMode, DWORD nCurrentCameraMode)
@@ -328,7 +374,7 @@ CCamera *CPlayer::ChangeCamera(DWORD nNewCameraMode, float fTimeElapsed)
 		SetMaxVelocityY(400.0f);
 		m_pCamera = OnChangeCamera(FIRST_PERSON_CAMERA, nCurrentCameraMode);
 		m_pCamera->SetTimeLag(0.0f);
-		m_pCamera->SetOffset(XMFLOAT3(0.0f, 20.0f, 0.0f));
+		m_pCamera->SetOffset(XMFLOAT3(0.0f, 20.0f, -0.1f));
 		m_pCamera->GenerateProjectionMatrix(1.01f, 50000.0f, ASPECT_RATIO, 60.0f);
 		break;
 	case SPACESHIP_CAMERA:
@@ -382,16 +428,21 @@ void CPlayer::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamer
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 
-void CPlayer::BuildObject(PxPhysics* pPxPhysics, PxScene* pPxScene, PxMaterial *pPxMaterial, PxControllerManager *pPxControllerManager)
+void CPlayer::BuildObject(PxPhysics* pPxPhysics, PxScene* pPxScene, PxMaterial *pPxMaterial, PxControllerManager *pPxControllerManager, void* pContext)
 {
 	m_pScene = pPxScene;
 
 	PxCapsuleControllerDesc	PxCapsuledesc;
-	PxCapsuledesc.position = PxExtendedVec3(0, 0, 0);
-	PxCapsuledesc.radius = 1.0f;
-	PxCapsuledesc.height = 2.0f;
+
+	CHeightMapTerrain *pTerrain = (CHeightMapTerrain *)pContext;
+	SetPlayerUpdatedContext(pTerrain);
+	SetCameraUpdatedContext(pTerrain);
+	PxCapsuledesc.position = PxExtendedVec3(0, pTerrain->GetHeight(200, 300), 0);
+
+	PxCapsuledesc.radius = 6.0f;
+	PxCapsuledesc.height = 9.0f;
 	//캐릭터가 올라갈 수있는 장애물의 최대 높이를 정의합니다. 
-	PxCapsuledesc.stepOffset = 2.f;
+	PxCapsuledesc.stepOffset = 10.f;
 
 	//캐시 된 볼륨 증가.
 	//성능을 향상시키기 위해 캐싱하는 컨트롤러 주변의 공간입니다.  
@@ -425,7 +476,6 @@ bool CPlayer::IsOnGround(void)
 	//피직스 객체의 상태값을 m_pPxState에 넣어준다.
 	m_pPxCharacterController->getState(m_pPxState);
 
-	/*return m_pComGravity->Get_OnGround();*/
 	if (m_pPxState.collisionFlags == PxControllerCollisionFlag::eCOLLISION_DOWN)
 		return true;
 	return false;
