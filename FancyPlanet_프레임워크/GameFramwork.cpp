@@ -773,107 +773,103 @@ void CGameFramework::ProcessInput()
 	bool bProcessedByScene = false;
 	bool IsInput = false;
 
-	if (GetKeyboardState(pKeysBuffer) && m_ppScenes[CHARACTER])
-		bProcessedByScene = m_ppScenes[CHARACTER]->ProcessInput(pKeysBuffer);
-
-	std::chrono::milliseconds ms;
-
-	ms = std::chrono::duration_cast<std::chrono::milliseconds>(chrono::system_clock::now() - start);
-
-	if (ms.count() > 33)
+	if (m_pPlayer->GetKeySwitch())
 	{
-		istime = true;
+		if (GetKeyboardState(pKeysBuffer) && m_ppScenes[CHARACTER])
+			bProcessedByScene = m_ppScenes[CHARACTER]->ProcessInput(pKeysBuffer);
 
-	}
-	if (!bProcessedByScene)
-	{
+		std::chrono::milliseconds ms;
 
+		ms = std::chrono::duration_cast<std::chrono::milliseconds>(chrono::system_clock::now() - start);
 
-		DWORD dwDirection = 0;
-		if (pKeysBuffer[87] & 0xF0)
+		if (ms.count() > 33)
 		{
-
-			dwDirection |= DIR_FORWARD;
-
-			m_ppScenes[CHARACTER]->ChangeAnimation(1);
-			IsInput = true;
-			keystate = true;
+			istime = true;
 
 		}
-		if (pKeysBuffer[83] & 0xF0)
+		if (!bProcessedByScene)
 		{
-			dwDirection |= DIR_BACKWARD;
+			DWORD dwDirection = 0;
+			if (pKeysBuffer[87] & 0xF0)
+			{
 
-			m_ppScenes[CHARACTER]->ChangeAnimation(-1);
-			IsInput = true;
-			keystate = true;
-		}
-		if (pKeysBuffer[65] & 0xF0)
-		{
-			//dwDirection |= DIR_LEFT;
-			m_pPlayer->Rotate(0.0f, -0.6f, 0.0f);
+				dwDirection |= DIR_FORWARD;
 
-
-			//m_ppScenes[CHARACTER]->ChangeAnimation(1);
-			//IsInput = true;
-			keystate = true;
-		}
-		if (pKeysBuffer[68] & 0xF0)
-		{
-
-			//dwDirection |= DIR_RIGHT;
-			m_pPlayer->Rotate(0.0f, 0.6f, 0.0f);
-
-			//m_ppScenes[CHARACTER]->ChangeAnimation(1);
-			//IsInput = true;
-			keystate = true;
-		}
-		if (pKeysBuffer[VK_NEXT] & 0xF0)
-		{
-			dwDirection |= DIR_DOWN;
-			IsInput = true;
-			keystate = true;
-		}
-		if (pKeysBuffer[VK_SPACE] & 0xF0) // jump
-		{
-			if (m_pPlayer->IsOnGround()) {
-				m_pPlayer->SetFallVelocity(100);
 				m_ppScenes[CHARACTER]->ChangeAnimation(1);
 				IsInput = true;
 				keystate = true;
-			}
-		}
-		float cxDelta = 0.0f, cyDelta = 0.0f;
-		POINT ptCursorPos;
-		if (true) // GetCapture() == m_hWnd [카메라 고정]
-		{
-			GetCursorPos(&ptCursorPos);
 
-			if (GetCapture() == m_hWnd)
+			}
+			if (pKeysBuffer[83] & 0xF0)
 			{
+				dwDirection |= DIR_BACKWARD;
+
+				m_ppScenes[CHARACTER]->ChangeAnimation(-1);
+				IsInput = true;
+				keystate = true;
+			}
+			else if (pKeysBuffer[65] & 0xF0)
+			{
+				dwDirection |= DIR_LEFT;
+
 				m_ppScenes[CHARACTER]->ChangeAnimation(2);
+				IsInput = true;
+				keystate = true;
 			}
-			cxDelta = (float)(ptCursorPos.x - m_ptOldCursorPos.x) / 3.0f;
-			cyDelta = (float)(ptCursorPos.y - m_ptOldCursorPos.y) / 3.0f;
-			SetCursorPos(m_ptOldCursorPos.x, m_ptOldCursorPos.y);
-		}
-
-		if ((dwDirection != 0) || (cxDelta != 0.0f) || (cyDelta != 0.0f))
-		{
-			if (cxDelta || cyDelta)
+			else if (pKeysBuffer[68] & 0xF0)
 			{
-				//if (pKeysBuffer[VK_RBUTTON] & 0xF0)
-				//	m_pPlayer->Rotate(cyDelta, 0.0f, -cxDelta);
-				//else
-				//	m_pPlayer->Rotate(cyDelta, cxDelta, 0.0f);
-				m_pPlayer->Rotate(cyDelta / 4, 0.0f, -cxDelta / 4);
-				m_pPlayer->Rotate(cyDelta / 4, cxDelta / 4, 0.0f);
+				dwDirection |= DIR_RIGHT;
+
+				m_ppScenes[CHARACTER]->ChangeAnimation(3);
+				IsInput = true;
+				keystate = true;
 			}
-			if (dwDirection)
-				m_pPlayer->Move(dwDirection, 50.0f * m_GameTimer.GetTimeElapsed(), true);
+			if (pKeysBuffer[VK_NEXT] & 0xF0)
+			{
+				dwDirection |= DIR_DOWN;
+				IsInput = true;
+				keystate = true;
+			}
+			if (pKeysBuffer[VK_SPACE] & 0xF0) // jump
+			{
+				if (m_pPlayer->IsOnGround()) {
+					m_pPlayer->SetFallVelocity(100);
+					m_ppScenes[CHARACTER]->ChangeAnimation(1);
+					IsInput = true;
+					keystate = true;
+				}
+			}
+			float cxDelta = 0.0f, cyDelta = 0.0f;
+			POINT ptCursorPos;
+			if (true) // GetCapture() == m_hWnd [카메라 고정]
+			{
+				GetCursorPos(&ptCursorPos);
+
+				if (GetCapture() == m_hWnd)
+				{
+					m_ppScenes[CHARACTER]->ChangeAnimation(4);
+				}
+				cxDelta = (float)(ptCursorPos.x - m_ptOldCursorPos.x) / 3.0f;
+				cyDelta = (float)(ptCursorPos.y - m_ptOldCursorPos.y) / 3.0f;
+				SetCursorPos(m_ptOldCursorPos.x, m_ptOldCursorPos.y);
+			}
+
+			if ((dwDirection != 0) || (cxDelta != 0.0f) || (cyDelta != 0.0f))
+			{
+				if (cxDelta || cyDelta)
+				{
+					//if (pKeysBuffer[VK_RBUTTON] & 0xF0)
+					//	m_pPlayer->Rotate(cyDelta, 0.0f, -cxDelta);
+					//else
+					//	m_pPlayer->Rotate(cyDelta, cxDelta, 0.0f);
+					m_pPlayer->Rotate(cyDelta / 4, 0.0f, -cxDelta / 4);
+					m_pPlayer->Rotate(cyDelta / 4, cxDelta / 4, 0.0f);
+				}
+				if (dwDirection)
+					m_pPlayer->Move(dwDirection, 20.0f * m_GameTimer.GetTimeElapsed(), true);
+			}
 		}
 	}
-
 	if (!IsInput)
 		m_ppScenes[CHARACTER]->ChangeAnimation(0);
 
@@ -894,8 +890,6 @@ void CGameFramework::ProcessInput()
 		istime = false;
 	}
 	m_pPlayer->Update(m_GameTimer.GetTimeElapsed());
-
-
 }
 
 void CGameFramework::CalculatePickRay(int MousePosX, int MousePosY)

@@ -478,9 +478,21 @@ void CMaterial::ReleaseUploadBuffers()
 	if (m_pTexture)
 		m_pTexture->ReleaseUploadBuffers();
 }
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+TCHAR* char2tchar(char * asc)
+{
+	TCHAR* ptszUni = NULL;
+	int nLen = MultiByteToWideChar(CP_ACP, 0, asc, strlen(asc), NULL, NULL);
+	ptszUni = new TCHAR[nLen + 1];
+	MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, asc, strlen(asc), ptszUni, nLen);
+	ptszUni[nLen] = '\0';
+	return ptszUni;
+}
+
 CGameObject::CGameObject(int nMeshes)
 {
 	m_xmf4x4World = Matrix4x4::Identity();
@@ -495,7 +507,32 @@ CGameObject::CGameObject(int nMeshes)
 			m_ppMeshes[i] = NULL;
 	}
 }
+CGameObject::CGameObject(int nMeshes, ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList
+	, ID3D12RootSignature *pd3dGraphicsRootSignature, TCHAR *pstrFileName)
+{
+	m_xmf4x4World = Matrix4x4::Identity();
 
+	m_nMeshes = nMeshes;
+	m_ppMeshes = NULL;
+
+	if (m_nMeshes > 0)
+	{
+		m_ppMeshes = new CMesh*[m_nMeshes];
+		for (int i = 0; i < m_nMeshes; i++)
+			m_ppMeshes[i] = NULL;
+	}
+	ifstream fi;
+
+	fi.open(pstrFileName, ostream::binary);
+
+	if (!fi)
+	{
+		exit(1);
+	}
+
+	LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, fi, GET_TYPE, 1);
+
+}
 CGameObject::~CGameObject()
 {
 	ReleaseShaderVariables();
@@ -509,7 +546,8 @@ CGameObject::~CGameObject()
 		}
 		delete[] m_ppMeshes;
 	}
-	if (m_pMaterial) m_pMaterial->Release();
+	if (m_pMaterial) 
+		m_pMaterial->Release();
 
 }
 
@@ -544,6 +582,151 @@ void CGameObject::SetMesh(int nIndex, CMesh *pMesh)
 		m_ppMeshes[nIndex] = pMesh;
 		if (pMesh)
 			pMesh->AddRef();
+	}
+}
+
+void CGameObject::LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList,
+	ID3D12RootSignature *pd3dGraphicsRootSignature, ifstream& InFile, UINT nType, UINT nSub)
+{
+	int m_nType = -1;
+	int nSubMesh = 0;
+	static UINT nRendererMesh = 0;
+
+	if (nType != SKIP)
+		InFile.read((char*)&m_nType, sizeof(int)); // 타입 받기
+	else
+	{
+		m_nType = SKINNEDMESH;
+	}
+	XMFLOAT3 *pxmf3ParentsPosition = NULL;
+
+	if (m_nType == SKINNEDMESH || m_nType == RENDERMESH)
+	{
+
+		ResizeMeshes(1);
+
+		XMFLOAT3 *pxmf3Positions = NULL;
+		XMFLOAT2 *pxmf2TextureCoords0 = NULL;
+		XMFLOAT3 *pxmf3Normals = NULL;
+		XMFLOAT3 *pxmf3Tangents = NULL;
+
+		char* pstrAlbedoTextureName = NULL;
+		char* pstrNormalTextureName = NULL;
+		UINT *pIndices = NULL;
+
+		int nVertices = 0, nIndices = 0;
+
+		CMaterial *pMaterial = NULL;
+
+		InFile.read((char*)&nSubMesh, sizeof(int)); // 서브매쉬 갯수 받기
+
+		InFile.read((char*)&m_nDrawType, sizeof(int)); // 그리기 타입 받기
+
+		InFile.read((char*)&nVertices, sizeof(int)); // 정점 갯수 받기
+		InFile.read((char*)&nIndices, sizeof(int)); // 정점 갯수 받기
+
+		pIndices = new UINT[nIndices];
+		pxmf3Positions = new XMFLOAT3[nVertices];
+		pxmf2TextureCoords0 = new XMFLOAT2[nVertices];
+		pxmf3Normals = new XMFLOAT3[nVertices];
+		pxmf3Tangents = new XMFLOAT3[nVertices];
+
+		InFile.read((char*)pIndices, sizeof(UINT) * nIndices); // 인덱스 받기
+		InFile.read((char*)pxmf3Positions, sizeof(XMFLOAT3) * nVertices); // 정점 받기
+		InFile.read((char*)pxmf2TextureCoords0, sizeof(XMFLOAT2) * nVertices); // uv 받기
+
+		if (m_nDrawType > 1)
+		{
+			InFile.read((char*)pxmf3Normals, sizeof(XMFLOAT3) * nVertices); // 법선 받기
+			InFile.read((char*)pxmf3Tangents, sizeof(XMFLOAT3) * nVertices); // 탄젠트 받기
+		}
+		int Namesize;
+
+		InFile.read((char*)&Namesize, sizeof(int)); // 디퓨즈맵이름 받기
+		pstrAlbedoTextureName = new char[Namesize];
+		InFile.read(pstrAlbedoTextureName, sizeof(char)*Namesize);
+
+		if (m_nDrawType > 1)
+		{
+			InFile.read((char*)&Namesize, sizeof(int)); // 노말맵이름 받기
+			pstrNormalTextureName = new char[Namesize];
+			InFile.read(pstrNormalTextureName, sizeof(char)*Namesize);
+		}
+
+		CMesh* pMesh = NULL;
+				
+		pMesh = new CMeshIlluminatedTexturedTBN(pd3dDevice, pd3dCommandList, nVertices, pxmf3Positions, pxmf3Tangents, pxmf3Normals, pxmf2TextureCoords0, nIndices, pIndices);
+
+		if (pMesh)
+			SetMesh(0, pMesh);
+		else
+			ResizeMeshes(0);
+
+		if (pxmf3Positions)
+			delete[] pxmf3Positions;
+
+		if (pxmf2TextureCoords0)
+			delete[] pxmf2TextureCoords0;
+
+		if (pxmf3Normals)
+			delete[] pxmf3Normals;
+
+		if (pxmf3Tangents)
+			delete[] pxmf3Tangents;
+
+		if (pIndices)
+			delete[] pIndices;
+
+		pMaterial = new CMaterial();
+
+		TCHAR pstrPathName[128] = { '\0' };
+		TCHAR* pstrFileName = char2tchar(pstrAlbedoTextureName);
+		_tcscpy_s(pstrPathName, 128, _T("../Assets/"));
+		_tcscat_s(pstrPathName, 128, pstrFileName);
+		_tcscat_s(pstrPathName, 128, _T(".dds"));
+
+		CTexture *pTexture = new CTexture(m_nDrawType, RESOURCE_TEXTURE2D, 0);
+		pTexture->LoadTextureFromFile(pd3dDevice, pd3dCommandList, pstrPathName, 0);
+
+		if (pstrFileName)
+			delete[] pstrFileName;
+
+		if (m_nDrawType > 1)
+		{
+			pstrFileName = char2tchar(pstrNormalTextureName);
+			_tcscpy_s(pstrPathName, 128, _T("../Assets/"));
+			_tcscat_s(pstrPathName, 128, pstrFileName);
+			_tcscat_s(pstrPathName, 128, _T(".dds"));
+
+			pTexture->LoadTextureFromFile(pd3dDevice, pd3dCommandList, pstrPathName, 1);
+		}
+
+		if (pstrAlbedoTextureName)
+			delete[] pstrAlbedoTextureName;
+
+		if (pstrNormalTextureName)
+			delete[] pstrNormalTextureName;
+
+		pMaterial->SetTexture(pTexture);
+
+		CShader* pShader = NULL;
+
+		if (m_nDrawType == 1 && m_nType == SKINNEDMESH)
+			pShader = new CDefferredTexturedShader();
+		else if (m_nDrawType == 2 && m_nType == SKINNEDMESH)
+			pShader = new CDefferredLightingTexturedShader();
+		else
+			pShader = new CObjectShader();
+
+		pShader->CreateShader(pd3dDevice, pd3dGraphicsRootSignature, 4);
+		pShader->CreateCbvAndSrvDescriptorHeaps(pd3dDevice, pd3dCommandList, 0, m_nDrawType);
+		pShader->CreateShaderResourceViews(pd3dDevice, pd3dCommandList, pTexture, 2, true);
+		SetCbvGPUDescriptorHandle(pShader->GetGPUCbvDescriptorStartHandle());
+
+		pMaterial->SetShader(pShader);
+
+		if (pMaterial)
+			SetMaterial(pMaterial);
 	}
 }
 
@@ -673,6 +856,31 @@ void CGameObject::Render(ID3D12GraphicsCommandList *pd3dCommandList, int iRootPa
 		}
 	}
 }
+
+void CGameObject::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera, UINT nInstances)
+{
+	OnPrepareRender();
+
+	if (m_pMaterial)
+	{
+		if (m_pMaterial->m_pShader)
+		{
+			m_pMaterial->m_pShader->Render(pd3dCommandList, pCamera);
+		}
+		if (m_pMaterial->m_pTexture)
+		{
+			m_pMaterial->m_pTexture->UpdateShaderVariables(pd3dCommandList);
+		}
+	}
+	if (m_ppMeshes)
+	{
+		for (int i = 0; i < m_nMeshes; i++)
+		{
+			if (m_ppMeshes[i])
+				m_ppMeshes[i]->Render(pd3dCommandList, nInstances);
+		}
+	}
+}
 void CGameObject::ReleaseUploadBuffers()
 {
 	if (m_ppMeshes)
@@ -773,19 +981,6 @@ void CGameObject::Rotate(XMFLOAT4 *pxmf4Quaternion)
 {
 	XMMATRIX mtxRotate = XMMatrixRotationQuaternion(XMLoadFloat4(pxmf4Quaternion));
 	m_xmf4x4World = Matrix4x4::Multiply(mtxRotate, m_xmf4x4World);
-}
-
-
-
-
-TCHAR* char2tchar(char * asc)
-{
-	TCHAR* ptszUni = NULL;
-	int nLen = MultiByteToWideChar(CP_ACP, 0, asc, strlen(asc), NULL, NULL);
-	ptszUni = new TCHAR[nLen + 1];
-	MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, asc, strlen(asc), ptszUni, nLen);
-	ptszUni[nLen] = '\0';
-	return ptszUni;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1343,12 +1538,19 @@ void CAnimationObject::LoadGeometryFromFile(ID3D12Device *pd3dDevice, ID3D12Grap
 		exit(1);
 	}
 	m_bRoot = true;
-	m_BoneTransforms = new BONE_TRANSFORMS();
-	m_BoneTransforms2 = new BONE_TRANSFORMS2();
-	m_BoneTransforms3 = new BONE_TRANSFORMS2();
 
 	LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, fi, GET_TYPE, 1);
-	LoadAnimation(pd3dDevice, pd3dCommandList, fi, pAnimationController);
+
+	bool bAnimation;
+	fi.read((char*)&bAnimation, sizeof(bool));
+
+	if (bAnimation)
+	{
+		m_BoneTransforms = new BONE_TRANSFORMS();
+		m_BoneTransforms2 = new BONE_TRANSFORMS2();
+		m_BoneTransforms3 = new BONE_TRANSFORMS2();
+		LoadAnimation(pd3dDevice, pd3dCommandList, fi, pAnimationController);
+	}
 	fi.close(); // 파일 닫기
 }
 CAnimationObject* CAnimationObject::GetRootObject()
@@ -1554,7 +1756,7 @@ void CPhysXObject::BuildObject(PxPhysics* pPxPhysics, PxScene* pPxScene, PxMater
 
 	PxBoxGeometry _PxBoxGeometry(_d3dxvExtents.x, _d3dxvExtents.y, _d3dxvExtents.z);
 	m_pPxActor = PxCreateDynamic(*pPxPhysics, _PxTransform, _PxBoxGeometry, *pPxMaterial, 4000.0f);
-
+	m_pPxActor->setName("CollisionBox");
 	pPxScene->addActor(*m_pPxActor);
 }
 

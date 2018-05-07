@@ -56,7 +56,17 @@ private:
 	FLOAT m_fFallvelocity;
 	FLOAT m_fFallAcceleration;
 	CAnimationObject* m_pRenderObject;
+
+	bool m_bKeySwitch = true;
 public:
+	void SetKeySwitch(bool bKeySwitch)
+	{
+		m_bKeySwitch = bKeySwitch;
+	}
+	bool GetKeySwitch()
+	{
+		return m_bKeySwitch;
+	}
 	void SetRenderObject(CAnimationObject* pRenderObject)
 	{
 		m_pRenderObject = pRenderObject;

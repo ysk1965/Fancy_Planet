@@ -33,6 +33,7 @@ public:
 	virtual void SkyBoxRender(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera) {}
 	virtual void ModelsSetPosition(const array <PLAYER_INFO, MAX_USER>& PlayerArray) {};
 	virtual void ReleaseUploadBuffers();
+	virtual void ReleaseShaderVariables() = 0;
 	virtual void SetProjectile(XMFLOAT3& xmf3Direction)
 	{
 	};
@@ -67,6 +68,7 @@ public:
 	virtual void AnimateObjects(float fTimeElapsed, CCamera *pCamera);
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera = NULL);
 	virtual void ReleaseUploadBuffers();
+	virtual void ReleaseShaderVariables() {};
 	virtual void ChangeAnimation(int newState) {}
 	virtual CHeightMapTerrain * GetTerrain()
 	{
@@ -98,6 +100,7 @@ public:
 	virtual void AnimateObjects(float fTimeElapsed, CCamera *pCamera);
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera = NULL);
 	virtual void ReleaseUploadBuffers();
+	virtual void ReleaseShaderVariables() {};
 	virtual void ChangeAnimation(int newState) {}
 	virtual void SetProjectile(XMFLOAT3& xmf3Direction);
 
@@ -109,11 +112,6 @@ public:
 
 	PhysXScene(PxPhysics* pPxPhysicsSDK, PxScene* pPxScene, PxControllerManager* pPxControllerManager, PxCooking* pCooking);
 	~PhysXScene();
-protected:
-	//씬은 게임 객체들의 집합이다. 게임 객체는 셰이더를 포함한다.
-	CPhysXObject * *m_ppObjects = NULL;
-	CAnimationObject **m_ppAniObjects = NULL;
-	int m_nObjects = 0;
 private:
 };
 
@@ -127,6 +125,7 @@ public:
 	virtual void AnimateObjects(float fTimeElapsed, CCamera *pCamera);
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera = NULL);
 	virtual void ReleaseUploadBuffers();
+	virtual void ReleaseShaderVariables();
 	virtual void ChangeAnimation(int newState);
 	void CreateShaderVariables(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList);
 	void UpdateShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList);
@@ -148,8 +147,12 @@ private:
 	ID3D12Resource					*m_pd3dcbGameObjects3 = NULL;
 	BONE_TRANSFORMS3				*m_pcbMappedGameObjects3 = NULL;
 
-	CAnimationObject **m_ppSampleObjects = NULL;
+	CPhysXObject		**m_ppPxObjects = NULL;
+	CAnimationObject **m_ppSampleAnimationObjects = NULL;
+
 	CAnimationObject	 **m_ppSoldierObjects = NULL;
+
+
 	int							m_nObjects = 0;
 	AnimationController **m_ppAnimationController = NULL;
 };
@@ -159,14 +162,25 @@ class ObjectScene : public CScene
 public:
 	virtual void BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList);
 	virtual void ReleaseObjects();
-
-	virtual ID3D12RootSignature *CreateGraphicsRootSignature(ID3D12Device *pd3dDevice);
 	virtual void AnimateObjects(float fTimeElapsed, CCamera *pCamera);
+
+	virtual void ReleaseShaderVariables();
+	virtual ID3D12RootSignature *CreateGraphicsRootSignature(ID3D12Device *pd3dDevice);
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera = NULL);
 	virtual void ReleaseUploadBuffers();
+	void CreateShaderVariables(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList);
+	void UpdateShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList);
 	virtual void ChangeAnimation(int newState) {}
 
 	ObjectScene(PxPhysics* pPxPhysicsSDK, PxScene* pPxScene, PxControllerManager* pPxControllerManager, PxCooking* pCooking);
 	~ObjectScene();
 private:
+	UINT m_nObjects = 0;
+
+	ID3D12Resource * m_pd3dcbGameObjects = NULL;
+	CB_GAMEOBJECT_INFO				*m_pcbMappedGameObjects = NULL;
+
+	std::vector<CGameObject*> m_pShell;
+
+	CGameObject * *m_ppSampleObjects = NULL;
 };

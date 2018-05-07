@@ -492,6 +492,7 @@ void CPlayer::onShapeHit(const PxControllerShapeHit & hit)
 
 	if (actor)
 	{
+		printf("OnShapeHIT!!![%s]\n", actor->getName());
 		if (actor->getRigidBodyFlags() & PxRigidBodyFlag::eKINEMATIC)
 			return;
 

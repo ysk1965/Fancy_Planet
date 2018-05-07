@@ -436,6 +436,58 @@ void CTerrainShader::CreateShader(ID3D12Device *pd3dDevice, ID3D12RootSignature 
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+CObjectShader::CObjectShader()
+{
+
+}
+
+CObjectShader::~CObjectShader()
+{
+
+}
+
+D3D12_INPUT_LAYOUT_DESC CObjectShader::CreateInputLayout()
+{
+	UINT nInputElementDescs = 4;
+	D3D12_INPUT_ELEMENT_DESC *pd3dInputElementDescs = new D3D12_INPUT_ELEMENT_DESC[nInputElementDescs];
+	//정점 정보를 위한 입력 원소이다. 
+
+	pd3dInputElementDescs[0] = { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+	pd3dInputElementDescs[1] = { "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+	pd3dInputElementDescs[2] = { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 24, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+	pd3dInputElementDescs[3] = { "TANGENT", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 32, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+
+	D3D12_INPUT_LAYOUT_DESC d3dInputLayoutDesc;
+	d3dInputLayoutDesc.pInputElementDescs = pd3dInputElementDescs;
+	d3dInputLayoutDesc.NumElements = nInputElementDescs;
+	return(d3dInputLayoutDesc);
+}
+
+D3D12_SHADER_BYTECODE CObjectShader::CreateVertexShader(ID3DBlob **ppd3dShaderBlob)
+{
+	return(CShader::CompileShaderFromFile(L"Object.hlsl", "Object_VS", "vs_5_1", ppd3dShaderBlob));
+}
+
+D3D12_SHADER_BYTECODE CObjectShader::CreatePixelShader(ID3DBlob **ppd3dShaderBlob)
+{
+	return(CShader::CompileShaderFromFile(L"Object.hlsl", "Object_PS", "ps_5_1", ppd3dShaderBlob));
+}
+
+void CObjectShader::CreateShader(ID3D12Device *pd3dDevice, ID3D12RootSignature *pd3dGraphicsRootSignature, UINT nRenderTargets)
+{
+	m_nPipelineStates = 1;
+	m_ppd3dPipelineStates = new ID3D12PipelineState*[m_nPipelineStates];
+
+	CShader::CreateShader(pd3dDevice, pd3dGraphicsRootSignature, nRenderTargets);
+}
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 CRendererMeshShader::CRendererMeshShader()
 {
 

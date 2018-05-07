@@ -1,6 +1,7 @@
 #pragma once
 #include "Mesh.h"
 #include "Camera.h"
+#include "EASTL\vector.h"
 #include <chrono>
 
 enum 
@@ -212,7 +213,9 @@ public:
 class CGameObject
 {
 public:
-	CGameObject(int nMeshes);
+	CGameObject(int nMeshes); 
+	CGameObject(int nMeshes, ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList
+		, ID3D12RootSignature *pd3dGraphicsRootSignature, TCHAR *pstrFileName);
 	virtual ~CGameObject();
 
 private:
@@ -246,6 +249,9 @@ protected:
 	ID3D12Resource					*m_pd3dcbGameObject = NULL;
 	CB_GAMEOBJECT_INFO				*m_pcbMappedGameObject = NULL;
 
+	bool m_bRendererMesh = false;
+
+	UINT							m_nDrawType = -1;
 public:
 	void SetMesh(int nIndex, CMesh *pMesh);
 	void SetShader(CShader *pShader);
@@ -263,13 +269,17 @@ public:
 	virtual void OnPrepareRender();
 	virtual void SetRootParameter(ID3D12GraphicsCommandList *pd3dCommandList, int iRootParameterIndex);
 	
-	virtual void Animate(float fTimeElapsed);
+	virtual void Animate(float fTimeElapsed); 
+	void Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera, UINT nInstances);
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, int iRootParameterIndex, CCamera *pCamera = NULL);
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, int iRootParameterIndex, CCamera *pCamera, UINT nInstances);
 	virtual void BuildMaterials(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList) { }
 	virtual void ReleaseUploadBuffers();
 	virtual void ChangeAnimation(int newState) {};
 	virtual void UpdateTransform(XMFLOAT4X4 *pxmf4x4Parent = NULL){};
+
+	virtual void LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList,
+		ID3D12RootSignature *pd3dGraphicsRootSignature, ifstream& InFile, UINT nType, UINT nSub);
 
 	XMFLOAT3 GetPosition();
 	XMFLOAT3 GetLook();
@@ -299,7 +309,6 @@ class CAnimationObject : public CGameObject
 private:
 	CPlayer * m_pPlayer = NULL;
 	UINT m_nScale = 1;
-	bool m_bRendererMesh = false;
 	XMFLOAT4X4* m_pBindPoses = NULL;
 	UINT m_nRendererMesh = 0;
 	float m_RndererScale = 1;
@@ -356,7 +365,7 @@ public:
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, int iRootParameterIndex, CCamera *pCamera = NULL);
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera, UINT nInstances);
 	void LoadAnimation(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ifstream& InFile, AnimationController* pAnimationController);
-	void LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList,
+	virtual void LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList,
 		ID3D12RootSignature *pd3dGraphicsRootSignature, ifstream& InFile, UINT nType, UINT nSub);
 	void LoadGeometryFromFile(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature
 		, TCHAR *pstrFileName, AnimationController* pAnimationController);
@@ -392,7 +401,6 @@ public:
 	TCHAR							m_strFrameName[256] = { '\0' };
 	bool							m_bRoot = false;
 	int								m_iBoneIndex = -1;
-	UINT							m_nDrawType = -1;
 
 	AnimationController				*m_pAnimationController = NULL;
 	AnimationFactors				*m_pAnimationFactors = NULL;

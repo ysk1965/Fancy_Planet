@@ -138,6 +138,7 @@
     <FxCompile Include="Light.hlsl" />
     <FxCompile Include="UI.hlsl" />
     <FxCompile Include="Animation.hlsl" />
+    <FxCompile Include="Object.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Assets\Image\Terrain\HeightMap.raw">
