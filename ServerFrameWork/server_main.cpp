@@ -18,7 +18,7 @@ using namespace std;
 
 HANDLE gh_iocp;
 float g_fTime = 0.0;
-int g_time = 0;
+float g_time = 0;
 
 int g_roomnumb[5] = { 0 };
 int g_ridx = 0;
@@ -35,12 +35,13 @@ public:
 	bool m_isconnected;
 	XMFLOAT4X4 m_pos;
 	EXOVER m_rxover;
-	int m_packet_size;  // Áö±İ Á¶¸³ÇÏ°í ÀÖ´Â ÆĞÅ¶ÀÇ Å©±â
-	int	m_prev_packet_size; // Áö³­¹ø recv¿¡¼­ ¿Ï¼ºµÇÁö ¾Ê¾Æ¼­ ÀúÀåÇØ ³õÀº ÆĞÅ¶ÀÇ ¾ÕºÎºĞÀÇ Å©±â
+	int m_packet_size;  // ì§€ê¸ˆ ì¡°ë¦½í•˜ê³  ìˆëŠ” íŒ¨í‚·ì˜ í¬ê¸°
+	int	m_prev_packet_size; // ì§€ë‚œë²ˆ recvì—ì„œ ì™„ì„±ë˜ì§€ ì•Šì•„ì„œ ì €ì¥í•´ ë†“ì€ íŒ¨í‚·ì˜ ì•ë¶€ë¶„ì˜ í¬ê¸°
 	int m_roomnumb;
 	bool m_isready;
 	int m_scene_state;
 	char m_packet[MAX_PACKET_SIZE];
+	int m_animstate;
 
 	Client()
 	{
@@ -48,8 +49,8 @@ public:
 		m_isconnected = false;
 		int m_roomnumb = 0;
 		int m_scene_state = 0;
-		m_pos = {  };
-		m_pos._42 = 212.0f;
+		m_pos = {};
+	
 		ZeroMemory(&m_rxover.m_over, sizeof(WSAOVERLAPPED));
 		m_rxover.m_wsabuf.buf = m_rxover.m_iobuf;
 		m_rxover.m_wsabuf.len = sizeof(m_rxover.m_wsabuf.buf);
@@ -70,7 +71,7 @@ void error_display(const char *msg, int err_no)
 		MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
 		(LPTSTR)&lpMsgBuf, 0, NULL);
 	std::cout << msg;
-	std::wcout << L"  ¿¡·¯" << lpMsgBuf << std::endl;
+	std::wcout << L"  ì—ëŸ¬" << lpMsgBuf << std::endl;
 	LocalFree(lpMsgBuf);
 	while (true);
 }
@@ -113,7 +114,7 @@ void DisconnectPlayer(int id)
 
 void initialize()
 {
-	gh_iocp = CreateIoCompletionPort(INVALID_HANDLE_VALUE, 0, 0, 0); // ÀÇ¹Ì¾ø´Â ÆÄ¶ó¸ŞÅÍ, ¸¶Áö¸·Àº ¾Ë¾Æ¼­ ¾²·¹µå¸¦ ¸¸µé¾îÁØ´Ù.
+	gh_iocp = CreateIoCompletionPort(INVALID_HANDLE_VALUE, 0, 0, 0); // ì˜ë¯¸ì—†ëŠ” íŒŒë¼ë©”í„°, ë§ˆì§€ë§‰ì€ ì•Œì•„ì„œ ì“°ë ˆë“œë¥¼ ë§Œë“¤ì–´ì¤€ë‹¤.
 	std::wcout.imbue(std::locale("korean"));
 
 	WSADATA	wsadata;
@@ -136,8 +137,6 @@ void StartRecv(int id)
 
 void ProcessPacket(int id, char *packet)
 {
-	//XMFLOAT4X4 pos = g_clients[id].m_pos;
-
 	switch (packet[1])
 	{
 	case CS_READY:
@@ -151,7 +150,7 @@ void ProcessPacket(int id, char *packet)
 		int roomnumb = g_clients[id].m_roomnumb;
 		sc_packet_ready ready_packet;
 		ready_packet.id = id;
-		ready_packet.size = sizeof(sc_packet_ready);
+		ready_packet.size = sizeof(ready_packet);
 		ready_packet.type = SC_READY;
 		ready_packet.state = g_clients[id].m_isready;
 
@@ -169,13 +168,16 @@ void ProcessPacket(int id, char *packet)
 					ready_player += 1;
 					if (ready_player == 2)
 					{
-						sc_packet_scene_change start_packet;
-						start_packet.type = SC_SCENE_CHANGE;
-						start_packet.size = sizeof(sc_packet_ready);
-						start_packet.scenestate = 1;
-						start_packet.id = i;
-						SendPacket(i, &start_packet);
-						printf("°ÔÀÓ½ÃÀÛ ÆĞÅ¶ Àü¼Û. \n ");
+						for (int j = 0; j < MAX_USER; ++j)
+						{
+							sc_packet_scene_change start_packet;
+							start_packet.type = SC_SCENE_CHANGE;
+							start_packet.size = sizeof(start_packet);
+							start_packet.scenestate = 1;
+							start_packet.id = j;
+							SendPacket(j, &start_packet);
+							printf("ê²Œì„ì‹œì‘ íŒ¨í‚· ì „ì†¡. \n ");
+						}
 					}
 				}
 			}
@@ -186,28 +188,27 @@ void ProcessPacket(int id, char *packet)
 	{
 		cs_packet_pos *p = reinterpret_cast<cs_packet_pos *>(packet);
 		int roomnumb = p->roomnumb;
-		printf("Move Client's Room Number: %d\n", roomnumb);
+		//printf("Move Client's Room Number: %d\n", roomnumb);
 		sc_packet_pos pos_packet;
 
 		g_clients[id].m_pos = p->m_pos;
+		g_clients[id].m_animstate = p->animstate;
 		pos_packet.id = id;
-		pos_packet.size = sizeof(sc_packet_pos);
+	
 		pos_packet.type = SC_POS;
 		pos_packet.m_pos = g_clients[id].m_pos;
-
-		printf("Client [ %d ] Move To : %f %f %f\n", id, p->m_pos._41, p->m_pos._42, p->m_pos._43);
+		pos_packet.animstate = g_clients[id].m_animstate;
+		pos_packet.size = sizeof(sc_packet_pos);
+		//printf("Client [ %d ] Move To : %f %f %f\n", id, p->m_pos._41, p->m_pos._42, p->m_pos._43);
 		for (int i = 0; i < MAX_USER; ++i)
 		{
-			if (true == g_clients[i].m_isconnected)//Á¢¼ÓÁßÀÌ°í
-				if (id != i)//ÀÌ ÆĞÅ¶À» º¸³½ Å¬¶ó°¡ ¾Æ´Ï¸ç
-					if (g_clients[i].m_roomnumb == roomnumb)// ÆĞÅ¶ º¸³½ Å¬¶ó¿Í °°Àº ¹æÀÎ Å¬¶ó¿¡°Ô¸¸
-						SendPacket(i, &pos_packet);//ÆĞÅ¶ Àü¼Û
+			if (true == g_clients[i].m_isconnected)//ì ‘ì†ì¤‘ì´ê³ 
+				if (i != id)//ì´ íŒ¨í‚·ì„ ë³´ë‚¸ í´ë¼ê°€ ì•„ë‹ˆë©°
+					//if (g_clients[i].m_roomnumb == roomnumb)// íŒ¨í‚· ë³´ë‚¸ í´ë¼ì™€ ê°™ì€ ë°©ì¸ í´ë¼ì—ê²Œë§Œ
+						SendPacket(i, &pos_packet);//íŒ¨í‚· ì „ì†¡
 		}
-
-
+		break;
 	}
-	break;
-
 
 	default:
 		printf("Unkown Packet Type from Client [%d]\n", id);
@@ -223,11 +224,11 @@ void worker_thread()
 	while (true)
 	{
 		unsigned long io_size;
-		unsigned long long iocp_key; // 64 ºñÆ® integer , ¿ì¸®°¡ 64ºñÆ®·Î ÄÄÆÄÀÏÇØ¼­ 64ºñÆ®
+		unsigned long long iocp_key; // 64 ë¹„íŠ¸ integer , ìš°ë¦¬ê°€ 64ë¹„íŠ¸ë¡œ ì»´íŒŒì¼í•´ì„œ 64ë¹„íŠ¸
 		WSAOVERLAPPED *over;
 		BOOL ret = GetQueuedCompletionStatus(gh_iocp, &io_size, &iocp_key, &over, INFINITE);
 		int key = static_cast<int>(iocp_key);
-		printf("WT::Network I/O with Client [ %d ]\n", key);
+		//printf("WT::Network I/O with Client [ %d ]\n", key);
 		if (FALSE == ret) {
 			cout << "Error in GQCS\n";
 			DisconnectPlayer(key);
@@ -271,14 +272,14 @@ void worker_thread()
 			}
 			StartRecv(key);
 		}
-		else {  // Send ÈÄÃ³¸®
+		else {  // Send í›„ì²˜ë¦¬
 			//cout << "WT:A packet was sent to Client[" << key << "]\n";
 			delete p_over;
 		}
 	}
 }
 
-void accept_thread()	//»õ·Î Á¢¼ÓÇØ ¿À´Â Å¬¶óÀÌ¾ğÆ®¸¦ IOCP·Î ³Ñ±â´Â ¿ªÇÒ
+void accept_thread()	//ìƒˆë¡œ ì ‘ì†í•´ ì˜¤ëŠ” í´ë¼ì´ì–¸íŠ¸ë¥¼ IOCPë¡œ ë„˜ê¸°ëŠ” ì—­í• 
 {
 	SOCKET s = WSASocket(AF_INET, SOCK_STREAM, IPPROTO_TCP, NULL, 0, WSA_FLAG_OVERLAPPED);
 
@@ -286,7 +287,7 @@ void accept_thread()	//»õ·Î Á¢¼ÓÇØ ¿À´Â Å¬¶óÀÌ¾ğÆ®¸¦ IOCP·Î ³Ñ±â´Â ¿ªÇÒ
 	ZeroMemory(&bind_addr, sizeof(SOCKADDR_IN));
 	bind_addr.sin_family = AF_INET;
 	bind_addr.sin_port = htons(MY_SERVER_PORT);
-	bind_addr.sin_addr.s_addr = INADDR_ANY;	// 0.0.0.0  ¾Æ¹«´ë¼­³ª ¿À´Â °ÍÀ» ´Ù ¹Ş°Ú´Ù.
+	bind_addr.sin_addr.s_addr = INADDR_ANY;	// 0.0.0.0  ì•„ë¬´ëŒ€ì„œë‚˜ ì˜¤ëŠ” ê²ƒì„ ë‹¤ ë°›ê² ë‹¤.
 
 	::bind(s, reinterpret_cast<sockaddr *>(&bind_addr), sizeof(bind_addr));
 	listen(s, 1000);
@@ -297,7 +298,7 @@ void accept_thread()	//»õ·Î Á¢¼ÓÇØ ¿À´Â Å¬¶óÀÌ¾ğÆ®¸¦ IOCP·Î ³Ñ±â´Â ¿ªÇÒ
 		ZeroMemory(&c_addr, sizeof(SOCKADDR_IN));
 		c_addr.sin_family = AF_INET;
 		c_addr.sin_port = htons(MY_SERVER_PORT);
-		c_addr.sin_addr.s_addr = INADDR_ANY;	// 0.0.0.0  ¾Æ¹«´ë¼­³ª ¿À´Â °ÍÀ» ´Ù ¹Ş°Ú´Ù.
+		c_addr.sin_addr.s_addr = INADDR_ANY;	// 0.0.0.0  ì•„ë¬´ëŒ€ì„œë‚˜ ì˜¤ëŠ” ê²ƒì„ ë‹¤ ë°›ê² ë‹¤.
 		int addr_size = sizeof(sockaddr);
 
 		SOCKET cs = WSAAccept(s, reinterpret_cast<sockaddr *>(&c_addr), &addr_size, NULL, NULL);
@@ -307,60 +308,53 @@ void accept_thread()	//»õ·Î Á¢¼ÓÇØ ¿À´Â Å¬¶óÀÌ¾ğÆ®¸¦ IOCP·Î ³Ñ±â´Â ¿ªÇÒ
 		}
 		cout << "New Client Connected!\n";
 		int id = -1;
-		for (int i = 0; i < MAX_USER; ++i)//ºó ÀÚ¸®¸¦ Ã£¾Æ ¾ÆÀÌµğ¸¦ ÀÎµ¦½º·Î ¼³Á¤ÇØÁİ´Ï´Ù.
+		for (int i = 0; i < MAX_USER; ++i)//ë¹ˆ ìë¦¬ë¥¼ ì°¾ì•„ ì•„ì´ë””ë¥¼ ì¸ë±ìŠ¤ë¡œ ì„¤ì •í•´ì¤ë‹ˆë‹¤.
 			if (false == g_clients[i].m_isconnected) {
 				id = i;
 				break;
 			}
-		if (-1 == id) {//¸ğµç ÀÚ¸®°¡ Ã¡À¸¹Ç·Î Á¢¼Ó ºÒ°¡ÀÔ´Ï´Ù.
+		if (-1 == id) {//ëª¨ë“  ìë¦¬ê°€ ì°¼ìœ¼ë¯€ë¡œ ì ‘ì† ë¶ˆê°€ì…ë‹ˆë‹¤.
 			cout << "MAX USER Exceeded\n";
 			continue;
 		}
-		cout << "ID of new Client is [" << id << "]";//¼³Á¤ÇÑ ¾ÆÀÌµğ¸¦ Ãâ·ÂÇÏ°í ÃÊ±âÈ­ÇØÁİ´Ï´Ù.
+		cout << "ID of new Client is [" << id << "]";//ì„¤ì •í•œ ì•„ì´ë””ë¥¼ ì¶œë ¥í•˜ê³  ì´ˆê¸°í™”í•´ì¤ë‹ˆë‹¤.
 		g_clients[id].m_s = cs;
 		g_clients[id].m_packet_size = 0;
 		g_clients[id].m_prev_packet_size = 0;
 		g_clients[id].m_pos = {};
-
+		g_clients[id].m_animstate = 0;
 		CreateIoCompletionPort(reinterpret_cast<HANDLE>(cs), gh_iocp, id, 0);
-		g_clients[id].m_isconnected = true;// ÀÌ ¾ÆÀÌµğ¸¦ ºÎ¿©¹ŞÀº Å¬¶óÀÌ¾ğÆ®´Â ÀÌÁ¦ ¼­¹ö¿Í ¿¬°áÀÌ µÆ½À´Ï´Ù.
+		g_clients[id].m_isconnected = true;// ì´ ì•„ì´ë””ë¥¼ ë¶€ì—¬ë°›ì€ í´ë¼ì´ì–¸íŠ¸ëŠ” ì´ì œ ì„œë²„ì™€ ì—°ê²°ì´ ëìŠµë‹ˆë‹¤.
 
-		int roomsearch = 0;
-		for (int i = 0; i < MAX_USER; ++i)
-		{
-			if (true == g_clients[i].m_isconnected) {
-				roomsearch += 1;
-			}
-		}
-		if (roomsearch % 4 == 1)
-		{
+		//printf("This Client Room Number is [%d]", g_ridx);
 
-			g_ridx++;
-		}
-		printf("This Client Room Number is [%d]", g_ridx);
+		g_clients[id].m_roomnumb = 0;
+		StartRecv(id);// ìœ„ì˜ ì •ë³´ë¥¼ ì„œë²„ì— ë°›ìŠµë‹ˆë‹¤.
 
-		g_clients[id].m_roomnumb = g_ridx;
-		StartRecv(id);// À§ÀÇ Á¤º¸¸¦ ¼­¹ö¿¡ ¹Ş½À´Ï´Ù.
-
-		sc_packet_put_player p; // Å¬¶óÀÌ¾ğÆ®(Ä³¸¯ÅÍ)°¡ Á¢¼ÓÇß´Ù´Â ÆĞÅ¶À» ÇÏ³ª ¼³Á¤ÇÕ´Ï´Ù.
-		p.id = (unsigned short)id;//¾ÆÀÌµğ
-		p.size = sizeof(sc_packet_put_player);//ÆĞÅ¶»çÀÌÁî
-		p.type = SC_PUT_PLAYER;//ÆĞÅ¶Å¸ÀÔ
+		sc_packet_put_player p; // í´ë¼ì´ì–¸íŠ¸(ìºë¦­í„°)ê°€ ì ‘ì†í–ˆë‹¤ëŠ” íŒ¨í‚·ì„ í•˜ë‚˜ ì„¤ì •í•©ë‹ˆë‹¤.
+		p.id = (unsigned short)id;//ì•„ì´ë””
+		p.size = sizeof(sc_packet_put_player);//íŒ¨í‚·ì‚¬ì´ì¦ˆ
+		p.type = SC_PUT_PLAYER;//íŒ¨í‚·íƒ€ì…
+		g_clients[id].m_pos._11 = 10.0f;
+		g_clients[id].m_pos._22 = 10.0f;
+		g_clients[id].m_pos._33 = 10.0f;
+		g_clients[id].m_pos._44 = 1.0f;
+		g_clients[id].m_pos._42 = 212.0f;
 		p.m_pos = g_clients[id].m_pos;
 		p.roomnumb = g_clients[id].m_roomnumb;
+		
 
-
-		for (int i = 0; i < MAX_USER; ++i)//¸ğµç Å¬¶óÀÌ¾ğÆ®¸¦ ÈÈÀ»°Ì´Ï´Ù.
+		for (int i = 0; i < MAX_USER; ++i)//ëª¨ë“  í´ë¼ì´ì–¸íŠ¸ë¥¼ í›‘ì„ê²ë‹ˆë‹¤.
 		{
 			if (true == g_clients[i].m_isconnected)
-				SendPacket(i, &p);//¸ğµç ÀÎµ¦½º¸¦ °Ë»öÇØ Á¢¼ÓÇØÀÖ´Â Å¬¶óÀÌ¾ğÆ®µé¿¡°Ô ÆĞÅ¶À» Àü´ŞÇÕ´Ï´Ù.
+				SendPacket(i, &p);//ëª¨ë“  ì¸ë±ìŠ¤ë¥¼ ê²€ìƒ‰í•´ ì ‘ì†í•´ìˆëŠ” í´ë¼ì´ì–¸íŠ¸ë“¤ì—ê²Œ íŒ¨í‚·ì„ ì „ë‹¬í•©ë‹ˆë‹¤.
 		}
 		for (int i = 0; i < MAX_USER; ++i) {
 			if (true == g_clients[i].m_isconnected)
-			{//i ÀÎµ¦½º¿¡ Á¢¼ÓÇÑ Å¬¶óÀÌ¾ğÆ®°¡ ¾ø´Ù¸é ³Ñ¾î°¡°í
-				if (i == id) continue;//Á¢¼ÓÇÑ ÀÚ½ÅÀÇ Å¬¶óÀÌ¾ğÆ®°¡ ¼ÓÇØÀÖ´Â ÀÎµ¦½ºµµ ³Ñ¾î°©´Ï´Ù.
-				p.id = (unsigned short)i;//À§ÀÇ Á¶°ÇµéÀ» Á¦¿ÜÇÑ Å¬¶óÀÌ¾ğÆ® Á¤º¸¸¦ ÇÏ³ªÇÏ³ª ÈÈÀ¸¸ç
-				p.m_pos = g_clients[i].m_pos;//ÁÂÇ¥
+			{//i ì¸ë±ìŠ¤ì— ì ‘ì†í•œ í´ë¼ì´ì–¸íŠ¸ê°€ ì—†ë‹¤ë©´ ë„˜ì–´ê°€ê³ 
+				if (i == id) continue;//ì ‘ì†í•œ ìì‹ ì˜ í´ë¼ì´ì–¸íŠ¸ê°€ ì†í•´ìˆëŠ” ì¸ë±ìŠ¤ë„ ë„˜ì–´ê°‘ë‹ˆë‹¤.
+				p.id = (unsigned short)i;//ìœ„ì˜ ì¡°ê±´ë“¤ì„ ì œì™¸í•œ í´ë¼ì´ì–¸íŠ¸ ì •ë³´ë¥¼ í•˜ë‚˜í•˜ë‚˜ í›‘ìœ¼ë©°
+				p.m_pos = g_clients[i].m_pos;//ì¢Œí‘œ
 				p.roomnumb = g_clients[i].m_roomnumb;
 				SendPacket(id, &p);
 			}
@@ -372,40 +366,37 @@ void timer_thread()
 {
 	while (1)
 	{
-		CTimeMgr::GetInstance()->SetTime();//Å¸ÀÓ °»½Å
-		g_fTime += 1.0f * CTimeMgr::GetInstance()->GetTime();
-		if (g_fTime >= 1.0f)
-		{
-			g_fTime = 0.0f;
-			g_time += 1;
+		CTimeMgr::GetInstance()->SetTime();//íƒ€ì„ ê°±ì‹ 
+		g_fTime +=  1.0f*CTimeMgr::GetInstance()->GetTime();
+	
 
 			sc_packet_time time_packet;
 
 			time_packet.size = sizeof(sc_packet_time);
 			time_packet.type = SC_TIME;
-			time_packet.m_ftime = g_time;
-			printf("GAME TIME : %f \n", time_packet.m_ftime);
+			time_packet.m_ftime = g_fTime;
+			//printf("GAME TIME : %f \n", time_packet.m_ftime);
 			for (int i = 0; i < MAX_USER; ++i)
 			{
-				if (true == g_clients[i].m_isconnected)//Á¢¼ÓÁßÀÌ°í
-					SendPacket(i, &time_packet);//ÆĞÅ¶ Àü¼Û
+				if (true == g_clients[i].m_isconnected)//ì ‘ì†ì¤‘ì´ê³ 
+					SendPacket(i, &time_packet);//íŒ¨í‚· ì „ì†¡
 			}
 
-		}
+		
 	}
 }
 int main()
 {
 	vector <thread> w_threads;
 	initialize();
-	//CreateWorkerThreads();	// ¾²·¹µå Á¶ÀÎ±îÁö ÀÌ ¾È¿¡¼­ ÇØÁÖ¾î¾ß ÇÑ´Ù. Àü¿ªº¯¼ö ÇØ¼­ °ü¸®¸¦ ÇØ¾ß ÇÔ. Àü¿ªº¯¼ö ¸¸µå´Â °ÍÀº
-	// ÁÁÀº ¹æ¹ıÀÌ ¾Æ´Ô.
-	for (int i = 0; i < 4; ++i) w_threads.push_back(thread{ worker_thread }); // 4ÀÎ ÀÌÀ¯´Â ÄõµåÄÚ¾î CPU ¶ó¼­
+	//CreateWorkerThreads();	// ì“°ë ˆë“œ ì¡°ì¸ê¹Œì§€ ì´ ì•ˆì—ì„œ í•´ì£¼ì–´ì•¼ í•œë‹¤. ì „ì—­ë³€ìˆ˜ í•´ì„œ ê´€ë¦¬ë¥¼ í•´ì•¼ í•¨. ì „ì—­ë³€ìˆ˜ ë§Œë“œëŠ” ê²ƒì€
+	// ì¢‹ì€ ë°©ë²•ì´ ì•„ë‹˜.
+	for (int i = 0; i < 4; ++i) w_threads.push_back(thread{ worker_thread }); // 4ì¸ ì´ìœ ëŠ” ì¿¼ë“œì½”ì–´ CPU ë¼ì„œ
 																			  //CreateAcceptThreads();
 	thread a_thread{ accept_thread };
 
 	CTimeMgr::GetInstance()->InitTime();
-	//thread t_thread{ timer_thread };
+//	thread t_thread{ timer_thread };
 
 	for (auto& th : w_threads) th.join();
 	a_thread.join();
