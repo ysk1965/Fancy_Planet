@@ -9,7 +9,7 @@ using namespace DirectX;
 #define	BUF_SIZE				1024
 #define	WM_SOCKET				WM_USER + 1
 
-#define MAX_BUFF_SIZE   4000
+#define MAX_BUFF_SIZE   1024
 #define MAX_PACKET_SIZE  255
 
 #define BOARD_WIDTH   8
@@ -31,6 +31,7 @@ using namespace DirectX;
 #define CS_LEFT  3
 #define CS_RIGHT    4
 #define CS_CHAT		5
+#define CS_SHOT		10
 
 #define SC_POS           1
 #define SC_PUT_PLAYER    2
@@ -38,6 +39,8 @@ using namespace DirectX;
 #define SC_READY		4
 #define SC_SCENE_CHANGE 5
 #define SC_TIME 6
+#define SC_SHOT	10
+
 #pragma pack (push, 1)
 
 struct cs_packet_pos {
@@ -76,7 +79,7 @@ struct sc_packet_put_player {
 	unsigned char size;
 	unsigned char type;
 	unsigned short id;
-
+	int animstate;
 	int roomnumb;
 	XMFLOAT4X4 m_pos;
 };
@@ -101,6 +104,17 @@ struct sc_packet_chat {
 	int roomnumb = 0;
 	wchar_t message[MAX_STR_SIZE];
 };
+struct cs_packet_shot {
+	unsigned char size;
+	unsigned char type;
+	unsigned short id;	
+};
+struct sc_packet_shot {
+	unsigned char size;
+	unsigned char type;
+	unsigned short id;
+};
+
 struct sc_packet_scene_change
 {
 	unsigned char size;
@@ -125,19 +139,19 @@ typedef unsigned short WORD;
 typedef unsigned char  UCHAR;
 typedef unsigned char  BYTE;
 
-///////////////////////////Ä³¸¯ÅÍ ÀúÀå ±¸Á¶Ã¼////////////////////////////////////////////
+///////////////////////////ìºë¦­í„° ì €ì¥ êµ¬ì¡°ì²´////////////////////////////////////////////
 
 // the blitter object structure BOB
 typedef struct PLAYER_INFO
 {
-	int state;          // »óÅÂ
-	int anim_state;     // ¾Ö´Ï¸ŞÀÌ¼Ç »óÅÂ
-	int attr;           // °´Ã¼ ¼Ó¼º(Á¾·ù)
-	XMFLOAT4X4 pos;          // Æ÷Áö¼Ç°ª
-	int xv, yv;        // ¼Óµµ°ª
+	int state;          // ìƒíƒœ
+	int anim_state;     // ì• ë‹ˆë©”ì´ì…˜ ìƒíƒœ
+	int attr;           // ê°ì²´ ì†ì„±(ì¢…ë¥˜)
+	XMFLOAT4X4 pos;          // í¬ì§€ì…˜ê°’
+	int xv, yv;        // ì†ë„ê°’
 	float scale, rotation;
 
-	WCHAR message[256]; //Ã¤ÆÃ Á¤º¸
+	WCHAR message[256]; //ì±„íŒ… ì •ë³´
 	DWORD message_time;
 
 	bool m_isconnected = false;
