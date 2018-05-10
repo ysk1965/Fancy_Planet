@@ -79,7 +79,7 @@ struct sc_packet_put_player {
 	unsigned char size;
 	unsigned char type;
 	unsigned short id;
-
+	int animstate;
 	int roomnumb;
 	XMFLOAT4X4 m_pos;
 };

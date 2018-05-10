@@ -220,7 +220,35 @@ PS_TEXTURED_DEFFERREDLIGHTING_OUTPUT PS_TDL(A_VS_OUTPUT input) : SV_TARGET
 	
 	return output;
 }
-
+PS_TEXTURED_DEFFERREDLIGHTING_OUTPUT PS_Specular_TDL(A_VS_OUTPUT input) : SV_TARGET
+{
+	PS_TEXTURED_DEFFERREDLIGHTING_OUTPUT output;
+	float2 uv1;
+	
+	uv1.x = input.uv.x;
+	uv1.y = 1.0f - input.uv.y;
+	
+	float3 diffuse = gtxtModel_Diffuse.Sample(gWrapSamplerState, uv1).rgb;
+	
+	output.diffuse = float4(diffuse, 1.0f);
+	
+	float3 N = normalize(input.normalW);
+	float3 T = normalize(input.tangentW - dot(input.tangentW, N) * N);
+	float3 B = cross(N, T);
+	float3x3 TBN = float3x3(T, B, N);
+	// 노말맵으로 부터 법선벡터를 가져온다.
+	float3 normal = gtxtModel_Normal.Sample(gWrapSamplerState, uv1).rgb;
+	// -1 와 1사이 값으로 변환한다.
+	normal = 2.0f * normal - 1.0f;
+	float3 normalW = mul(normal, TBN);
+	output.normal = float4(normalW, 1.0f);
+	
+	output.depth = float4(input.positionW, 1.0f);
+	
+	output.specular = gtxtModel_Specular.Sample(gWrapSamplerState, uv1).rgba;
+	
+	return output;
+}
 struct VS_INPUT
 {
 	float3 position : POSITION;
@@ -279,6 +307,36 @@ PS_TEXTURED_DEFFERREDLIGHTING_OUTPUT RendererMesh_PS(VS_OUTPUT input) : SV_TARGE
 	output.depth = float4(input.positionW, 1.0f);
 	
 	output.specular = float4(0.1f, 0.1f, 0.1f, 64.0f / 255.0f);
+	
+	return output;
+}
+
+[earlydepthstencil]
+PS_TEXTURED_DEFFERREDLIGHTING_OUTPUT RendererMesh_Specular_PS(VS_OUTPUT input) : SV_TARGET
+{
+	PS_TEXTURED_DEFFERREDLIGHTING_OUTPUT output;
+	float2 uv1;
+	uv1.x = input.uv.x;
+	uv1.y = 1.0f - input.uv.y;
+	
+	float3 diffuse = gtxtModel_Diffuse.Sample(gWrapSamplerState, uv1).rgb;
+	
+	output.diffuse = float4(diffuse, 1.0f);
+	
+	float3 N = normalize(input.normalW);
+	float3 T = normalize(input.tangentW - dot(input.tangentW, N) * N);
+	float3 B = cross(N, T);
+	float3x3 TBN = float3x3(T, B, N);
+	// 노말맵으로 부터 법선벡터를 가져온다.
+	float3 normal = gtxtModel_Normal.Sample(gWrapSamplerState, uv1).rgb;
+	// -1 와 1사이 값으로 변환한다.
+	normal = 2.0f * normal - 1.0f;
+	float3 normalW = mul(normal, TBN);
+	output.normal = float4(normalW, 1.0f);
+	
+	output.depth = float4(input.positionW, 1.0f);
+	
+	output.specular = gtxtModel_Specular.Sample(gWrapSamplerState, uv1).rgba;
 	
 	return output;
 }

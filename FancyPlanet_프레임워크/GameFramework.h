@@ -72,8 +72,11 @@ private:
 	ID3D12GraphicsCommandList * m_pd3dScreenCommandList;
 	CTextureToFullScreenShader *m_pScreenShader = NULL;
 
+	MiniUIShader* m_pMiniUIShader = NULL;
 	MiniMapShader* m_pMiniMapShader = NULL;
 	ArrowShader* m_pArrowShader = NULL;
+	CrossShader* m_pCrossShader = NULL;
+	NumberShader* m_pNumberShader = NULL;
 
 	ID3D12CommandAllocator      *m_pd3dScreenCommandAllocator;
 
@@ -90,7 +93,6 @@ private:
 	ID3D12Device            *m_pd3dDevice = NULL;
 
 	int                     m_nDivision = 0;
-	bool					qwe = false;
 	XMFLOAT3				 pickRayDirection;
 
 	bool                  **m_ppbDivision = NULL;
@@ -112,8 +114,8 @@ private:
 	UINT                  m_nDsvDescriptorIncrementSize;
 
 	ID3D12CommandAllocator      **m_ppd3dCommandAllocators;
-	ID3D12CommandQueue         *m_pd3dCommandQueue = NULL;
 	ID3D12GraphicsCommandList   **m_ppd3dCommandLists;
+	ID3D12CommandQueue         *m_pd3dCommandQueue = NULL;
 
 	ID3D12Fence               *m_pd3dFence = NULL;
 	UINT64                  m_nFenceValues[m_nSwapChainBuffers];

@@ -253,6 +253,7 @@ void CGameFramework::CreateCommandQueueAndList()
 		hResult = m_pd3dDevice->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_ppd3dCommandAllocators[i], NULL, __uuidof(ID3D12GraphicsCommandList), (void **)&m_ppd3dCommandLists[i]);
 		hResult = m_ppd3dCommandLists[i]->Close();
 	}
+
 	hResult = m_pd3dDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, __uuidof(ID3D12CommandAllocator), (void **)&m_pd3dScreenCommandAllocator);
 	hResult = m_pd3dDevice->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_pd3dScreenCommandAllocator, NULL, __uuidof(ID3D12GraphicsCommandList), (void **)&m_pd3dScreenCommandList);
 	hResult = m_pd3dScreenCommandList->Close();
@@ -313,6 +314,12 @@ void CGameFramework::CreateRenderTargetViews()
 
 void CGameFramework::CreateUIShader()
 {
+	m_pMiniUIShader = new MiniUIShader();
+	m_pMiniUIShader->CreateGraphicsRootSignature(m_pd3dDevice);
+	m_pMiniUIShader->CreateShader(m_pd3dDevice, m_pMiniUIShader->GetGraphicsRootSignature(), 4);
+	m_pMiniUIShader->BuildObjects(m_pd3dDevice, m_pd3dScreenCommandList);
+
+
 	m_pMiniMapShader = new MiniMapShader(m_pPlayer);
 	m_pMiniMapShader->CreateGraphicsRootSignature(m_pd3dDevice);
 	m_pMiniMapShader->CreateShader(m_pd3dDevice, m_pMiniMapShader->GetGraphicsRootSignature(), 4);
@@ -323,6 +330,19 @@ void CGameFramework::CreateUIShader()
 	m_pArrowShader->CreateGraphicsRootSignature(m_pd3dDevice);
 	m_pArrowShader->CreateShader(m_pd3dDevice, m_pArrowShader->GetGraphicsRootSignature(), 4);
 	m_pArrowShader->BuildObjects(m_pd3dDevice, m_pd3dScreenCommandList);
+
+
+	m_pCrossShader = new CrossShader();
+	m_pCrossShader->CreateGraphicsRootSignature(m_pd3dDevice);
+	m_pCrossShader->CreateShader(m_pd3dDevice, m_pCrossShader->GetGraphicsRootSignature(), 4);
+	m_pCrossShader->BuildObjects(m_pd3dDevice, m_pd3dScreenCommandList);
+
+
+	m_pNumberShader = new NumberShader();
+	m_pNumberShader->CreateGraphicsRootSignature(m_pd3dDevice);
+	m_pNumberShader->CreateShader(m_pd3dDevice, m_pNumberShader->GetGraphicsRootSignature(), 4);
+	m_pNumberShader->BuildObjects(m_pd3dDevice, m_pd3dScreenCommandList);
+
 }
 
 void CGameFramework::CreateSwapChainRenderTargetViews()
@@ -499,6 +519,7 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 			cs_packet_pos * my_pos_packet = reinterpret_cast<cs_packet_pos *>(send_buffer);
 			my_pos_packet->size = sizeof(cs_packet_pos);
 			send_wsabuf.len = sizeof(cs_packet_pos);
+			my_pos_packet->animstate = 0;
 			my_pos_packet->type = CS_POS;
 			my_pos_packet->m_pos = GetPlayerMatrix();
 			my_pos_packet->roomnumb = g_my_info.roomnumb;
@@ -517,6 +538,7 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 			my_pos_packet->size = sizeof(cs_packet_pos);
 			send_wsabuf.len = sizeof(cs_packet_pos);
 			my_pos_packet->type = CS_POS;
+			my_pos_packet->animstate = 0;
 			my_pos_packet->m_pos = GetPlayerMatrix();
 			send_wsabuf.buf = reinterpret_cast<char *>(my_pos_packet);
 			g_my_info.pos = GetPlayerMatrix();
@@ -533,6 +555,7 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 			my_pos_packet->size = sizeof(cs_packet_pos);
 			send_wsabuf.len = sizeof(cs_packet_pos);
 			my_pos_packet->type = CS_POS;
+			my_pos_packet->animstate = 0;
 			my_pos_packet->m_pos = GetPlayerMatrix();
 			send_wsabuf.buf = reinterpret_cast<char *>(my_pos_packet);
 			g_my_info.pos = GetPlayerMatrix();
@@ -549,6 +572,7 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 			my_pos_packet->size = sizeof(cs_packet_pos);
 			send_wsabuf.len = sizeof(cs_packet_pos);
 			my_pos_packet->type = CS_POS;
+			my_pos_packet->animstate = 0;
 			my_pos_packet->m_pos = GetPlayerMatrix();
 			send_wsabuf.buf = reinterpret_cast<char *>(my_pos_packet);
 			g_my_info.pos = GetPlayerMatrix();
@@ -674,8 +698,10 @@ void CGameFramework::BuildObjects()
 	ShowCursor(false);
 
 	for (int i = 0; i < NUM_SUBSETS; i++)
+	{
+		m_ppd3dCommandAllocators[i]->Reset();
 		m_ppd3dCommandLists[i]->Reset(m_ppd3dCommandAllocators[i], NULL);
-
+	}
 	m_nDivision = 10;
 
 	m_ppScenes = new CScene*[NUM_SUBSETS];
@@ -720,6 +746,7 @@ void CGameFramework::BuildObjects()
 		m_ppd3dCommandLists[i]->Close();
 	}
 	ID3D12CommandList *ppd3dCommandLists[] = { m_ppd3dCommandLists[0],  m_ppd3dCommandLists[1],  m_ppd3dCommandLists[2], m_ppd3dCommandLists[3] };
+
 	m_pd3dCommandQueue->ExecuteCommandLists(NUM_SUBSETS, ppd3dCommandLists);
 
 	WaitForGpuComplete();
@@ -753,6 +780,12 @@ void CGameFramework::ReleaseObjects()
 	if (m_pScreenShader)
 		delete m_pScreenShader;
 
+	if (m_pMiniUIShader)
+		m_pMiniUIShader->ReleaseObjects();
+
+	if (m_pMiniUIShader)
+		delete m_pMiniUIShader;
+
 	if (m_pMiniMapShader)
 		m_pMiniMapShader->ReleaseObjects();
 
@@ -764,6 +797,18 @@ void CGameFramework::ReleaseObjects()
 
 	if (m_pArrowShader)
 		delete m_pArrowShader;
+
+	if (m_pCrossShader)
+		m_pCrossShader->ReleaseObjects();
+
+	if (m_pCrossShader)
+		delete m_pCrossShader;
+
+	if (m_pNumberShader)
+		m_pNumberShader->ReleaseObjects();
+
+	if (m_pNumberShader)
+		delete m_pNumberShader;
 }
 
 void CGameFramework::ProcessInput()
@@ -772,8 +817,9 @@ void CGameFramework::ProcessInput()
 	static UCHAR pKeysBuffer[256];
 	bool bProcessedByScene = false;
 	bool IsInput = false;
+	bool bPlayerKeySwitch = m_pPlayer->GetKeySwitch();
 
-	if (m_pPlayer->GetKeySwitch())
+	if (bPlayerKeySwitch)
 	{
 		if (GetKeyboardState(pKeysBuffer) && m_ppScenes[CHARACTER])
 			bProcessedByScene = m_ppScenes[CHARACTER]->ProcessInput(pKeysBuffer);
@@ -794,16 +840,18 @@ void CGameFramework::ProcessInput()
 			{
 
 				dwDirection |= DIR_FORWARD;
-
+				g_player_info[g_myid].anim_state = 1;
+				g_my_info.anim_state = 1;
 				m_ppScenes[CHARACTER]->ChangeAnimation(1);
 				IsInput = true;
 				keystate = true;
 
 			}
-			if (pKeysBuffer[83] & 0xF0)
+			else if (pKeysBuffer[83] & 0xF0)
 			{
 				dwDirection |= DIR_BACKWARD;
-
+				g_player_info[g_myid].anim_state = -1;
+				g_my_info.anim_state = -1;
 				m_ppScenes[CHARACTER]->ChangeAnimation(-1);
 				IsInput = true;
 				keystate = true;
@@ -811,7 +859,8 @@ void CGameFramework::ProcessInput()
 			else if (pKeysBuffer[65] & 0xF0)
 			{
 				dwDirection |= DIR_LEFT;
-
+				g_player_info[g_myid].anim_state = 2;
+				g_my_info.anim_state = 2;
 				m_ppScenes[CHARACTER]->ChangeAnimation(2);
 				IsInput = true;
 				keystate = true;
@@ -819,7 +868,8 @@ void CGameFramework::ProcessInput()
 			else if (pKeysBuffer[68] & 0xF0)
 			{
 				dwDirection |= DIR_RIGHT;
-
+				g_player_info[g_myid].anim_state = 3;
+				g_my_info.anim_state = 3;
 				m_ppScenes[CHARACTER]->ChangeAnimation(3);
 				IsInput = true;
 				keystate = true;
@@ -834,6 +884,8 @@ void CGameFramework::ProcessInput()
 			{
 				if (m_pPlayer->IsOnGround()) {
 					m_pPlayer->SetFallVelocity(100);
+					g_player_info[g_myid].anim_state = 1;
+					g_my_info.anim_state = 1;
 					m_ppScenes[CHARACTER]->ChangeAnimation(1);
 					IsInput = true;
 					keystate = true;
@@ -844,11 +896,13 @@ void CGameFramework::ProcessInput()
 			if (true) // GetCapture() == m_hWnd [카메라 고정]
 			{
 				GetCursorPos(&ptCursorPos);
-
 				if (GetCapture() == m_hWnd)
 				{
 					m_ppScenes[CHARACTER]->ChangeAnimation(4);
+					CalculatePickRay(ptCursorPos.x, ptCursorPos.y);
+					m_ppScenes[OBEJECT]->SetProjectile(xmf3PickDirection);
 				}
+
 				cxDelta = (float)(ptCursorPos.x - m_ptOldCursorPos.x) / 3.0f;
 				cyDelta = (float)(ptCursorPos.y - m_ptOldCursorPos.y) / 3.0f;
 				SetCursorPos(m_ptOldCursorPos.x, m_ptOldCursorPos.y);
@@ -858,20 +912,17 @@ void CGameFramework::ProcessInput()
 			{
 				if (cxDelta || cyDelta)
 				{
-					//if (pKeysBuffer[VK_RBUTTON] & 0xF0)
-					//	m_pPlayer->Rotate(cyDelta, 0.0f, -cxDelta);
-					//else
-					//	m_pPlayer->Rotate(cyDelta, cxDelta, 0.0f);
 					m_pPlayer->Rotate(cyDelta / 4, 0.0f, -cxDelta / 4);
 					m_pPlayer->Rotate(cyDelta / 4, cxDelta / 4, 0.0f);
 				}
 				if (dwDirection)
-					m_pPlayer->Move(dwDirection, 20.0f * m_GameTimer.GetTimeElapsed(), true);
+					m_pPlayer->Move(dwDirection, 120.0f * m_GameTimer.GetTimeElapsed(), true);
 			}
 		}
 	}
 	if (!IsInput)
 		m_ppScenes[CHARACTER]->ChangeAnimation(0);
+
 
 
 	if (keystate == true && istime == true)
@@ -881,17 +932,16 @@ void CGameFramework::ProcessInput()
 		my_pos_packet->size = sizeof(cs_packet_pos);
 		send_wsabuf.len = sizeof(cs_packet_pos);
 		my_pos_packet->type = CS_POS;
+		my_pos_packet->animstate = g_my_info.anim_state;
 		my_pos_packet->m_pos = GetPlayerMatrix();
 		send_wsabuf.buf = reinterpret_cast<char *>(my_pos_packet);
 		g_my_info.pos = GetPlayerMatrix();
 		DWORD iobyte;
-		//printf("packet: Move Character! %f , %f , %f\n", my_pos_packet->m_pos._41, my_pos_packet->m_pos._42, my_pos_packet->m_pos._43);
 		WSASend(g_mysocket, &send_wsabuf, 1, &iobyte, 0, NULL, NULL);
 		istime = false;
 	}
 	m_pPlayer->Update(m_GameTimer.GetTimeElapsed());
 }
-
 void CGameFramework::CalculatePickRay(int MousePosX, int MousePosY)
 {
 	XMFLOAT3 xmf3Vec;
@@ -968,9 +1018,6 @@ void CGameFramework::PrepareFrame()
 	{
 		HRESULT hResult = m_ppd3dCommandAllocators[i]->Reset();
 		hResult = m_ppd3dCommandLists[i]->Reset(m_ppd3dCommandAllocators[i], NULL);
-
-		m_ppd3dCommandLists[i]->ClearDepthStencilView(m_d3dDsvDepthStencilBufferCPUHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, NULL);
-
 	}
 	m_pd3dScreenCommandAllocator->Reset();
 	m_pd3dScreenCommandList->Reset(m_pd3dScreenCommandAllocator, NULL);
@@ -979,31 +1026,38 @@ void CGameFramework::PrepareFrame()
 
 	for (int i = 0; i < NUM_SUBSETS; i++)
 	{
-		::SynchronizeResourceTransition(m_ppd3dCommandLists[i], m_ppd3dRenderTargetBuffers[i], D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_RENDER_TARGET);
-
-		m_ppd3dCommandLists[i]->ClearRenderTargetView(m_pd3dRtvRenderTargetBufferCPUHandles[i], pfClearColor, 0, NULL);
-		m_ppd3dCommandLists[i]->OMSetRenderTargets(4, m_pd3dRtvRenderTargetBufferCPUHandles, TRUE, &m_d3dDsvDepthStencilBufferCPUHandle);
+		::SynchronizeResourceTransition(m_pd3dScreenCommandList, m_ppd3dRenderTargetBuffers[i], D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_RENDER_TARGET);
 	}
+	for (int i = 0; i < NUM_SUBSETS; i++)
+	{
+		m_pd3dScreenCommandList->ClearRenderTargetView(m_pd3dRtvRenderTargetBufferCPUHandles[i], pfClearColor, 0, NULL);
+	}
+	m_pd3dScreenCommandList->ClearDepthStencilView(m_d3dDsvDepthStencilBufferCPUHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, NULL);
+	m_ppd3dCommandLists[0]->OMSetRenderTargets(4, m_pd3dRtvRenderTargetBufferCPUHandles, TRUE, &m_d3dDsvDepthStencilBufferCPUHandle);
+	m_ppd3dCommandLists[1]->OMSetRenderTargets(4, m_pd3dRtvRenderTargetBufferCPUHandles, TRUE, &m_d3dDsvDepthStencilBufferCPUHandle);
+	m_ppd3dCommandLists[2]->OMSetRenderTargets(4, m_pd3dRtvRenderTargetBufferCPUHandles, TRUE, &m_d3dDsvDepthStencilBufferCPUHandle);
+	m_ppd3dCommandLists[3]->OMSetRenderTargets(4, m_pd3dRtvRenderTargetBufferCPUHandles, TRUE, &m_d3dDsvDepthStencilBufferCPUHandle);
 }
 
 void CGameFramework::RenderUI()
 {
+	m_pMiniUIShader->Render(m_pd3dScreenCommandList, m_pCamera);
 	m_pArrowShader->Render(m_pd3dScreenCommandList, m_pCamera);
 	m_pMiniMapShader->Render(m_pd3dScreenCommandList, m_pCamera);
+	m_pCrossShader->Render(m_pd3dScreenCommandList, m_pCamera);
+	m_pNumberShader->Render(m_pd3dScreenCommandList, m_pCamera);
 }
 
 void CGameFramework::FrameAdvance()
 {
-	// PhysX Update
 	if (m_pPxScene)
 	{
 		m_pPxScene->simulate(1 / 10.f);
 		m_pPxScene->fetchResults(true);
 	}
-	if (qwe) {
-		m_ppScenes[PHYSX]->AnimateObjects(0, m_pCamera);
-		m_ppScenes[CHARACTER]->AnimateObjects(0, m_pCamera);
-	}
+
+	m_ppScenes[PHYSX]->AnimateObjects(0, m_pCamera);
+	m_ppScenes[OBEJECT]->AnimateObjects(0, m_pCamera);
 
 	m_GameTimer.Tick(0.0f);
 	ProcessInput();
@@ -1015,14 +1069,12 @@ void CGameFramework::FrameAdvance()
 		PxVec3(m_pPlayer->GetCamera()->GetPosition().x, m_pPlayer->GetCamera()->GetPosition().y, m_pPlayer->GetCamera()->GetPosition().z),
 		PxVec3(m_pPlayer->GetCamera()->GetUpVector().x, m_pPlayer->GetCamera()->GetUpVector().y, m_pPlayer->GetCamera()->GetUpVector().z),
 		PxVec3(
-			m_pPlayer->GetCamera()->GetPosition().x + m_pPlayer->GetLookVector().x,
-			m_pPlayer->GetCamera()->GetPosition().y + m_pPlayer->GetLookVector().y,
-			m_pPlayer->GetCamera()->GetPosition().z + m_pPlayer->GetLookVector().z
+			m_pPlayer->GetCamera()->GetPosition().x + m_pPlayer->GetCamera()->GetLookVector().x,
+			m_pPlayer->GetCamera()->GetPosition().y + m_pPlayer->GetCamera()->GetLookVector().y,
+			m_pPlayer->GetCamera()->GetPosition().z + m_pPlayer->GetCamera()->GetLookVector().z
 		));
 
-	m_pPlayer->GetCamera()->GetPitch();
-
-	m_ppScenes[CHARACTER]->ModelsSetPosition(g_player_info);
+	m_ppScenes[CHARACTER]->ModelsSetPosition(g_player_info, g_myid);
 
 	for (int i = 0; i < NUM_SUBSETS; i++)
 	{
@@ -1030,18 +1082,16 @@ void CGameFramework::FrameAdvance()
 	}
 	WaitForMultipleObjects(NUM_SUBSETS, m_workerFinishedRenderFrame, TRUE, INFINITE);
 
-	ID3D12CommandList *ppd3dCommandLists[] = { m_ppd3dCommandLists[0],  m_ppd3dCommandLists[1],  m_ppd3dCommandLists[2], m_ppd3dCommandLists[3] };
+	ID3D12CommandList *ppd3dCommandLists[] = { m_pd3dScreenCommandList, m_ppd3dCommandLists[0],  m_ppd3dCommandLists[1],  m_ppd3dCommandLists[2], m_ppd3dCommandLists[3] };
 	for (int i = 0; i < NUM_COMMANDLIST; i++)
 		HRESULT hResult = m_ppd3dCommandLists[i]->Close();
-	m_pd3dCommandQueue->ExecuteCommandLists(NUM_SUBSETS, ppd3dCommandLists);
-	WaitForGpuComplete();
 
 	HRESULT hResult = m_pd3dScreenCommandList->Close();
-	for (int i = 0; i < NUM_COMMANDLIST; i++)
-	{
-		HRESULT hResult = m_ppd3dCommandAllocators[i]->Reset();
-		hResult = m_ppd3dCommandLists[i]->Reset(m_ppd3dCommandAllocators[i], NULL);
-	}
+
+	m_pd3dCommandQueue->ExecuteCommandLists(NUM_SUBSETS + 1, ppd3dCommandLists);
+	
+	WaitForGpuComplete();
+
 	hResult = m_pd3dScreenCommandAllocator->Reset();
 	hResult = m_pd3dScreenCommandList->Reset(m_pd3dScreenCommandAllocator, NULL);
 
@@ -1057,40 +1107,21 @@ void CGameFramework::FrameAdvance()
 	m_pd3dScreenCommandList->OMSetRenderTargets(1, &m_pd3dRtvSwapChainBackBufferCPUHandles[m_nSwapChainBufferIndex], TRUE, &m_d3dDsvDepthStencilBufferCPUHandle);
 	//원래대로 백버퍼에 그린다.
 
-	RenderUI();
+	//RenderUI();
 
 	m_pScreenShader->Render(m_pd3dScreenCommandList, m_pCamera);
-#ifdef _WITH_PLAYER_TOP
-	m_pd3dCommandList->ClearDepthStencilView(m_d3dDsvDepthStencilBufferCPUHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, NULL);
-#endif
 
 	::SynchronizeResourceTransition(m_pd3dScreenCommandList, m_ppd3dSwapChainBackBuffers[m_nSwapChainBufferIndex], D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 
+	hResult = m_pd3dScreenCommandList->Close();
+
 	ID3D12CommandList *ppd3dScreenCommandLists[] = { m_pd3dScreenCommandList };
 
-	hResult = m_pd3dScreenCommandList->Close();
 	m_pd3dCommandQueue->ExecuteCommandLists(1, ppd3dScreenCommandLists);
 	WaitForGpuComplete();
 
-	for (int i = 0; i < NUM_COMMANDLIST; i++)
-		HRESULT hResult = m_ppd3dCommandLists[i]->Close();
-
-#ifdef _WITH_PRESENT_PARAMETERS
-	DXGI_PRESENT_PARAMETERS dxgiPresentParameters;
-	dxgiPresentParameters.DirtyRectsCount = 0;
-	dxgiPresentParameters.pDirtyRects = NULL;
-	dxgiPresentParameters.pScrollRect = NULL;
-	dxgiPresentParameters.pScrollOffset = NULL;
-	m_pdxgiSwapChain->Present1(1, 0, &dxgiPresentParameters);
-#else
-#ifdef _WITH_SYNCH_SWAPCHAIN
-	m_pdxgiSwapChain->Present(1, 0);
-#else
 	m_pdxgiSwapChain->Present(0, 0);
-#endif
-#endif
 
-	//	m_nSwapChainBufferIndex = m_pdxgiSwapChain->GetCurrentBackBufferIndex();
 	MoveToNextFrame();
 
 	m_GameTimer.GetFrameRate(m_pszFrameRate + 12, 37);
@@ -1223,19 +1254,21 @@ void CGameFramework::ProcessPacket(char *ptr)
 		if (id == g_myid) { // 내 아이디와 패킷의 아이디가 같다면? == 위의 조건문을 돌았다 == 내 정보
 			g_my_info.pos = my_packet->m_pos; // 내 플레이어 구조체에 패킷의 좌표값을 저장합니다.
 			g_my_info.roomnumb = my_packet->roomnumb;
-			printf("My Roomnumber is [%d]\n", g_my_info.roomnumb);
-			m_ppScenes[CHARACTER]->ModelsSetPosition(g_player_info);
+			g_my_info.anim_state = my_packet->animstate;
+			g_player_info[id].anim_state = my_packet->animstate;
+			printf("animstate : %d\n", g_my_info.anim_state);
 
 		}
 		else {
 			g_player_info[id].m_isconnected = true;
 			g_player_info[id].pos = my_packet->m_pos;
 			g_player_info[id].roomnumb = my_packet->roomnumb;
+			g_player_info[id].anim_state = my_packet->animstate;
 			printf("Other Client [%d] is Connect to Server", id);
-			m_ppScenes[CHARACTER]->ModelsSetPosition(g_player_info);
+			printf("animstate : %d\n", g_my_info.anim_state);
+
 		}
 
-		//FrameAdvance();
 
 		break;
 	}
@@ -1246,8 +1279,7 @@ void CGameFramework::ProcessPacket(char *ptr)
 		int id = my_packet->id;
 
 		g_player_info[id].pos = my_packet->m_pos;
-		//printf("packet:other's Move Character! ID: %d, %f , %f , %f\n", id, g_player_info[id].pos._41, g_player_info[id].pos._42, g_player_info[id].pos._43);
-
+		g_player_info[id].anim_state = my_packet->animstate;
 		break;
 	}
 
@@ -1332,6 +1364,7 @@ void CGameFramework::ProcessPacket(char *ptr)
 			my_pos_packet->type = CS_POS;
 			my_pos_packet->m_pos = GetPlayerMatrix();
 			my_pos_packet->roomnumb = g_my_info.roomnumb;
+			my_pos_packet->animstate = g_my_info.anim_state;
 			g_my_info.pos = GetPlayerMatrix();
 			DWORD iobyte;
 			printf("packet: Move Character! %f , %f , %f\n", my_pos_packet->m_pos._41, my_pos_packet->m_pos._42, my_pos_packet->m_pos._43);
@@ -1355,25 +1388,8 @@ void CGameFramework::ProcessPacket(char *ptr)
 
 		break;
 	}
-	/*case SC_CHAT:
-	{
-	sc_packet_chat *my_packet = reinterpret_cast<sc_packet_chat *>(ptr);
-	int other_id = my_packet->id;
-	if (other_id == g_myid) {
-	wcsncpy_s(player.message, my_packet->message, 256);
-	player.message_time = GetTickCount();
-	}
-	else if (other_id < NPC_START) {
-	wcsncpy_s(skelaton[other_id].message, my_packet->message, 256);
-	skelaton[other_id].message_time = GetTickCount();
-	}
-	else {
-	wcsncpy_s(npc[other_id - NPC_START].message, my_packet->message, 256);
-	npc[other_id - NPC_START].message_time = GetTickCount();
-	}
-	break;
 
-	}*/
+
 	default:
 	{
 		printf("Unknown PACKET type [%d]\n", ptr[1]);
@@ -1381,6 +1397,8 @@ void CGameFramework::ProcessPacket(char *ptr)
 	}
 	}
 }
+
+
 
 
 void CGameFramework::ReadPacket(SOCKET sock)

@@ -152,7 +152,7 @@ float4 PSTextureToFullScreen(float4 position : SV_POSITION) : SV_Target
 	float3 diffuse = gtxtDiffuse.Load(uvm).xyz;
 	float4 specular = gtxtSpecular.Load(uvm);
 
-	float4 cllumination = Lighting(pos, normal, diffuse*1.5f, specular.x, specular.a*255.0f);
+	float4 cllumination = Lighting(pos, normal, diffuse, specular.x, specular.a*255.0f);
 
 	return (cllumination);
 }

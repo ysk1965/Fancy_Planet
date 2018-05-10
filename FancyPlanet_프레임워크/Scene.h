@@ -4,6 +4,8 @@
 #include "protocol.h"
 
 #define MESH_NUM 1
+#define MESH_NUM2 6
+
 class CMesh;
 
 class CScene
@@ -31,13 +33,13 @@ public:
 	virtual void AnimateObjects(float fTimeElapsed, CCamera *pCamera) = 0;
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera = NULL) = 0;
 	virtual void SkyBoxRender(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera) {}
-	virtual void ModelsSetPosition(const array <PLAYER_INFO, MAX_USER>& PlayerArray) {};
+	virtual void ModelsSetPosition(const array <PLAYER_INFO, MAX_USER>& PlayerArray, int myid) {};
 	virtual void ReleaseUploadBuffers();
 	virtual void ReleaseShaderVariables() = 0;
 	virtual void SetProjectile(XMFLOAT3& xmf3Direction)
 	{
 	};
-	virtual void ChangeAnimation(int newState) = 0;
+	virtual void ChangeAnimation(int newState) {};
 	virtual CHeightMapTerrain * GetTerrain() { return NULL; };
 	void FrustumCulling(CCamera *pCamera);
 
@@ -69,7 +71,6 @@ public:
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera = NULL);
 	virtual void ReleaseUploadBuffers();
 	virtual void ReleaseShaderVariables() {};
-	virtual void ChangeAnimation(int newState) {}
 	virtual CHeightMapTerrain * GetTerrain()
 	{
 		return m_pTerrain;
@@ -101,7 +102,6 @@ public:
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera = NULL);
 	virtual void ReleaseUploadBuffers();
 	virtual void ReleaseShaderVariables() {};
-	virtual void ChangeAnimation(int newState) {}
 	virtual void SetProjectile(XMFLOAT3& xmf3Direction);
 
 	PxPhysics*  GetPhysicsSDK(void) { return m_pPxPhysicsSDK; }
@@ -131,8 +131,7 @@ public:
 	void UpdateShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList);
 	void CopyObject(CAnimationObject* pSample, CAnimationObject** ppObjects, UINT nSize);
 	CAnimationObject* FindMeshRendererObject(CAnimationObject* pRootObject, UINT nRendererMesh);
-	virtual void ModelsSetPosition(const array <PLAYER_INFO, MAX_USER>& PlayerArray);
-	virtual void SetProjectile(XMFLOAT3& xmf3Direction);
+	virtual void ModelsSetPosition(const array <PLAYER_INFO, MAX_USER>& PlayerArray, int myid);
 
 	CharacterScene(PxPhysics* pPxPhysicsSDK, PxScene* pPxScene, PxControllerManager* pPxControllerManager, PxCooking* pCooking);
 	~CharacterScene();
@@ -163,24 +162,27 @@ public:
 	virtual void BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList);
 	virtual void ReleaseObjects();
 	virtual void AnimateObjects(float fTimeElapsed, CCamera *pCamera);
-
+	
+	virtual void SetProjectile(XMFLOAT3& xmf3Direction);
 	virtual void ReleaseShaderVariables();
 	virtual ID3D12RootSignature *CreateGraphicsRootSignature(ID3D12Device *pd3dDevice);
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera = NULL);
 	virtual void ReleaseUploadBuffers();
-	void CreateShaderVariables(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList);
-	void UpdateShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList);
-	virtual void ChangeAnimation(int newState) {}
 
 	ObjectScene(PxPhysics* pPxPhysicsSDK, PxScene* pPxScene, PxControllerManager* pPxControllerManager, PxCooking* pCooking);
 	~ObjectScene();
+
+	CPhysXObject **m_ppSampleObjects = NULL;
 private:
 	UINT m_nObjects = 0;
 
-	ID3D12Resource * m_pd3dcbGameObjects = NULL;
-	CB_GAMEOBJECT_INFO				*m_pcbMappedGameObjects = NULL;
+	CPhysXObject** m_ppShell = NULL;
 
-	std::vector<CGameObject*> m_pShell;
+	CPhysXObject** m_ppAsteroid0 = NULL;
+	CPhysXObject** m_ppAsteroid1 = NULL;
+	CPhysXObject** m_ppAsteroid2 = NULL;
+	CPhysXObject** m_ppAsteroid3 = NULL;
+	CPhysXObject** m_ppAsteroid4 = NULL;
 
-	CGameObject * *m_ppSampleObjects = NULL;
+	CPhysXObject **m_ppPxObjects = NULL;
 };

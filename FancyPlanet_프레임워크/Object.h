@@ -1,7 +1,6 @@
 #pragma once
 #include "Mesh.h"
 #include "Camera.h"
-#include "EASTL\vector.h"
 #include <chrono>
 
 enum 
@@ -48,12 +47,12 @@ enum
 
 class CShader;
 class CAnimationObject;
-class AnimationFactors;
+class AnimationFactors; 
+class CPhysXObject;
 
 struct CB_GAMEOBJECT_INFO
 {
-	XMFLOAT4X4						m_xmf4x4World;
-	UINT									m_nMaterial;
+	XMFLOAT4X4						m_xmf4x4World; 
 };
 struct SRVROOTARGUMENTINFO
 {
@@ -213,14 +212,14 @@ public:
 class CGameObject
 {
 public:
-	CGameObject(int nMeshes); 
+	CGameObject(int nMeshes, UINT nObjects);
 	CGameObject(int nMeshes, ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList
-		, ID3D12RootSignature *pd3dGraphicsRootSignature, TCHAR *pstrFileName);
+		, ID3D12RootSignature *pd3dGraphicsRootSignature, TCHAR *pstrFileName, UINT nObjects);
 	virtual ~CGameObject();
 
 private:
 	int								m_nReferences = 0;
-	
+	UINT							m_nObjects = 0;
 public:
 	void AddRef() 
 	{
@@ -246,8 +245,8 @@ public:
 	D3D12_GPU_DESCRIPTOR_HANDLE		m_d3dCbvGPUDescriptorHandle;
 
 protected:
-	ID3D12Resource					*m_pd3dcbGameObject = NULL;
-	CB_GAMEOBJECT_INFO				*m_pcbMappedGameObject = NULL;
+	ID3D12Resource					*m_pd3dcbGameObjects = NULL; // 샘플 오브젝트만 이값을 가지고 있다.
+	CB_GAMEOBJECT_INFO				*m_pcbMappedGameObjects = NULL;
 
 	bool m_bRendererMesh = false;
 
@@ -262,17 +261,16 @@ public:
 	void SetCbvGPUDescriptorHandlePtr(UINT64 nCbvGPUDescriptorHandlePtr) { m_d3dCbvGPUDescriptorHandle.ptr = nCbvGPUDescriptorHandlePtr; }
 	D3D12_GPU_DESCRIPTOR_HANDLE GetCbvGPUDescriptorHandle() { return(m_d3dCbvGPUDescriptorHandle); }
 
-	virtual ID3D12Resource *CreateShaderVariables(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList);
+	virtual void CreateShaderVariables(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList);
 	virtual void ReleaseShaderVariables();
-	virtual void UpdateShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList);
+	virtual void UpdateShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList, UINT RootParameterIndex, CPhysXObject** ppObjects);
 	virtual void UpdateAnimationVariables(ID3D12GraphicsCommandList *pd3dCommandList);
 	virtual void OnPrepareRender();
 	virtual void SetRootParameter(ID3D12GraphicsCommandList *pd3dCommandList, int iRootParameterIndex);
 	
 	virtual void Animate(float fTimeElapsed); 
-	void Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera, UINT nInstances);
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, int iRootParameterIndex, CCamera *pCamera = NULL);
-	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, int iRootParameterIndex, CCamera *pCamera, UINT nInstances);
+	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, int iRootParameterIndex, CCamera *pCamera, UINT nInstances, CPhysXObject** ppObjects);
 	virtual void BuildMaterials(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList) { }
 	virtual void ReleaseUploadBuffers();
 	virtual void ChangeAnimation(int newState) {};
@@ -285,7 +283,12 @@ public:
 	XMFLOAT3 GetLook();
 	XMFLOAT3 GetUp();
 	XMFLOAT3 GetRight();
-	
+
+	void Move(float fSpeed)
+	{
+		SetPosition(m_xmf4x4World._41 + m_Direction.x * fSpeed, m_xmf4x4World._42 + m_Direction.y * fSpeed, m_xmf4x4World._43 + m_Direction.z * fSpeed);
+	}
+
 	virtual void SetPosition(float x, float y, float z);
 	virtual void SetPosition(XMFLOAT3& xmf3Position);
 	virtual void SetScale(float x, float y, float z);
@@ -313,9 +316,9 @@ private:
 	UINT m_nRendererMesh = 0;
 	float m_RndererScale = 1;
 public:
-	void Move(float fSpeed)
+	CPlayer * GetPlayer()
 	{
-		SetPosition(m_xmf4x4ToParentTransform._41 + m_Direction.x * fSpeed, m_xmf4x4ToParentTransform._42 + m_Direction.y * fSpeed, m_xmf4x4ToParentTransform._43 + m_Direction.z * fSpeed);
+		return m_pPlayer;
 	}
 	void SetRendererMeshNum(UINT index)
 	{
@@ -353,9 +356,10 @@ public:
 	{
 		return m_RndererScale;
 	}
+
 	CAnimationObject(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature,
 		UINT nMeshes, TCHAR *pstrFileName, AnimationController* pAnimationController);
-	CAnimationObject(int nMeshes) : CGameObject(nMeshes)
+	CAnimationObject(int nMeshes) : CGameObject(nMeshes, 0)
 	{
 		m_xmf4x4ToRootTransform = Matrix4x4::Identity();
 		m_xmf4x4ToParentTransform = Matrix4x4::Identity();
@@ -517,23 +521,25 @@ protected:
 	CMesh *m_pMesh = NULL;
 	CShader *m_pShader = NULL;
 public:
-	CPhysXObject(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature);
+	CPhysXObject(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature, UINT nObjects);
+	CPhysXObject(int nMeshes, ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList,
+		ID3D12RootSignature *pd3dGraphicsRootSignature, TCHAR *pstrFileName, UINT nObjects);
+	CPhysXObject(int nMeshes);
+
 	virtual ~CPhysXObject();
 
-	virtual void SetMesh(CMesh *pMesh);
-	virtual void SetShader(CShader *pShader);
-
 	virtual void SetPosition(XMFLOAT3& xmf3Position);
+	void UpdateDirectPos(XMFLOAT3 DirShooting);
 	virtual void SetRotation(XMFLOAT4& pxmf4Quaternion);
-	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera = NULL);
 
 	void shooting(float fpower);
+	void GetPhysXPos();
 	void AddForceAtLocalPos(PxRigidBody & body, const PxVec3 & force, const PxVec3 & pos, PxForceMode::Enum mode, bool wakeup);
 	void AddForceAtPosInternal(PxRigidBody & body, const PxVec3 & force, const PxVec3 & pos, PxForceMode::Enum mode, bool wakeup);
 
 
 	// Px
-	virtual void	BuildObject(PxPhysics* pPxPhysics, PxScene* pPxScene, PxMaterial *pPxMaterial, XMFLOAT3 vScale, PxCooking* pCooking);
+	virtual void	BuildObject(PxPhysics* pPxPhysics, PxScene* pPxScene, PxMaterial *pPxMaterial, XMFLOAT3 vScale, PxCooking* pCooking, const char* name);
 	void			PhysXUpdate(const float& fTimeDelta);
 	virtual int		Update(const float& fTimeDelta);
 };

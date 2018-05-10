@@ -8,7 +8,6 @@ cbuffer cbCameraInfo : register(b1)
 struct INSTANCEDGAMEOBJECTINFO
 {
 	matrix		gmtxWorld;
-	uint		gnMaterial;
 };
 
 SamplerState gWrapSamplerState : register(s0);
@@ -50,7 +49,7 @@ VS_OUTPUT Object_VS(VS_INPUT input, uint nInstanceID : SV_InstanceID)
 {
 	VS_OUTPUT output;
 
-	//matrix qwe = matrix(10, 0, 0, 0, 0, 10, 0, 0, 0, 0, 10, 0, 100, 500, 100, 1);
+	matrix qwe = matrix(10, 0, 0, 0, 0, 10, 0, 0, 0, 0, 10, 0, 100, 500, 100, 1);
 
 	output.positionW = (float3)mul(float4(input.position, 1.0f), gObjectInfos[nInstanceID].gmtxWorld);
 	output.position = mul(mul(float4(output.positionW, 1.0f), gmtxView), gmtxProjection);

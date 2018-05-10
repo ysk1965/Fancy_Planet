@@ -237,7 +237,7 @@ void CFirstPersonCamera::Update(XMFLOAT3& xmf3LookAt, float fTimeElapsed)
 {
 	if (m_pPlayer)
 	{
-		m_xmf3Position = XMFLOAT3(m_pPlayer->GetPosition().x, m_pPlayer->GetPosition().y+11, m_pPlayer->GetPosition().z);
+		m_xmf3Position = XMFLOAT3(m_pPlayer->GetPosition().x, m_pPlayer->GetPosition().y+16.5, m_pPlayer->GetPosition().z);
 		//XMFLOAT4X4 xmf4x4Rotate = Matrix4x4::Identity();
 		//XMFLOAT3 xmf3Right = m_pPlayer->GetRightVector();
 		//XMFLOAT3 xmf3Up = m_pPlayer->GetUpVector();

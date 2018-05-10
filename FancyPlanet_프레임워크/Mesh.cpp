@@ -730,7 +730,7 @@ CHeightMapGridMesh::CHeightMapGridMesh(PxPhysics* pPxPhysicsSDK, PxScene* pPxSce
 
 	//PhysXRigidActor = 
 	//PhysXTriangleMesh = pCooking->createTriangleMesh(meshDesc, pPxPhysicsSDK->getPhysicsInsertionCallback());
-	PhysXMeterial = pPxPhysicsSDK->createMaterial(0.5f, 0.5f, 0.2f);
+	PhysXMeterial = pPxPhysicsSDK->createMaterial(0.8f, 0.8f, 0.4f);
 
 
 	m_nVertices = nWidth * nLength;
@@ -800,6 +800,8 @@ CHeightMapGridMesh::CHeightMapGridMesh(PxPhysics* pPxPhysicsSDK, PxScene* pPxSce
 
 	PxHeightFieldGeometry hfGeom(heightField, PxMeshGeometryFlags(), m_xmf3Scale.y, m_xmf3Scale.x, m_xmf3Scale.z);
 	PxShape* hfShape = hfActor->createShape(hfGeom, *PhysXMeterial);
+
+	hfActor->setName("HeightField");
 	
 	pPxScene->addActor(*hfActor);
 
