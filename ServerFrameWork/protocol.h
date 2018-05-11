@@ -6,8 +6,8 @@
 
 using namespace DirectX;
 
-#define	BUF_SIZE				1024
-#define	WM_SOCKET				WM_USER + 1
+#define   BUF_SIZE            1024
+#define   WM_SOCKET            WM_USER + 1
 
 #define MAX_BUFF_SIZE   1024
 #define MAX_PACKET_SIZE  255
@@ -30,16 +30,17 @@ using namespace DirectX;
 #define CS_READY  2
 #define CS_LEFT  3
 #define CS_RIGHT    4
-#define CS_CHAT		5
-#define CS_SHOT		10
+#define CS_CHAT      5
+#define CS_SHOT      10
 
 #define SC_POS           1
 #define SC_PUT_PLAYER    2
 #define SC_REMOVE_PLAYER 3
-#define SC_READY		4
+#define SC_READY      4
 #define SC_SCENE_CHANGE 5
+#define SC_GRAVITY_CHANGE 7
 #define SC_TIME 6
-#define SC_SHOT	10
+#define SC_SHOT   10
 
 #pragma pack (push, 1)
 
@@ -47,8 +48,8 @@ struct cs_packet_pos {
 	unsigned char size;
 	unsigned char type;
 	unsigned short id;
-	int animstate = 0;
-	int roomnumb = 0;
+	char animstate = 0;
+
 	XMFLOAT4X4 m_pos;
 };
 
@@ -62,7 +63,6 @@ struct cs_packet_ready {
 struct cs_packet_chat {
 	unsigned char size;
 	unsigned char type;
-	int roomnumb = 0;
 	wchar_t message[MAX_STR_SIZE];
 };
 
@@ -70,8 +70,7 @@ struct sc_packet_pos {
 	unsigned char size;
 	unsigned char type;
 	unsigned short id;
-	int animstate = 0;
-	int roomnumb = 0;
+	char animstate = 0;
 	XMFLOAT4X4 m_pos;
 };
 
@@ -79,8 +78,8 @@ struct sc_packet_put_player {
 	unsigned char size;
 	unsigned char type;
 	unsigned short id;
-	int animstate;
-	int roomnumb;
+	char animstate;
+	unsigned char roomnumb;
 	XMFLOAT4X4 m_pos;
 };
 struct sc_packet_remove_player {
@@ -93,7 +92,6 @@ struct sc_packet_ready {
 	unsigned char size;
 	unsigned char type;
 	unsigned short id;
-	int roomnumb = 0;
 	bool state;
 };
 
@@ -101,18 +99,21 @@ struct sc_packet_chat {
 	unsigned char size;
 	unsigned char type;
 	unsigned short id;
-	int roomnumb = 0;
+
 	wchar_t message[MAX_STR_SIZE];
 };
 struct cs_packet_shot {
 	unsigned char size;
 	unsigned char type;
-	unsigned short id;	
+	unsigned short id;
+	unsigned char roomnumb;
+	char animstate;
 };
 struct sc_packet_shot {
 	unsigned char size;
 	unsigned char type;
 	unsigned short id;
+	char animstate;
 };
 
 struct sc_packet_scene_change
@@ -120,7 +121,6 @@ struct sc_packet_scene_change
 	unsigned char size;
 	unsigned char type;
 	unsigned short id;
-	int roomnumb = 0;
 	int scenestate = 0;
 
 };
@@ -129,10 +129,15 @@ struct sc_packet_time
 {
 	unsigned char size;
 	unsigned char type;
-	int roomnumb = 0;
 	float m_ftime = 0;
 };
 
+struct sc_gravity_change
+{
+	unsigned char size;
+	unsigned char type;
+	unsigned char gravity_state;
+};
 // basic unsigned types
 typedef unsigned short USHORT;
 typedef unsigned short WORD;
@@ -145,7 +150,7 @@ typedef unsigned char  BYTE;
 typedef struct PLAYER_INFO
 {
 	int state;          // 상태
-	int anim_state;     // 애니메이션 상태
+	char anim_state;     // 애니메이션 상태
 	int attr;           // 객체 속성(종류)
 	XMFLOAT4X4 pos;          // 포지션값
 	int xv, yv;        // 속도값
