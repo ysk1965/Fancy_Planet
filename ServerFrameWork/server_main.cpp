@@ -17,11 +17,16 @@ using namespace DirectX;
 using namespace std;
 
 HANDLE gh_iocp;
-float g_fTime = 0.0;
-float g_time = 0;
-
-int g_roomnumb[5] = { 0 };
-int g_ridx = 0;
+float g_fTime = 0.f;
+float g_time = 0.f;
+int g_gamestate = 0;
+std::chrono::system_clock::time_point start;
+struct Room
+{
+	int roomnumb;
+	int gamestate;
+	int user;
+};
 struct EXOVER {
 	WSAOVERLAPPED m_over;
 	char m_iobuf[MAX_BUFF_SIZE];
@@ -38,6 +43,7 @@ public:
 	int m_packet_size;  // 지금 조립하고 있는 패킷의 크기
 	int	m_prev_packet_size; // 지난번 recv에서 완성되지 않아서 저장해 놓은 패킷의 앞부분의 크기
 	int m_roomnumb;
+	int m_health;
 	bool m_isready;
 	int m_scene_state;
 	char m_packet[MAX_PACKET_SIZE];
@@ -45,12 +51,13 @@ public:
 
 	Client()
 	{
-		bool m_isready = false;
+		m_isready = false;
 		m_isconnected = false;
-		int m_roomnumb = 0;
-		int m_scene_state = 0;
+		m_roomnumb = 0;
+		m_scene_state = 0;
+		m_health = 100;
 		m_pos = {};
-	
+
 		ZeroMemory(&m_rxover.m_over, sizeof(WSAOVERLAPPED));
 		m_rxover.m_wsabuf.buf = m_rxover.m_iobuf;
 		m_rxover.m_wsabuf.len = sizeof(m_rxover.m_wsabuf.buf);
@@ -95,6 +102,62 @@ void SendPacket(int id, void *ptr)
 	if (0 != res) {
 		int err_no = WSAGetLastError();
 		if (WSA_IO_PENDING != err_no) error_display("Send Error! ", err_no);
+	}
+}
+void timer_thread()
+{
+	while (1)
+	{
+
+		std::chrono::milliseconds ms;
+		ms = std::chrono::duration_cast<std::chrono::milliseconds>(chrono::system_clock::now() - start);
+		if (g_gamestate == 1)
+		{
+			if (ms.count() > 1000)
+			{
+				g_time += 1.f;
+				sc_packet_time time_packet;
+				time_packet.size = sizeof(sc_packet_time);
+				time_packet.type = SC_TIME;
+				time_packet.m_ftime = g_time;
+
+				printf("GAME TIME : %f \n", time_packet.m_ftime);
+				for (int i = 0; i < MAX_USER; ++i)
+				{
+					if (true == g_clients[i].m_isconnected)//접속중이고
+						SendPacket(i, &time_packet);//패킷 전송
+				}
+				if (g_time == 30.f)
+				{
+					sc_gravity_change gravity_packet;
+
+					gravity_packet.size = sizeof(sc_gravity_change);
+					gravity_packet.type = SC_GRAVITY_CHANGE;
+					gravity_packet.gravity_state = rand() % 3 + 1;
+					printf("중력 변경! %d\n", gravity_packet.gravity_state);
+					for (int i = 0; i < MAX_USER; ++i)
+					{
+						if (true == g_clients[i].m_isconnected)//접속중이고
+							SendPacket(i, &gravity_packet);//패킷 전송
+					}
+				}
+				start = chrono::system_clock::now();
+			}
+			if (g_time == 60.f)
+			{
+				g_time = 0;
+				g_gamestate = 0;
+				sc_packet_scene_change scene_packet;
+				scene_packet.size = sizeof(sc_packet_scene_change);
+				scene_packet.type = SC_SCENE_CHANGE;
+				scene_packet.scenestate = 0;
+				for (int i = 0; i < MAX_USER; ++i)
+				{
+					if (true == g_clients[i].m_isconnected)//접속중이고
+						SendPacket(i, &scene_packet);//패킷 전송
+				}
+			}
+		}
 	}
 }
 void DisconnectPlayer(int id)
@@ -156,9 +219,9 @@ void ProcessPacket(int id, char *packet)
 
 		for (int i = 0; i < MAX_USER; ++i)
 			if (true == g_clients[i].m_isconnected)
-					SendPacket(i, &ready_packet);
+				SendPacket(i, &ready_packet);
 
-		int ready_player = 0; 
+		int ready_player = 0;
 		for (int i = 0; i < MAX_USER; ++i)
 		{
 			if (true == g_clients[i].m_isconnected)
@@ -166,19 +229,23 @@ void ProcessPacket(int id, char *packet)
 				if (g_clients[i].m_isready == true)
 				{
 					ready_player += 1;
-					if (ready_player == 2)
-					{
-						for (int j = 0; j < MAX_USER; ++j)
-						{
-							sc_packet_scene_change start_packet;
-							start_packet.type = SC_SCENE_CHANGE;
-							start_packet.size = sizeof(start_packet);
-							start_packet.scenestate = 1;
-							start_packet.id = j;
-							SendPacket(j, &start_packet);
-							printf("게임시작 패킷 전송. \n ");
-						}
-					}
+				}
+			}
+		}
+		if (ready_player == 2)
+		{
+			for (int i = 0; i < MAX_USER; ++i)
+			{
+				if (g_clients[i].m_isready == true)
+				{
+					sc_packet_scene_change start_packet;
+					start_packet.type = SC_SCENE_CHANGE;
+					start_packet.size = sizeof(start_packet);
+					start_packet.scenestate = 1;
+					start_packet.id = i;
+					SendPacket(i, &start_packet);
+					printf("게임시작 패킷 전송. \n ");
+					g_gamestate = 1;
 				}
 			}
 		}
@@ -187,32 +254,59 @@ void ProcessPacket(int id, char *packet)
 	case CS_POS:
 	{
 		cs_packet_pos *p = reinterpret_cast<cs_packet_pos *>(packet);
-		int roomnumb = p->roomnumb;
+		//int roomnumb = p->roomnumb;
 		//printf("Move Client's Room Number: %d\n", roomnumb);
 		sc_packet_pos pos_packet;
 
 		g_clients[id].m_pos = p->m_pos;
 		g_clients[id].m_animstate = p->animstate;
 		pos_packet.id = id;
-	
+
 		pos_packet.type = SC_POS;
 		pos_packet.m_pos = g_clients[id].m_pos;
 		pos_packet.animstate = g_clients[id].m_animstate;
 		pos_packet.size = sizeof(sc_packet_pos);
+
+		for (int i = 0; i < MAX_USER; ++i)
+		{
+			if (true == g_clients[i].m_isconnected)//접속중이고
+				if (i != id)//이 패킷을 보낸 클라가 아니며
+
+					SendPacket(i, &pos_packet);//패킷 전송
+		}
+		break;
+	}
+	case CS_SHOT:
+	{
+		cs_packet_shot *p = reinterpret_cast<cs_packet_shot *>(packet);
+
+		sc_packet_shot shot_packet;
+
+		g_clients[id].m_animstate = p->animstate;
+
+		shot_packet.type = SC_SHOT;
+		shot_packet.animstate = g_clients[id].m_animstate;
+		shot_packet.size = sizeof(sc_packet_shot);
 		//printf("Client [ %d ] Move To : %f %f %f\n", id, p->m_pos._41, p->m_pos._42, p->m_pos._43);
 		for (int i = 0; i < MAX_USER; ++i)
 		{
 			if (true == g_clients[i].m_isconnected)//접속중이고
 				if (i != id)//이 패킷을 보낸 클라가 아니며
-					//if (g_clients[i].m_roomnumb == roomnumb)// 패킷 보낸 클라와 같은 방인 클라에게만
-						SendPacket(i, &pos_packet);//패킷 전송
+				{
+					SendPacket(i, &shot_packet);//패킷 전송
+					printf("%d 클라이언트가 공격했다!\n", id);
+				}
 		}
 		break;
 	}
 
 	default:
+	{
+
 		printf("Unkown Packet Type from Client [%d]\n", id);
 		return;
+	}
+
 	}
 }
 
@@ -223,6 +317,7 @@ void worker_thread()
 {
 	while (true)
 	{
+		Sleep(1);
 		unsigned long io_size;
 		unsigned long long iocp_key; // 64 비트 integer , 우리가 64비트로 컴파일해서 64비트
 		WSAOVERLAPPED *over;
@@ -273,7 +368,7 @@ void worker_thread()
 			StartRecv(key);
 		}
 		else {  // Send 후처리
-			//cout << "WT:A packet was sent to Client[" << key << "]\n";
+				//cout << "WT:A packet was sent to Client[" << key << "]\n";
 			delete p_over;
 		}
 	}
@@ -342,7 +437,7 @@ void accept_thread()	//새로 접속해 오는 클라이언트를 IOCP로 넘기
 		g_clients[id].m_pos._42 = 212.0f;
 		p.m_pos = g_clients[id].m_pos;
 		p.roomnumb = g_clients[id].m_roomnumb;
-		
+
 
 		for (int i = 0; i < MAX_USER; ++i)//모든 클라이언트를 훑을겁니다.
 		{
@@ -362,29 +457,7 @@ void accept_thread()	//새로 접속해 오는 클라이언트를 IOCP로 넘기
 
 	}
 }
-void timer_thread()
-{
-	while (1)
-	{
-		CTimeMgr::GetInstance()->SetTime();//타임 갱신
-		g_fTime +=  1.0f*CTimeMgr::GetInstance()->GetTime();
-	
 
-			sc_packet_time time_packet;
-
-			time_packet.size = sizeof(sc_packet_time);
-			time_packet.type = SC_TIME;
-			time_packet.m_ftime = g_fTime;
-			//printf("GAME TIME : %f \n", time_packet.m_ftime);
-			for (int i = 0; i < MAX_USER; ++i)
-			{
-				if (true == g_clients[i].m_isconnected)//접속중이고
-					SendPacket(i, &time_packet);//패킷 전송
-			}
-
-		
-	}
-}
 int main()
 {
 	vector <thread> w_threads;
@@ -394,11 +467,11 @@ int main()
 	for (int i = 0; i < 4; ++i) w_threads.push_back(thread{ worker_thread }); // 4인 이유는 쿼드코어 CPU 라서
 																			  //CreateAcceptThreads();
 	thread a_thread{ accept_thread };
-
 	CTimeMgr::GetInstance()->InitTime();
-//	thread t_thread{ timer_thread };
+
+	thread t_thread{ timer_thread };
 
 	for (auto& th : w_threads) th.join();
 	a_thread.join();
-	//t_thread.join();
+	t_thread.join();
 }
