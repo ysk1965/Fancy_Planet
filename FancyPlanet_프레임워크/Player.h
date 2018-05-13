@@ -7,6 +7,12 @@
 #define DIR_UP					0x10
 #define DIR_DOWN				0x20
 
+#define FLAGE_NUM			3
+
+#define JUMP 0
+#define LAUNCH 1
+#define ETC 2
+
 #include "Object.h"
 #include "Camera.h"
 
@@ -45,20 +51,57 @@ protected:
 	float						m_fSpeed = 1.0f;
 	float						m_fTimeDelta = 0.0f;
 
+	bool						m_bJumpState = false;
 	//////////////////////////
 	//		   PhysX		//
 	//////////////////////////
 	PxScene*					m_pScene;
 private:
+	XMFLOAT2				m_xmf2MousPos;
+	bool						m_bFalgs[FLAGE_NUM];
+	DWORD                m_dwStart[FLAGE_NUM];
 	PxController * m_pPxCharacterController;
 
 	CGameObject* pSphereMesh; // 충돌박스 입히기
 	FLOAT m_fFallvelocity;
 	FLOAT m_fFallAcceleration;
 	CAnimationObject* m_pRenderObject;
-
+	bool m_bAttackedState = false;
 	bool m_bKeySwitch = true;
 public:
+	void SetMousPos(const float& fX, const float& fY)
+	{
+		m_xmf2MousPos.x = fX;
+		m_xmf2MousPos.y = fY;
+	}
+	XMFLOAT2& GetMousPos()
+	{
+		return m_xmf2MousPos;
+	}
+	bool GetFlag(int index)
+	{
+		return m_bFalgs[index];
+	}
+	void SetFlag(int Index, bool bflag)
+	{
+		m_bFalgs[Index] = bflag;
+	}
+	DWORD& GetStartTime(int Index)
+	{
+		return m_dwStart[Index];
+	}
+	void SetStartTime(const DWORD& dwTime, int Index)
+	{
+		m_dwStart[Index] = dwTime;
+	}
+	bool GetJumpState()
+	{
+		return m_bJumpState;
+	}
+	void SetJumpState(bool bJumpState)
+	{
+		m_bJumpState = bJumpState;
+	}
 	void SetKeySwitch(bool bKeySwitch)
 	{
 		m_bKeySwitch = bKeySwitch;
@@ -71,11 +114,22 @@ public:
 	{
 		m_pRenderObject = pRenderObject;
 	}
+	CAnimationObject* GetRenderObject()
+	{
+		return m_pRenderObject;
+	}
 	XMFLOAT4X4& GetPlayerWorldTransform()
 	{
 		return m_pRenderObject->m_xmf4x4World;
 	}
-
+	bool GetBeAttackedState()
+	{
+		return m_bAttackedState;
+	}
+	void SetBeAttackedStateToFalse()
+	{
+		m_bAttackedState = false;
+	}
 	void AddForceAtLocalPos(PxRigidBody& body, const PxVec3& force, const PxVec3& pos, PxForceMode::Enum mode, bool wakeup = true);
 	void AddForceAtPosInternal(PxRigidBody& body, const PxVec3& force, const PxVec3& pos, PxForceMode::Enum mode, bool wakeup);
 
@@ -106,19 +160,19 @@ public:
 		, void *pContext = NULL, int nMeshes = 1);
 	virtual ~CPlayer();
 
-	XMFLOAT3 GetPosition() 
+	XMFLOAT3 GetPosition()
 	{
-		return(m_xmf3Position); 
+		return(m_xmf3Position);
 	}
-	XMFLOAT3 GetLookVector() 
+	XMFLOAT3 GetLookVector()
 	{
-		return(m_xmf3Look); 
+		return(m_xmf3Look);
 	}
 	XMFLOAT3 GetUpVector()
 	{
-		return(m_xmf3Up); 
+		return(m_xmf3Up);
 	}
-	XMFLOAT3 GetRightVector() 
+	XMFLOAT3 GetRightVector()
 	{
 		return(m_xmf3Right);
 	}
@@ -148,6 +202,7 @@ public:
 	void Move(float fxOffset = 0.0f, float fyOffset = 0.0f, float fzOffset = 0.0f);
 	void Rotate(float x, float y, float z);
 
+	void UpdateJumpState();
 	void Update(float fTimeElapsed);
 
 	virtual void OnPlayerUpdateCallback(float fTimeElapsed);
@@ -164,13 +219,13 @@ public:
 	CCamera *OnChangeCamera(DWORD nNewCameraMode, DWORD nCurrentCameraMode);
 
 	virtual CCamera *ChangeCamera(DWORD nNewCameraMode, float fTimeElapsed);
-	
+
 	virtual void OnPrepareRender();
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera = NULL);
 	virtual void Animate(float fTimeElapsed);
 
 protected:
-	ID3D12Resource					*m_pd3dcbPlayer = NULL;
+	ID3D12Resource * m_pd3dcbPlayer = NULL;
 	CB_PLAYER_INFO					*m_pcbMappedPlayer = NULL;
 };
 

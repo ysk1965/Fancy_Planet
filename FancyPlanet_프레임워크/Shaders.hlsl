@@ -27,6 +27,7 @@ struct INSTANCEDGAMEOBJECTINFO
 Texture2D gtxtTerrainBaseTexture : register(t4);
 Texture2D gtxtTerrainDetailTexture : register(t5);
 Texture2D gtxtTerrainNormalMap : register(t6);
+
 SamplerState gWrapSamplerState : register(s0);
 SamplerState gClampSamplerState : register(s1);
 
@@ -188,15 +189,16 @@ VS_TEXTURED_OUTPUT VSTextured(VS_TEXTURED_INPUT input)
 	return(output);
 }
 
+Texture2D gtxtSkyBox : register(t9);
 
-
-Texture2D<float4> gtxtSkyBox : register(t9);
-
-
-float4 PSSkyBox(VS_TEXTURED_OUTPUT input) : SV_TARGET
+PS_TEXTURED_DEFFERREDLIGHTING_OUTPUT PSSkyBox(VS_TEXTURED_OUTPUT input) : SV_TARGET
 {
-	float4 cColor = gtxtSkyBox.Sample(gClampSamplerState, input.uv);
+	PS_TEXTURED_DEFFERREDLIGHTING_OUTPUT output;
 
-	return(cColor);
+	output.diffuse = float4(gtxtSkyBox.Sample(gClampSamplerState, input.uv).xyz, 1.0f);
+
+	output.depth = float4(input.positionW, 1.0f);
+
+	return(output);
 }
 

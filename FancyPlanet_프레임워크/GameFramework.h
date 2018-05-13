@@ -18,7 +18,7 @@ enum
 	TERRAIN,
 	PHYSX,
 	CHARACTER,
-	OBEJECT
+	OBJECT
 };
 using namespace std;
 
@@ -56,12 +56,15 @@ public:
 	void SpaceDivision();
 	void RenderSubset(int iIndex);
 	void RenderUI();
+	void NotifyIdleState();
+	void CollisionCheckByBullet();
+	void SendBulletPacket();
 
 	void OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
 	void OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
 	LRESULT CALLBACK OnProcessingWindowMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
 
-	void CalculatePickRay(int MousePosX, int MousePosY);
+	void CalculatePickRay(const XMFLOAT2& xmf2MousePos);
 
 	XMFLOAT4X4& GetPlayerMatrix()
 	{
@@ -76,7 +79,10 @@ private:
 	MiniMapShader* m_pMiniMapShader = NULL;
 	ArrowShader* m_pArrowShader = NULL;
 	CrossShader* m_pCrossShader = NULL;
-	NumberShader* m_pNumberShader = NULL;
+	ScoreBoardShader* m_pScoreboardShader = NULL;
+	TimeNumberShader* m_pTimeNumberShader = NULL;
+	GravityPointerShader* m_pGravityPointerShader = NULL;
+	HPNumberShader* m_pHPNumberShader = NULL;
 
 	ID3D12CommandAllocator      *m_pd3dScreenCommandAllocator;
 
@@ -185,11 +191,16 @@ private:
 	int      g_myid; // 내 아이디
 	PLAYER_INFO g_my_info;
 	array <PLAYER_INFO, MAX_USER> g_player_info;
+	std::chrono::system_clock::time_point bulletstart;
 
 	bool keystate = false;
-
+	std::chrono::system_clock::time_point idlestatepoint;
 	std::chrono::system_clock::time_point start;
+	std::chrono::system_clock::time_point mousestart;
 	bool istime = false;
+
+	float g_fgametime;// 게임시간.
+	float g_fgravity; //중력 세기.
 public:
 	void ProcessPacket(char *ptr);
 	void ReadPacket(SOCKET sock);

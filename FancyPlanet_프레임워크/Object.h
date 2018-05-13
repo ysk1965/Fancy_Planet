@@ -11,7 +11,8 @@ enum
 	NOT_CYCLE = 3, // 한번만 재생되고 마지막 모습에서 정지
 	CAN_BACK_PLAY = 4, // 뒤로도 재생이 필요한 애니메이션(구현)
 	CYCLE_NEED_TIME = 5, // 싸이클이 필요하지만 처음과 끝이 같지 않는 애니메이션 
-	CONTINUOUS_PLAYBACK = 6 // 재생이 끊기지 않고, 다음 인덱스 애니메이션이 자동 실행
+	CONTINUOUS_PLAYBACK = 6, // 재생이 끊기지 않고, 다음 인덱스 애니메이션이 자동 실행
+	PLAY_NOW = 7
 };
 
 enum
@@ -116,7 +117,7 @@ public:
 
 	AnimationController(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, UINT nAnimation);
 	~AnimationController();
-	void GetCurrentFrame();
+	void GetCurrentFrame(bool bStop);
 	SRT Interpolate(int iBoneNum, float fRendererScale);
 	SRT Interpolate(int iBoneNum, float fTime, float fRendererScale);
 	void SetToParentTransforms();
@@ -232,8 +233,10 @@ public:
 	}
 
 public:
-	XMFLOAT3					m_Direction;
+	XMFLOAT3						m_Direction;
 	bool							m_bActive = true;
+	bool							m_bShooted = false;
+	DWORD							m_dAlivedtime = 0;
 
 	XMFLOAT4X4						m_xmf4x4World;
 
@@ -251,6 +254,7 @@ protected:
 	bool m_bRendererMesh = false;
 
 	UINT							m_nDrawType = -1;
+	UINT							m_nBoneType = 0;
 public:
 	void SetMesh(int nIndex, CMesh *pMesh);
 	void SetShader(CShader *pShader);
@@ -327,6 +331,10 @@ public:
 	int GetRendererMeshNum()
 	{
 		return m_nRendererMesh;
+	}
+	int GetBoneType()
+	{
+		return m_nBoneType;
 	}
 	void SetRendererMesh(bool b)
 	{
@@ -529,7 +537,7 @@ public:
 	virtual ~CPhysXObject();
 
 	virtual void SetPosition(XMFLOAT3& xmf3Position);
-	void UpdateDirectPos(XMFLOAT3 DirShooting);
+	void UpdateDirectPos(const XMFLOAT3& xmf3Position, const XMFLOAT3& DirShooting);
 	virtual void SetRotation(XMFLOAT4& pxmf4Quaternion);
 
 	void shooting(float fpower);

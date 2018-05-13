@@ -12,30 +12,37 @@ class CScene
 {
 public:
 	CScene(PxPhysics* pPxPhysicsSDK, PxScene* pPxScene, PxControllerManager* pPxControllerManager, PxCooking* pCooking);
+	CScene() {};
 	~CScene();
 
 	bool OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
 	bool OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
+	CAnimationObject* FindBoneTypeObject(CAnimationObject* pRootObject, UINT nBoneTypeMesh);
 
 	virtual void BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList);
 	virtual void ReleaseObjects();
 
-	virtual ID3D12RootSignature *CreateGraphicsRootSignature(ID3D12Device *pd3dDevice) = 0;
-	ID3D12RootSignature *GetGraphicsRootSignature() 
+	virtual pair<XMFLOAT3, XMFLOAT3> GetProjectilePos();
+
+	virtual ID3D12RootSignature *CreateGraphicsRootSignature(ID3D12Device *pd3dDevice) { return NULL; };
+	ID3D12RootSignature *GetGraphicsRootSignature()
 	{
 		return(m_pd3dGraphicsRootSignature);
 	}
 	void SetGraphicsRootSignature(ID3D12GraphicsCommandList *pd3dCommandList)
 	{
-		pd3dCommandList->SetGraphicsRootSignature(m_pd3dGraphicsRootSignature); 
+		pd3dCommandList->SetGraphicsRootSignature(m_pd3dGraphicsRootSignature);
 	}
 	bool ProcessInput(UCHAR *pKeysBuffer);
-	virtual void AnimateObjects(float fTimeElapsed, CCamera *pCamera) = 0;
+	virtual void AnimateObjects(float fTimeElapsed, CCamera *pCamera) {};
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera = NULL) = 0;
 	virtual void SkyBoxRender(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera) {}
 	virtual void ModelsSetPosition(const array <PLAYER_INFO, MAX_USER>& PlayerArray, int myid) {};
 	virtual void ReleaseUploadBuffers();
-	virtual void ReleaseShaderVariables() = 0;
+	virtual void ReleaseShaderVariables() {};
+	virtual void SetVectorProjectile(XMFLOAT3 xmf3Position, XMFLOAT3 xmf3Direction) {
+
+	};
 	virtual void SetProjectile(XMFLOAT3& xmf3Direction)
 	{
 	};
@@ -55,7 +62,7 @@ protected:
 	//=====================================================
 
 	ID3D12RootSignature			*m_pd3dGraphicsRootSignature = NULL;
-	
+
 	int									m_nDivision = 0;
 };
  
@@ -91,28 +98,25 @@ private:
 };
 
 //마지막순서로 그려줘야할 씬
-class PhysXScene : public CScene
+class UIScene : public CScene
 {
 public:
 	virtual void BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList);
 	virtual void ReleaseObjects();
 
-	virtual ID3D12RootSignature *CreateGraphicsRootSignature(ID3D12Device *pd3dDevice);
-	virtual void AnimateObjects(float fTimeElapsed, CCamera *pCamera);
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera = NULL);
-	virtual void ReleaseUploadBuffers();
-	virtual void ReleaseShaderVariables() {};
-	virtual void SetProjectile(XMFLOAT3& xmf3Direction);
 
-	PxPhysics*  GetPhysicsSDK(void) { return m_pPxPhysicsSDK; }
-	PxScene*	GetPhysicsScene(void) { return m_pPxScene; }
-	PxControllerManager* GetPxControllerManager(void) { return m_pPxControllerManager; }
-	PxMaterial* GetPxMaterial(void) { return m_pPxMaterial; }
-	PxCooking*  GetCooking(void) { return m_pCooking; }
-
-	PhysXScene(PxPhysics* pPxPhysicsSDK, PxScene* pPxScene, PxControllerManager* pPxControllerManager, PxCooking* pCooking);
-	~PhysXScene();
+	UIScene();
+	~UIScene();
 private:
+	MiniUIShader * m_pMiniUIShader = NULL;
+	MiniMapShader* m_pMiniMapShader = NULL;
+	ArrowShader* m_pArrowShader = NULL;
+	CrossShader* m_pCrossShader = NULL;
+	ScoreBoardShader* m_pScoreboardShader = NULL;
+	TimeNumberShader* m_pTimeNumberShader = NULL;
+	GravityBarShader* m_pGravityBarShader = NULL;
+	GravityPointerShader* m_pGravityPointerShader = NULL;
 };
 
 //애니메이션이 들어간 오브젝트를 그리는 씬
@@ -162,6 +166,9 @@ public:
 	virtual void BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList);
 	virtual void ReleaseObjects();
 	virtual void AnimateObjects(float fTimeElapsed, CCamera *pCamera);
+
+	virtual pair<XMFLOAT3, XMFLOAT3> GetProjectilePos();
+	virtual void SetVectorProjectile(XMFLOAT3 xmf3Position, XMFLOAT3 xmf3Direction);
 	
 	virtual void SetProjectile(XMFLOAT3& xmf3Direction);
 	virtual void ReleaseShaderVariables();
@@ -173,8 +180,11 @@ public:
 	~ObjectScene();
 
 	CPhysXObject **m_ppSampleObjects = NULL;
+	DWORD		m_fReloadtime = 0;
 private:
 	UINT m_nObjects = 0;
+
+	vector<CPhysXObject*> m_vBullet;
 
 	CPhysXObject** m_ppShell = NULL;
 

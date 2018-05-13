@@ -171,6 +171,6 @@ float4 Lighting(float3 vPosition, float3 vNormal, float3 vDiffuse, float vMateri
 	cColor += (gcGlobalAmbientLight * gMaterials[vMaterial].m_cAmbient);
 	cColor.a = gMaterials[vMaterial].m_cDiffuse.a;
 
-	return(lerp(float4(vDiffuse, 1.0f), cColor, 1.0f));
+	return(lerp(float4(vDiffuse, 1.0f), cColor, 0.5f));
 }
 

@@ -14,7 +14,27 @@ CScene::CScene(PxPhysics* pPxPhysicsSDK, PxScene* pPxScene, PxControllerManager*
 CScene::~CScene()
 {
 }
+CAnimationObject* CScene::FindBoneTypeObject(CAnimationObject* pRootObject, UINT nBoneTypeMesh)
+{
+	stack<CAnimationObject*> FrameStack;
 
+	FrameStack.push(pRootObject);
+
+	while (!FrameStack.empty())
+	{
+		CAnimationObject* pFindObject = FrameStack.top();
+		FrameStack.pop();
+
+		if (pFindObject->IsRendererMesh() && nBoneTypeMesh == pFindObject->GetBoneType())
+			return pFindObject;
+
+		if (pFindObject->m_pChild)
+			FrameStack.push(pFindObject->m_pChild);
+		if (pFindObject->m_pSibling)
+			FrameStack.push(pFindObject->m_pSibling);
+	}
+	return NULL;
+}
 void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList)
 {
 }
@@ -23,6 +43,10 @@ void CScene::ReleaseObjects()
 {
 }
 
+pair<XMFLOAT3, XMFLOAT3> CScene::GetProjectilePos()
+{
+	return pair<XMFLOAT3, XMFLOAT3>();
+}
 
 void CScene::ReleaseUploadBuffers()
 {
@@ -71,7 +95,7 @@ void TerrainAndSkyBoxScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12Graphic
 	XMFLOAT4 xmf4Color(0.0f, 0.5f, 0.0f, 0.0f);
 
 	m_pTerrain = new CHeightMapTerrain(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature,
-		_T("../Assets/Image/Terrain/HeightMap2.raw"), 257, 257, 257, 257, xmf3Scale, xmf4Color,
+		_T("../Assets/Image/Terrain/HeightMap3.raw"), 257, 257, 257, 257, xmf3Scale, xmf4Color,
 		m_pPxPhysicsSDK, m_pPxScene, m_pPxControllerManager, m_pCooking);
 
 	m_pSkyBox = new CSkyBox(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
@@ -201,14 +225,14 @@ ID3D12RootSignature *TerrainAndSkyBoxScene::CreateGraphicsRootSignature(ID3D12De
 	pd3dSamplerDescs[0].RegisterSpace = 0;
 	pd3dSamplerDescs[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
-	pd3dSamplerDescs[1].Filter = D3D12_FILTER_ANISOTROPIC;
-	pd3dSamplerDescs[1].AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-	pd3dSamplerDescs[1].AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-	pd3dSamplerDescs[1].AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+	pd3dSamplerDescs[1].Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
+	pd3dSamplerDescs[1].AddressU = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+	pd3dSamplerDescs[1].AddressV = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+	pd3dSamplerDescs[1].AddressW = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
 	pd3dSamplerDescs[1].MipLODBias = 0;
-	pd3dSamplerDescs[1].MaxAnisotropy = 2;
-	pd3dSamplerDescs[1].ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
-	pd3dSamplerDescs[1].MinLOD = D3D12_FLOAT32_MAX;
+	pd3dSamplerDescs[1].MaxAnisotropy = 1;
+	pd3dSamplerDescs[1].ComparisonFunc = D3D12_COMPARISON_FUNC_ALWAYS;
+	pd3dSamplerDescs[1].MinLOD = 0;
 	pd3dSamplerDescs[1].MaxLOD = D3D12_FLOAT32_MAX;
 	pd3dSamplerDescs[1].ShaderRegister = 1;
 	pd3dSamplerDescs[1].RegisterSpace = 0;
@@ -241,143 +265,31 @@ ID3D12RootSignature *TerrainAndSkyBoxScene::CreateGraphicsRootSignature(ID3D12De
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-PhysXScene::PhysXScene(PxPhysics* pPxPhysicsSDK, PxScene* pPxScene, PxControllerManager* pPxControllerManager, PxCooking* pCooking)
-	: CScene(pPxPhysicsSDK, pPxScene, pPxControllerManager, pCooking)
+UIScene::UIScene()
 {
 }
-PhysXScene::~PhysXScene()
+UIScene::~UIScene()
 {
 	ReleaseObjects();
 }
-void PhysXScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList)
+void UIScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList)
 {
-	m_pd3dGraphicsRootSignature = CreateGraphicsRootSignature(pd3dDevice);
+	m_pGravityBarShader = new GravityBarShader();
+	m_pGravityBarShader->CreateGraphicsRootSignature(pd3dDevice);
+	m_pGravityBarShader->CreateShader(pd3dDevice, m_pGravityBarShader->GetGraphicsRootSignature(), 4);
+	m_pGravityBarShader->BuildObjects(pd3dDevice, pd3dCommandList);
 }
-void PhysXScene::ReleaseObjects()
+void UIScene::ReleaseObjects()
 {
+	if (m_pGravityBarShader)
+		m_pGravityBarShader->ReleaseObjects();
+
+	if (m_pGravityBarShader)
+		delete m_pGravityBarShader;
 }
-void PhysXScene::ReleaseUploadBuffers()
+void UIScene::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera)
 {
-}
-void PhysXScene::AnimateObjects(float fTimeElapsed, CCamera *pCamera)
-{
-}
-void PhysXScene::SetProjectile(XMFLOAT3& xmf3Direction)
-{
-}
-void PhysXScene::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera)
-{
-	pd3dCommandList->SetGraphicsRootSignature(m_pd3dGraphicsRootSignature);
-
-	pCamera->SetViewportsAndScissorRects(pd3dCommandList);
-	pCamera->UpdateShaderVariables(pd3dCommandList);
-
-	FrustumCulling(pCamera);
-
-	//for (int i = 0; i < m_nShaders; i++)
-	//{
-	//	if (m_ppShaders[i])
-	//		m_ppShaders[i]->Render(pd3dCommandList, pCamera);
-	//}
-}
-ID3D12RootSignature *PhysXScene::CreateGraphicsRootSignature(ID3D12Device *pd3dDevice)
-{
-	ID3D12RootSignature *pd3dGraphicsRootSignature = NULL;
-
-	D3D12_DESCRIPTOR_RANGE pd3dDescriptorRanges[3];
-
-	pd3dDescriptorRanges[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_CBV;
-	pd3dDescriptorRanges[0].RegisterSpace = 0;
-	pd3dDescriptorRanges[0].NumDescriptors = 1;
-	pd3dDescriptorRanges[0].BaseShaderRegister = 2;
-	pd3dDescriptorRanges[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
-
-	pd3dDescriptorRanges[1].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-	pd3dDescriptorRanges[1].NumDescriptors = 1;
-	pd3dDescriptorRanges[1].BaseShaderRegister = 7;
-	pd3dDescriptorRanges[1].RegisterSpace = 0;
-	pd3dDescriptorRanges[1].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
-
-	pd3dDescriptorRanges[2].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-	pd3dDescriptorRanges[2].NumDescriptors = 1;
-	pd3dDescriptorRanges[2].BaseShaderRegister = 8;
-	pd3dDescriptorRanges[2].RegisterSpace = 0;
-	pd3dDescriptorRanges[2].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
-
-	D3D12_ROOT_PARAMETER pd3dRootParameters[5];
-
-	pd3dRootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
-	pd3dRootParameters[0].Descriptor.ShaderRegister = 0; //Player
-	pd3dRootParameters[0].Descriptor.RegisterSpace = 0;
-	pd3dRootParameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
-
-	pd3dRootParameters[1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
-	pd3dRootParameters[1].Descriptor.ShaderRegister = 1; //Camera
-	pd3dRootParameters[1].Descriptor.RegisterSpace = 0;
-	pd3dRootParameters[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
-
-	pd3dRootParameters[2].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-	pd3dRootParameters[2].DescriptorTable.NumDescriptorRanges = 1; //Object
-	pd3dRootParameters[2].DescriptorTable.pDescriptorRanges = &pd3dDescriptorRanges[0];
-	pd3dRootParameters[2].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
-
-	pd3dRootParameters[3].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-	pd3dRootParameters[3].DescriptorTable.NumDescriptorRanges = 1;
-	pd3dRootParameters[3].DescriptorTable.pDescriptorRanges = &pd3dDescriptorRanges[1];//Test
-	pd3dRootParameters[3].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
-
-	pd3dRootParameters[4].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-	pd3dRootParameters[4].DescriptorTable.NumDescriptorRanges = 1;
-	pd3dRootParameters[4].DescriptorTable.pDescriptorRanges = &pd3dDescriptorRanges[2];//Test
-	pd3dRootParameters[4].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
-
-
-	D3D12_STATIC_SAMPLER_DESC d3dSamplerDescs[2];
-	::ZeroMemory(&d3dSamplerDescs, sizeof(D3D12_STATIC_SAMPLER_DESC));
-
-	d3dSamplerDescs[0].Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
-	d3dSamplerDescs[0].AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-	d3dSamplerDescs[0].AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-	d3dSamplerDescs[0].AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-	d3dSamplerDescs[0].MipLODBias = 0;
-	d3dSamplerDescs[0].MaxAnisotropy = 1;
-	d3dSamplerDescs[0].ComparisonFunc = D3D12_COMPARISON_FUNC_ALWAYS;
-	d3dSamplerDescs[0].MinLOD = 0;
-	d3dSamplerDescs[0].MaxLOD = D3D12_FLOAT32_MAX;
-	d3dSamplerDescs[0].ShaderRegister = 0;
-	d3dSamplerDescs[0].RegisterSpace = 0;
-	d3dSamplerDescs[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
-
-	d3dSamplerDescs[1].Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
-	d3dSamplerDescs[1].AddressU = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
-	d3dSamplerDescs[1].AddressV = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
-	d3dSamplerDescs[1].AddressW = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
-	d3dSamplerDescs[1].MipLODBias = 0;
-	d3dSamplerDescs[1].MaxAnisotropy = 1;
-	d3dSamplerDescs[1].ComparisonFunc = D3D12_COMPARISON_FUNC_ALWAYS;
-	d3dSamplerDescs[1].MinLOD = 0;
-	d3dSamplerDescs[1].MaxLOD = D3D12_FLOAT32_MAX;
-	d3dSamplerDescs[1].ShaderRegister = 1;
-	d3dSamplerDescs[1].RegisterSpace = 0;
-	d3dSamplerDescs[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
-
-	D3D12_ROOT_SIGNATURE_FLAGS d3dRootSignatureFlags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT | D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS | D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS | D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS;
-	D3D12_ROOT_SIGNATURE_DESC d3dRootSignatureDesc;
-	::ZeroMemory(&d3dRootSignatureDesc, sizeof(D3D12_ROOT_SIGNATURE_DESC));
-	d3dRootSignatureDesc.NumParameters = _countof(pd3dRootParameters);
-	d3dRootSignatureDesc.pParameters = pd3dRootParameters;
-	d3dRootSignatureDesc.NumStaticSamplers = 2;
-	d3dRootSignatureDesc.pStaticSamplers = d3dSamplerDescs;
-	d3dRootSignatureDesc.Flags = d3dRootSignatureFlags;
-
-	ID3DBlob *pd3dSignatureBlob = NULL;
-	ID3DBlob *pd3dErrorBlob = NULL;
-	D3D12SerializeRootSignature(&d3dRootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &pd3dSignatureBlob, &pd3dErrorBlob);
-	pd3dDevice->CreateRootSignature(0, pd3dSignatureBlob->GetBufferPointer(), pd3dSignatureBlob->GetBufferSize(), __uuidof(ID3D12RootSignature), (void **)&pd3dGraphicsRootSignature);
-	if (pd3dSignatureBlob) pd3dSignatureBlob->Release();
-	if (pd3dErrorBlob) pd3dErrorBlob->Release();
-
-	return(pd3dGraphicsRootSignature);
+	m_pGravityBarShader->Render(pd3dCommandList, pCamera);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -415,9 +327,9 @@ void CharacterScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsComman
 	for (int i = 0; i < m_nObjects; i++)
 	{
 		m_ppSoldierObjects[i]->m_pAnimationFactors->SetBoneObject(m_ppSoldierObjects[i]);
-		m_ppSoldierObjects[i]->SetPosition(1000, 200, 1000);
+		m_ppSoldierObjects[i]->SetPosition(1000, 500, 1000);
 		if (i != m_nObjects - 1)
-			m_ppSoldierObjects[i]->SetScale(100.0f, 100.0f, 100.0f);
+			m_ppSoldierObjects[i]->SetScale(10.0f, 10.0f, 10.0f);
 		else
 			m_ppSoldierObjects[m_nObjects - 1]->SetPlayerScale(10);
 	}
@@ -600,6 +512,7 @@ void CharacterScene::UpdateShaderVariables(ID3D12GraphicsCommandList *pd3dComman
 		}
 	}
 }
+
 CAnimationObject* CharacterScene::FindMeshRendererObject(CAnimationObject* pRootObject, UINT nRendererMesh)
 {
 	stack<CAnimationObject*> FrameStack;
@@ -826,7 +739,7 @@ ObjectScene::ObjectScene(PxPhysics* pPxPhysicsSDK, PxScene* pPxScene, PxControll
 	: CScene(pPxPhysicsSDK, pPxScene, pPxControllerManager, pCooking)
 {
 	m_ppSampleObjects = new CPhysXObject*[MESH_NUM2];
-
+	m_fReloadtime = GetTickCount();
 }
 ObjectScene::~ObjectScene()
 {
@@ -835,12 +748,67 @@ ObjectScene::~ObjectScene()
 }
 void ObjectScene::SetProjectile(XMFLOAT3& xmf3Direction)
 {
-	m_ppShell[0]->SetPosition(m_pPlayer->GetPosition());
-	m_ppShell[0]->m_Direction = xmf3Direction;
+	CAnimationObject* pFindObject = FindBoneTypeObject(m_pPlayer->GetRenderObject(), 1);
+
+	XMFLOAT4X4 WorldTransform = pFindObject->m_xmf4x4World;
+	XMFLOAT3 xmf3Look = XMFLOAT3(WorldTransform._31, WorldTransform._32, WorldTransform._33);
+	float Scalar = 0.78f;
+
+	XMFLOAT3 xmf3ShellRight = XMFLOAT3(0, 0, 0);
+	XMFLOAT3 xmf3ShellUp = XMFLOAT3(m_pPlayer->m_xmf4x4World._21, m_pPlayer->m_xmf4x4World._22, m_pPlayer->m_xmf4x4World._23);
+	XMFLOAT3 xmf3ShellLook = XMFLOAT3(xmf3Direction.x, xmf3Direction.y, xmf3Direction.z);
+
+	xmf3ShellUp = Vector3::Normalize(xmf3ShellUp);
+	xmf3ShellLook = Vector3::Normalize(xmf3ShellLook);
+
+	xmf3ShellRight = Vector3::CrossProduct(xmf3ShellUp, xmf3ShellLook);
+
+	if ((GetTickCount() - m_fReloadtime) > (DWORD)550)
+	{
+		for (int i = 0; i < m_nObjects; i++)
+		{
+			if (!m_ppShell[i]->m_bShooted)
+			{
+				m_ppShell[i]->m_xmf4x4World._11 = xmf3ShellRight.x;
+				m_ppShell[i]->m_xmf4x4World._12 = xmf3ShellRight.y;
+				m_ppShell[i]->m_xmf4x4World._13 = xmf3ShellRight.z;
+
+				m_ppShell[i]->m_xmf4x4World._21 = xmf3ShellUp.x;
+				m_ppShell[i]->m_xmf4x4World._22 = xmf3ShellUp.y;
+				m_ppShell[i]->m_xmf4x4World._23 = xmf3ShellUp.z;
+
+				m_ppShell[i]->m_xmf4x4World._31 = xmf3ShellLook.x;
+				m_ppShell[i]->m_xmf4x4World._32 = xmf3ShellLook.y;
+				m_ppShell[i]->m_xmf4x4World._33 = xmf3ShellLook.z;
+
+				XMFLOAT4X4 Scale = Matrix4x4::Identity();
+				Scale._11 = Scale._22 = Scale._33 = 500;
+				m_ppShell[i]->m_xmf4x4World = Matrix4x4::Multiply(m_ppShell[i]->m_xmf4x4World, Scale);
+
+				XMFLOAT3 xmf3Position = XMFLOAT3(WorldTransform._41 + Scalar * xmf3Look.x, WorldTransform._42 + Scalar * xmf3Look.y, WorldTransform._43 + Scalar * xmf3Look.z);
+
+				m_ppShell[i]->SetPosition(xmf3Position);
+				m_ppShell[i]->m_Direction = xmf3ShellLook;
+				m_ppShell[i]->m_bShooted = true;
+				m_ppShell[i]->m_dAlivedtime = GetTickCount();
+				for (int b = 0; b < m_vBullet.size(); b++)
+				{
+					if (m_vBullet[b] == NULL)
+					{
+						m_vBullet[b] = m_ppShell[i];
+						break;
+					}
+				}
+				m_fReloadtime = GetTickCount();
+				printf("น฿ป็: %lf, %lf, %lf\n", xmf3Position.x, xmf3Position.y, xmf3Position.z);
+				break;
+			}
+		}
+	}
 }
 void ObjectScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList)
 {
-	m_nObjects = 50;
+	m_nObjects = 40;
 
 	m_pd3dGraphicsRootSignature = CreateGraphicsRootSignature(pd3dDevice);
 
@@ -852,7 +820,7 @@ void ObjectScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 	
 	m_ppSampleObjects[0] = new CPhysXObject(0, pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, L"../Assets/Shell.bss", m_nObjects);
 	m_ppSampleObjects[0]->BuildObject(m_pPxPhysicsSDK, m_pPxScene, m_pPxMaterial, XMFLOAT3(1, 1, 1), m_pCooking, "Bullet");
-	m_ppSampleObjects[1] = new CPhysXObject(0, pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, L"../Assets/Asteroid0.bss", m_nObjects);
+	m_ppSampleObjects[1] = new CPhysXObject(0, pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, L"../Assets/Asteroid5.bss", m_nObjects);
 	m_ppSampleObjects[1]->BuildObject(m_pPxPhysicsSDK, m_pPxScene, m_pPxMaterial, XMFLOAT3(1, 1, 1), m_pCooking, "Astroid0");
 	m_ppSampleObjects[2] = new CPhysXObject(0, pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, L"../Assets/Asteroid1.bss", m_nObjects);
 	m_ppSampleObjects[2]->BuildObject(m_pPxPhysicsSDK, m_pPxScene, m_pPxMaterial, XMFLOAT3(1, 1, 1), m_pCooking, "Astroid1");
@@ -863,48 +831,55 @@ void ObjectScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 	m_ppSampleObjects[5] = new CPhysXObject(0, pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, L"../Assets/Asteroid4.bss", m_nObjects);
 	m_ppSampleObjects[5]->BuildObject(m_pPxPhysicsSDK, m_pPxScene, m_pPxMaterial, XMFLOAT3(1, 1, 1), m_pCooking, "Astroid4");
 
-	m_ppShell = new CPhysXObject*[m_nObjects + 1];
-	m_ppAsteroid0 = new CPhysXObject*[m_nObjects + 1];
-	m_ppAsteroid1 = new CPhysXObject*[m_nObjects + 1];
-	m_ppAsteroid2 = new CPhysXObject*[m_nObjects + 1];
-	m_ppAsteroid3 = new CPhysXObject*[m_nObjects + 1];
-	m_ppAsteroid4 = new CPhysXObject*[m_nObjects + 1];
 
-	for (int i = 0; i < m_nObjects; i++)
+	m_ppShell = new CPhysXObject*[m_nObjects];
+	m_ppAsteroid0 = new CPhysXObject*[m_nObjects];
+	m_ppAsteroid1 = new CPhysXObject*[m_nObjects];
+	m_ppAsteroid2 = new CPhysXObject*[m_nObjects];
+	m_ppAsteroid3 = new CPhysXObject*[m_nObjects];
+	m_ppAsteroid4 = new CPhysXObject*[m_nObjects];
+
+	m_vBullet.reserve(m_nObjects);
+	m_vBullet.resize(m_nObjects);
+
+	for (auto& bullet : m_vBullet)
+		bullet = NULL;
+
+	for (int i = 0; i < m_nObjects - 1; i++)
 	{
 		CPhysXObject* pShell = new CPhysXObject(0);
-		pShell->BuildObject(m_pPxPhysicsSDK, m_pPxScene, m_pPxMaterial, XMFLOAT3(1, 1, 1), m_pCooking, "Bullet");
-		pShell->SetScale(300, 300, 300);
+		pShell->BuildObject(m_pPxPhysicsSDK, m_pPxScene, m_pPxMaterial, 
+			XMFLOAT3(10, 10, 10), m_pCooking, "Bullet");
 		m_ppShell[i] = pShell;
 
 		CPhysXObject* pAsteroid = new CPhysXObject(0);
-		pAsteroid->BuildObject(m_pPxPhysicsSDK, m_pPxScene, m_pPxMaterial, XMFLOAT3(1, 1, 1), m_pCooking, "Astroid0");
-		pAsteroid->SetScale(rand()%300 + 500, rand() % 300 + 500, rand() % 300 + 500);
-		pAsteroid->SetPosition(XMFLOAT3(rand() % 1700, 223, rand() % 1700));
+		pAsteroid->BuildObject(m_pPxPhysicsSDK, m_pPxScene, m_pPxMaterial, 
+			XMFLOAT3(1, 1, 1), m_pCooking, "Astroid0");
+		pAsteroid->SetPosition(XMFLOAT3(rand() % 1700, 300, rand() % 1700));
 		m_ppAsteroid0[i] = pAsteroid;
 
 		pAsteroid = new CPhysXObject(0);
-		pAsteroid->BuildObject(m_pPxPhysicsSDK, m_pPxScene, m_pPxMaterial, XMFLOAT3(1, 1, 1), m_pCooking, "Astroid1");
-		pAsteroid->SetScale(rand() % 300 + 500, rand() % 300 + 500, rand() % 300 + 500);
-		pAsteroid->SetPosition(XMFLOAT3(rand() % 1700, 223, rand() % 1700));
+		pAsteroid->BuildObject(m_pPxPhysicsSDK, m_pPxScene, m_pPxMaterial, 
+			XMFLOAT3(1, 1, 1), m_pCooking, "Astroid1");
+		pAsteroid->SetPosition(XMFLOAT3(rand() % 1700, 300, rand() % 1700));
 		m_ppAsteroid1[i] = pAsteroid;
 
 		pAsteroid = new CPhysXObject(0);
-		pAsteroid->BuildObject(m_pPxPhysicsSDK, m_pPxScene, m_pPxMaterial, XMFLOAT3(1, 1, 1), m_pCooking, "Astroid2");
-		pAsteroid->SetScale(1, 1, 1);
-		pAsteroid->SetPosition(XMFLOAT3(rand() % 1700, 223, rand() % 1700));
+		pAsteroid->BuildObject(m_pPxPhysicsSDK, m_pPxScene, m_pPxMaterial, 
+			XMFLOAT3(1, 1, 1), m_pCooking, "Astroid2");
+		pAsteroid->SetPosition(XMFLOAT3(rand() % 1700, 300, rand() % 1700));
 		m_ppAsteroid2[i] = pAsteroid;
 
 		pAsteroid = new CPhysXObject(0);
-		pAsteroid->BuildObject(m_pPxPhysicsSDK, m_pPxScene, m_pPxMaterial, XMFLOAT3(1, 1, 1), m_pCooking, "Astroid3");
-		pAsteroid->SetScale(rand() % 300 + 500, rand() % 300 + 500, rand() % 300 + 500);
-		pAsteroid->SetPosition(XMFLOAT3(rand() % 1700, 223, rand() % 1700));
+		pAsteroid->BuildObject(m_pPxPhysicsSDK, m_pPxScene, m_pPxMaterial, 
+			XMFLOAT3(1, 1, 1), m_pCooking, "Astroid3");
+		pAsteroid->SetPosition(XMFLOAT3(rand() % 1700, 300, rand() % 1700));
 		m_ppAsteroid3[i] = pAsteroid;
 
 		pAsteroid = new CPhysXObject(0);
-		pAsteroid->BuildObject(m_pPxPhysicsSDK, m_pPxScene, m_pPxMaterial, XMFLOAT3(1, 1, 1), m_pCooking, "Astroid4");
-		pAsteroid->SetScale(rand() % 300 + 500, rand() % 300 + 500, rand() % 300 + 500);
-		pAsteroid->SetPosition(XMFLOAT3(rand() % 1700, 223, rand() % 1700));
+		pAsteroid->BuildObject(m_pPxPhysicsSDK, m_pPxScene, m_pPxMaterial, 
+			XMFLOAT3(1, 1, 1), m_pCooking, "Astroid4");
+		pAsteroid->SetPosition(XMFLOAT3(rand() % 1700, 300, rand() % 1700));
 		m_ppAsteroid4[i] = pAsteroid;
 	}
 	m_ppSampleObjects[0]->CGameObject::SetPosition(rand() % 2056, rand() % 200 + 200, rand() % 2056);
@@ -914,44 +889,44 @@ void ObjectScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 	m_ppSampleObjects[4]->CGameObject::SetPosition(rand() % 2056, rand() % 200 + 200, rand() % 2056);
 	m_ppSampleObjects[5]->CGameObject::SetPosition(rand() % 2056, rand() % 200 + 200, rand() % 2056);
 	
-	m_ppAsteroid0[m_nObjects] = m_ppSampleObjects[1];
-	m_ppAsteroid1[m_nObjects] = m_ppSampleObjects[2];
-	m_ppAsteroid2[m_nObjects] = m_ppSampleObjects[3];
-	m_ppAsteroid3[m_nObjects] = m_ppSampleObjects[4];
-	m_ppAsteroid4[m_nObjects] = m_ppSampleObjects[5];
+	m_ppAsteroid0[m_nObjects - 1] = m_ppSampleObjects[1];
+	m_ppAsteroid1[m_nObjects - 1] = m_ppSampleObjects[2];
+	m_ppAsteroid2[m_nObjects - 1] = m_ppSampleObjects[3];
+	m_ppAsteroid3[m_nObjects - 1] = m_ppSampleObjects[4];
+	m_ppAsteroid4[m_nObjects - 1] = m_ppSampleObjects[5];
 
-	m_ppShell[m_nObjects] = m_ppSampleObjects[0];
-	m_ppShell[m_nObjects]->CGameObject::SetPosition(0, 0, 0);
+	m_ppShell[m_nObjects - 1] = m_ppSampleObjects[0];
+	m_ppShell[m_nObjects - 1]->CGameObject::SetPosition(0, 0, 0);
 }
 void ObjectScene::ReleaseObjects()
 {
-	for (int i = 0; i < m_nObjects + 1; i++)
+	for (int i = 0; i < m_nObjects; i++)
 	{
 		if (m_ppShell[i])
 			delete m_ppShell[i];
 	}
 
-	for (int i = 0; i < m_nObjects + 1; i++)
+	for (int i = 0; i < m_nObjects; i++)
 	{
 		if (m_ppAsteroid0[i])
 			delete m_ppAsteroid0[i];
 	}
-	for (int i = 0; i < m_nObjects + 1; i++)
+	for (int i = 0; i < m_nObjects; i++)
 	{
 		if (m_ppAsteroid1[i])
 			delete m_ppAsteroid1[i];
 	}
-	for (int i = 0; i < m_nObjects + 1; i++)
+	for (int i = 0; i < m_nObjects; i++)
 	{
 		if (m_ppAsteroid2[i])
 			delete m_ppAsteroid2[i];
 	}
-	for (int i = 0; i < m_nObjects + 1; i++)
+	for (int i = 0; i < m_nObjects; i++)
 	{
 		if (m_ppAsteroid3[i])
 			delete m_ppAsteroid3[i];
 	}
-	for (int i = 0; i < m_nObjects + 1; i++)
+	for (int i = 0; i < m_nObjects; i++)
 	{
 		if (m_ppAsteroid4[i])
 			delete m_ppAsteroid4[i];
@@ -966,31 +941,105 @@ void ObjectScene::ReleaseObjects()
 }
 void ObjectScene::AnimateObjects(float fTimeElapsed, CCamera *pCamera)
 {
-	//m_ppSampleObjects[0]->UpdateDirectPos();
+	for (int i = 0; i < m_vBullet.size(); i++)
+	{
+		if (m_vBullet[i])
+		{
+			if (m_vBullet[i]->m_bShooted)
+			{
+				m_vBullet[i]->UpdateDirectPos(m_vBullet[i]->GetPosition(), m_vBullet[i]->m_Direction);
+				if ((GetTickCount() - m_vBullet[i]->m_dAlivedtime) > 300000000)
+				{
+					m_vBullet[i]->m_bShooted = false;
+					m_vBullet[i]->SetPosition(XMFLOAT3(0, 0, 0));
+					m_vBullet[i] = NULL;
+				}
+			}
+		}
+	}
 
-	//m_ppShell[0]->Move(5.0f);
-	m_ppShell[0]->UpdateDirectPos(m_pPlayer->GetCamera()->GetLookVector());
-
-
-	for (int i = 0; i < m_nObjects + 1; i++)
+	for (int i = 0; i < m_nObjects; i++)
 	{
 		m_ppAsteroid0[i]->GetPhysXPos();
 	}
-	for (int i = 0; i < m_nObjects + 1; i++)
+	for (int i = 0; i < m_nObjects; i++)
 	{
 		m_ppAsteroid1[i]->GetPhysXPos();
 	}
-	for (int i = 0; i < m_nObjects + 1; i++)
+	for (int i = 0; i < m_nObjects; i++)
 	{
 		m_ppAsteroid2[i]->GetPhysXPos();
 	}
-	for (int i = 0; i < m_nObjects + 1; i++)
+	for (int i = 0; i < m_nObjects; i++)
 	{
 		m_ppAsteroid3[i]->GetPhysXPos();
 	}
-	for (int i = 0; i < m_nObjects + 1; i++)
+	for (int i = 0; i < m_nObjects; i++)
 	{
 		m_ppAsteroid4[i]->GetPhysXPos();
+	}
+}
+pair<XMFLOAT3, XMFLOAT3> ObjectScene::GetProjectilePos()
+{
+	pair<XMFLOAT3, XMFLOAT3> Projectile;
+	int i = 0;
+	for (auto& bullet : m_vBullet)
+	{
+		if (bullet)
+		{
+			if (bullet->m_bShooted)
+			{
+				Projectile.first = XMFLOAT3(bullet->GetPosition().x, bullet->GetPosition().y, bullet->GetPosition().z);
+				Projectile.second = XMFLOAT3(bullet->m_Direction.x, bullet->m_Direction.y, bullet->m_Direction.z);
+			}
+		}
+	}
+	return Projectile;
+}
+void ObjectScene::SetVectorProjectile(XMFLOAT3 xmf3Position, XMFLOAT3 xmf3Direction)
+{
+	printf("VectorProjectile\n");
+	CAnimationObject* pFindObject = FindBoneTypeObject(m_pPlayer->GetRenderObject(), 1);
+
+	XMFLOAT4X4 WorldTransform = pFindObject->m_xmf4x4World;
+	XMFLOAT3 xmf3Look = XMFLOAT3(WorldTransform._31, WorldTransform._32, WorldTransform._33);
+	float Scalar = 0.78f;
+
+	XMFLOAT3 xmf3ShellRight = XMFLOAT3(0, 0, 0);
+	XMFLOAT3 xmf3ShellUp = XMFLOAT3(m_pPlayer->m_xmf4x4World._21, m_pPlayer->m_xmf4x4World._22, m_pPlayer->m_xmf4x4World._23);
+	XMFLOAT3 xmf3ShellLook = XMFLOAT3(xmf3Direction.x, xmf3Direction.y, xmf3Direction.z);
+
+	xmf3ShellUp = Vector3::Normalize(xmf3ShellUp);
+	xmf3ShellLook = Vector3::Normalize(xmf3ShellLook);
+
+	xmf3ShellRight = Vector3::CrossProduct(xmf3ShellUp, xmf3ShellLook);
+
+	for (int i = 0; i < m_nObjects; i++)
+	{
+		if (!m_ppShell[i]->m_bShooted)
+		{
+			m_ppShell[i]->m_xmf4x4World._11 = xmf3ShellRight.x;
+			m_ppShell[i]->m_xmf4x4World._12 = xmf3ShellRight.y;
+			m_ppShell[i]->m_xmf4x4World._13 = xmf3ShellRight.z;
+
+			m_ppShell[i]->m_xmf4x4World._21 = xmf3ShellUp.x;
+			m_ppShell[i]->m_xmf4x4World._22 = xmf3ShellUp.y;
+			m_ppShell[i]->m_xmf4x4World._23 = xmf3ShellUp.z;
+
+			m_ppShell[i]->m_xmf4x4World._31 = xmf3ShellLook.x;
+			m_ppShell[i]->m_xmf4x4World._32 = xmf3ShellLook.y;
+			m_ppShell[i]->m_xmf4x4World._33 = xmf3ShellLook.z;
+
+			XMFLOAT4X4 Scale = Matrix4x4::Identity();
+			Scale._11 = Scale._22 = Scale._33 = 500;
+			m_ppShell[i]->m_xmf4x4World = Matrix4x4::Multiply(m_ppShell[i]->m_xmf4x4World, Scale);
+
+			m_ppShell[i]->SetPosition(xmf3Position);
+			m_ppShell[i]->m_Direction = xmf3Direction;
+			m_ppShell[i]->m_bShooted = true;
+			m_vBullet.push_back(m_ppShell[i]);
+			break;
+		}
 	}
 }
 void ObjectScene::ReleaseUploadBuffers()
@@ -1012,12 +1061,12 @@ void ObjectScene::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pC
 
 	FrustumCulling(pCamera);
 	
-	m_ppShell[m_nObjects]->Render(pd3dCommandList, 5, pCamera, m_nObjects + 1, m_ppShell);
-	m_ppAsteroid0[m_nObjects]->Render(pd3dCommandList, 5, pCamera, m_nObjects + 1, m_ppAsteroid0);
-	m_ppAsteroid1[m_nObjects]->Render(pd3dCommandList, 5, pCamera, m_nObjects + 1, m_ppAsteroid1);
-	m_ppAsteroid2[m_nObjects]->Render(pd3dCommandList, 5, pCamera, m_nObjects + 1, m_ppAsteroid2);
-	m_ppAsteroid3[m_nObjects]->Render(pd3dCommandList, 5, pCamera, m_nObjects + 1, m_ppAsteroid3);
-	m_ppAsteroid4[m_nObjects]->Render(pd3dCommandList, 5, pCamera, m_nObjects + 1, m_ppAsteroid4);
+	m_ppShell[m_nObjects - 1]->Render(pd3dCommandList, 5, pCamera, m_nObjects * 4, m_ppShell);
+	m_ppAsteroid0[m_nObjects - 1]->Render(pd3dCommandList, 5, pCamera, m_nObjects * 4, m_ppAsteroid0);
+	m_ppAsteroid1[m_nObjects - 1]->Render(pd3dCommandList, 5, pCamera, m_nObjects * 4, m_ppAsteroid1);
+	m_ppAsteroid2[m_nObjects - 1]->Render(pd3dCommandList, 5, pCamera, m_nObjects * 4, m_ppAsteroid2);
+	m_ppAsteroid3[m_nObjects - 1]->Render(pd3dCommandList, 5, pCamera, m_nObjects * 4, m_ppAsteroid3);
+	m_ppAsteroid4[m_nObjects - 1]->Render(pd3dCommandList, 5, pCamera, m_nObjects * 4, m_ppAsteroid4);
 }
 ID3D12RootSignature *ObjectScene::CreateGraphicsRootSignature(ID3D12Device *pd3dDevice)
 {

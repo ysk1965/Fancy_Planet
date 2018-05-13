@@ -28,29 +28,29 @@ CPlayer::CPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dComman
 
 	m_pCamera = new CCamera;
 
-	if (m_pCamera) 
+	if (m_pCamera)
 		m_pCamera->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
 	// Px
 	m_fFallAcceleration = 4.0f;
 
-	//CHeightMapTerrain *pTerrain = (CHeightMapTerrain *)pContext;
-	//SetPosition(XMFLOAT3(0, pTerrain->GetHeight(200, 300), 0));
-	//SetPlayerUpdatedContext(pTerrain);
-	//SetCameraUpdatedContext(pTerrain);
+	for (int i = 0; i < FLAGE_NUM; i++)
+	{
+		m_bFalgs[i] = false;
+	}
 }
 
 CPlayer::~CPlayer()
 {
 	ReleaseShaderVariables();
 
-	if (m_pCamera) 
+	if (m_pCamera)
 		delete m_pCamera;
 }
 
 void CPlayer::ReleaseShaderVariables()
 {
-	if (m_pCamera) 
+	if (m_pCamera)
 		m_pCamera->ReleaseShaderVariables();
 
 	if (m_pd3dcbPlayer)
@@ -91,7 +91,7 @@ void CPlayer::Move(const XMFLOAT3& xmf3Shift, bool bUpdateVelocity)
 	{
 		//m_pPxCharacterController->move(PxVec3(xmf3Shift.x, xmf3Shift.y, xmf3Shift.z) * m_fSpeed * m_fTimeDelta, 0, m_fTimeDelta, PxControllerFilters()); //Pxplayer Move
 		m_pPxCharacterController->move(PxVec3(xmf3Shift.x, xmf3Shift.y, xmf3Shift.z) * m_fSpeed, 0, NULL, PxControllerFilters()); //Pxplayer Move
-		//m_xmf3Velocity = Vector3::Add(m_xmf3Velocity, xmf3Shift);
+																																  //m_xmf3Velocity = Vector3::Add(m_xmf3Velocity, xmf3Shift);
 	}
 	else
 	{
@@ -99,6 +99,7 @@ void CPlayer::Move(const XMFLOAT3& xmf3Shift, bool bUpdateVelocity)
 		//m_pCamera->Move(xmf3Shift);
 	}
 }
+
 
 void CPlayer::Rotate(float x, float y, float z)
 {
@@ -154,15 +155,15 @@ void CPlayer::Rotate(float x, float y, float z)
 		if (x != 0.0f)
 		{
 			m_fPitch += x;
-			if (m_fPitch > +89.0f) 
+			if (m_fPitch > +89.0f)
 			{
-				x -= (m_fPitch - 89.0f); 
+				x -= (m_fPitch - 89.0f);
 				m_fPitch = +89.0f;
 			}
 			if (m_fPitch < -89.0f)
 			{
 				x -= (m_fPitch + 89.0f);
-				m_fPitch = -89.0f; 
+				m_fPitch = -89.0f;
 			}
 		}
 		if (y != 0.0f)
@@ -176,10 +177,10 @@ void CPlayer::Rotate(float x, float y, float z)
 		if (z != 0.0f)
 		{
 			m_fRoll += z;
-			if (m_fRoll > +20.0f) 
+			if (m_fRoll > +20.0f)
 			{
 				z -= (m_fRoll - 20.0f);
-				m_fRoll = +20.0f; 
+				m_fRoll = +20.0f;
 			}
 			if (m_fRoll < -20.0f)
 			{
@@ -223,45 +224,15 @@ void CPlayer::Rotate(float x, float y, float z)
 	m_xmf3Up = Vector3::CrossProduct(m_xmf3Look, m_xmf3Right, true);
 }
 
+void CPlayer::UpdateJumpState()
+{
+	if (!m_bJumpState)
+		return;
+	else if (IsOnGround())
+		m_bJumpState = false;
+}
 void CPlayer::Update(float fTimeElapsed)
 {
-	//m_xmf3Velocity = Vector3::Add(m_xmf3Velocity, Vector3::ScalarProduct(m_xmf3Gravity, fTimeElapsed, false));
-	//float fLength = sqrtf(m_xmf3Velocity.x * m_xmf3Velocity.x + m_xmf3Velocity.z * m_xmf3Velocity.z);
-	//float fMaxVelocityXZ = m_fMaxVelocityXZ * fTimeElapsed;
-	//if (fLength > m_fMaxVelocityXZ)
-	//{
-	//	m_xmf3Velocity.x *= (fMaxVelocityXZ / fLength);
-	//	m_xmf3Velocity.z *= (fMaxVelocityXZ / fLength);
-	//}
-	//float fMaxVelocityY = m_fMaxVelocityY * fTimeElapsed;
-	//fLength = sqrtf(m_xmf3Velocity.y * m_xmf3Velocity.y);
-	//if (fLength > m_fMaxVelocityY) m_xmf3Velocity.y *= (fMaxVelocityY / fLength);
-
-	//Move(m_xmf3Velocity, false);
-
-	//if (m_pPlayerUpdatedContext)
-	//	OnPlayerUpdateCallback(fTimeElapsed);
-
-	////		Camera		//
-	//DWORD nCurrentCameraMode = m_pCamera->GetMode();
-
-	//if (nCurrentCameraMode == THIRD_PERSON_CAMERA)
-	//	m_pCamera->Update(m_xmf3Position, fTimeElapsed);
-	//if (m_pCameraUpdatedContext)
-	//	OnCameraUpdateCallback(fTimeElapsed);
-	//if (nCurrentCameraMode == THIRD_PERSON_CAMERA)
-	//	m_pCamera->SetLookAt(m_xmf3Position);
-
-	//m_pCamera->RegenerateViewMatrix();
-	////		Camera		//
-
-	//fLength = Vector3::Length(m_xmf3Velocity);
-
-	//float fDeceleration = (m_fFriction * fTimeElapsed);
-	//if (fDeceleration > fLength)
-	//	fDeceleration = fLength;
-	//m_xmf3Velocity = Vector3::Add(m_xmf3Velocity, Vector3::ScalarProduct(m_xmf3Velocity, -fDeceleration, true));
-
 	//////////////////////////////////////////////////////////////
 	//															//
 	//							PhysX							//
@@ -269,47 +240,49 @@ void CPlayer::Update(float fTimeElapsed)
 	//////////////////////////////////////////////////////////////
 
 	m_fTimeDelta = fTimeElapsed;
-	
+
 	//PhysX에 값을 전달해준다. 중력
 	m_fFallvelocity -= m_fFallAcceleration * fTimeElapsed * 50.f;
-	
-	if (m_fFallvelocity < -1000.f)
-		m_fFallvelocity = -1000.f;
-	
+
+	if (m_fFallvelocity < -1000.0f)
+		m_fFallvelocity = -10.0f;
+
 	m_pPxCharacterController->move(PxVec3(0, 1.f, 0) * fTimeElapsed * m_fFallvelocity, 0, fTimeElapsed, PxControllerFilters());
-	
+
+	UpdateJumpState();
+
 	PxControllerState   m_pPxState;
-	
+
 	//피직스 객체의 상태값을 m_pPxState에 넣어준다.
 	m_pPxCharacterController->getState(m_pPxState);
-	
-	//윗쪽 충돌하거나 아랫쪽 충돌하면 m_fFallvelocity = 0.0f
+
+	//윗쪽 충돌하거나 아랫쪽 충돌하면 
 	if (m_pPxState.collisionFlags == PxControllerCollisionFlag::eCOLLISION_DOWN ||
 		m_pPxState.collisionFlags == PxControllerCollisionFlag::eCOLLISION_UP)
 		m_fFallvelocity = 0.f;
-	
+
 	////현재 PhysX의 값으로 객체의 월드행렬을 만들어준다.
 	m_xmf3Position = XMFLOAT3((float)m_pPxCharacterController->getFootPosition().x, (float)m_pPxCharacterController->getFootPosition().y, (float)m_pPxCharacterController->getFootPosition().z); //컨트롤러의 발 위치 CCT 모양의 아래 부분
-	
+
 	float m_fRevice = -100.0f; //Player의 Y보정값(발이 지면에 안박히게 보정)
-	
+
 	XMMATRIX matTrans = XMMatrixTranslation(m_xmf3Position.x, m_xmf3Position.y + m_fRevice, m_xmf3Position.z);
-	
+
 	XMMATRIX matRotX = XMMatrixRotationX((float)D3DXToRadian(m_fPitch));
 	XMMATRIX matRotY = XMMatrixRotationY((float)D3DXToRadian(m_fYaw));
 	XMMATRIX matRotZ = XMMatrixRotationZ((float)D3DXToRadian(m_fRoll));
-	
+
 	XMStoreFloat4x4(&m_xmf4x4World, matRotX * matRotY * matRotZ * matTrans);
-	
+
 	DWORD nCurrentCameraMode = m_pCamera->GetMode();
-	
+
 	if (nCurrentCameraMode == THIRD_PERSON_CAMERA || FIRST_PERSON_CAMERA)
 		m_pCamera->Update(m_xmf3Position, fTimeElapsed);
 	if (m_pCameraUpdatedContext)
 		OnCameraUpdateCallback(fTimeElapsed);
 	if (nCurrentCameraMode == THIRD_PERSON_CAMERA)
 		m_pCamera->SetLookAt(m_xmf3Position);
-	
+
 	m_pCamera->RegenerateViewMatrix();
 }
 
@@ -493,9 +466,16 @@ void CPlayer::onShapeHit(const PxControllerShapeHit & hit)
 	if (actor)
 	{
 		printf("OnShapeHIT!!![%s]\n", actor->getName());
+
+		string change = actor->getName();
+
+		if (change == "Bullet")
+		{
+			printf("@@@Bullet\n");
+			m_bAttackedState = true;
+		}
 		if (actor->getRigidBodyFlags() & PxRigidBodyFlag::eKINEMATIC)
 			return;
-
 		const PxVec3 upVector = hit.controller->getUpDirection();
 		const PxF32 dp = hit.dir.dot(upVector);
 

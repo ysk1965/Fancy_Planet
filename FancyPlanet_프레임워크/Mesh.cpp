@@ -730,7 +730,7 @@ CHeightMapGridMesh::CHeightMapGridMesh(PxPhysics* pPxPhysicsSDK, PxScene* pPxSce
 
 	//PhysXRigidActor = 
 	//PhysXTriangleMesh = pCooking->createTriangleMesh(meshDesc, pPxPhysicsSDK->getPhysicsInsertionCallback());
-	PhysXMeterial = pPxPhysicsSDK->createMaterial(0.8f, 0.8f, 0.4f);
+	PhysXMeterial = pPxPhysicsSDK->createMaterial(0.5f, 0.5f, 0.2f);
 
 
 	m_nVertices = nWidth * nLength;
@@ -965,5 +965,98 @@ CTexturedRectMesh::CTexturedRectMesh(ID3D12Device *pd3dDevice, ID3D12GraphicsCom
 }
 
 CTexturedRectMesh::~CTexturedRectMesh()
+{
+}
+
+CSkyBoxRectMesh::CSkyBoxRectMesh(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, float fWidth, float fHeight, float fDepth, float fxPosition, float fyPosition, float fzPosition) : CMesh(pd3dDevice, pd3dCommandList)
+{
+	m_nVertices = 36;
+	m_nStride = sizeof(CSkyBoxVertex);
+	m_d3dPrimitiveTopology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+
+	CSkyBoxVertex pVertices[36];
+
+	float fx = (fWidth * 0.5f) + fxPosition, fy = (fHeight * 0.5f) + fyPosition, fz = (fDepth * 0.5f) + fzPosition;
+
+	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+	static const float c = 20.0f;
+	static const DirectX::XMFLOAT3 vertexPos[] = { // x, y, z
+		{ -c,  c, -c }, // 0
+	{ c,  c, -c }, // 1
+	{ c,  c,  c }, // 2
+	{ -c,  c,  c }, // 3
+	{ -c, -c,  c }, // 4
+	{ c, -c,  c }, // 5
+	{ c, -c, -c }, // 6
+	{ -c, -c, -c }, // 7
+	};
+
+	static const size_t numIndices = 6 * 6;
+	static const unsigned int indices[numIndices] = {
+		2, 6, 1, 2, 5, 6, // right   (+c,  .,  .), face 0
+		0, 4, 3, 0, 7, 4, // left    (-c,  .,  .), face 1
+		0, 2, 1, 0, 3, 2, // top     ( ., +c,  .), face 2
+		4, 6, 5, 4, 7, 6, // bottom  ( ., -c,  .), face 3
+		3, 5, 2, 3, 4, 5, // back    ( .,  ., +c), face 4
+		1, 6, 7, 1, 7, 0, // front   ( .,  ., -c), face 5
+	};
+
+	// Flatten out the indexed mesh and add the per-face parameters
+	std::vector<CSkyBoxVertex> vertices(numIndices);
+	for (size_t i = 0; i < numIndices; ++i) {
+		auto &v = vertices[i];
+
+		v.m_xmf3Position.x = vertexPos[indices[i]].x;
+		v.m_xmf3Position.y = vertexPos[indices[i]].y;
+		v.m_xmf3Position.z = vertexPos[indices[i]].z;
+
+		auto face = i / 6;
+		v.m_xmf3Coord.z = (float)face;
+
+		// Face uv's are fairly manual
+		switch (face)
+		{
+		case 0:
+			v.m_xmf3Coord.x = -v.m_xmf3Position.z;
+			v.m_xmf3Coord.y = -v.m_xmf3Position.y;
+			break;
+		case 1:
+			v.m_xmf3Coord.x = v.m_xmf3Position.z;
+			v.m_xmf3Coord.y = -v.m_xmf3Position.y;
+			break;
+		case 2:
+			v.m_xmf3Coord.x = v.m_xmf3Position.x;
+			v.m_xmf3Coord.y = v.m_xmf3Position.z;
+			break;
+		case 3:
+			v.m_xmf3Coord.x = v.m_xmf3Position.x;
+			v.m_xmf3Coord.y = -v.m_xmf3Position.z;
+			break;
+		case 4:
+			v.m_xmf3Coord.x = v.m_xmf3Position.x;
+			v.m_xmf3Coord.y = v.m_xmf3Position.y;
+			break;
+		case 5:
+			v.m_xmf3Coord.x = -v.m_xmf3Position.x;
+			v.m_xmf3Coord.y = -v.m_xmf3Position.y;
+			break;
+		};
+		// Move to 0..1
+		v.m_xmf3Coord.x = (v.m_xmf3Coord.x/40.0f) + 0.5f;
+		v.m_xmf3Coord.y = (v.m_xmf3Coord.y/40.0f) + 0.5f;
+
+		pVertices[i] = v;
+	}
+	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	m_pd3dVertexBuffer = CreateBufferResource(pd3dDevice, pd3dCommandList, pVertices, m_nStride * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dVertexUploadBuffer);
+
+	m_d3dVertexBufferView.BufferLocation = m_pd3dVertexBuffer->GetGPUVirtualAddress();
+	m_d3dVertexBufferView.StrideInBytes = m_nStride;
+	m_d3dVertexBufferView.SizeInBytes = m_nStride * m_nVertices;
+}
+
+CSkyBoxRectMesh::~CSkyBoxRectMesh()
 {
 }

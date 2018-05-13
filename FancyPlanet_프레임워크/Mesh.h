@@ -13,6 +13,17 @@ public:
 	~CVertex() { }
 };
 
+class CSkyBoxVertex : public CVertex
+{
+public:
+	XMFLOAT3						m_xmf3Coord;
+
+public:
+	CSkyBoxVertex() { m_xmf3Position = XMFLOAT3(0.0f, 0.0f, 0.0f); m_xmf3Coord = XMFLOAT3(0.0f, 0.0f, 0.0f); }
+	CSkyBoxVertex(float x, float y, float z, XMFLOAT3 xmf3Coord) { m_xmf3Position = XMFLOAT3(x, y, z); m_xmf3Coord = xmf3Coord; }
+	CSkyBoxVertex(XMFLOAT3 xmf3Position, XMFLOAT3 xmf3Coord = XMFLOAT3(0.0f, 0.0f, 0.0f)) { m_xmf3Position = xmf3Position; m_xmf3Coord = xmf3Coord; }
+	~CSkyBoxVertex() { }
+};
 class CDiffusedVertex : public CVertex
 {
 public:
@@ -439,4 +450,13 @@ class CTexturedRectMesh : public CMesh
 public:
 	CTexturedRectMesh(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, float fWidth = 20.0f, float fHeight = 20.0f, float fDepth = 20.0f, float fxPosition = 0.0f, float fyPosition = 0.0f, float fzPosition = 0.0f);
 	virtual ~CTexturedRectMesh();
+};
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+class CSkyBoxRectMesh : public CMesh
+{
+public:
+	CSkyBoxRectMesh(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, float fWidth = 20.0f, float fHeight = 20.0f, float fDepth = 20.0f, float fxPosition = 0.0f, float fyPosition = 0.0f, float fzPosition = 0.0f);
+	virtual ~CSkyBoxRectMesh();
 };
