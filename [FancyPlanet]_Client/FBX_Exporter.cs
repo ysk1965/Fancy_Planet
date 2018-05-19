@@ -7,6 +7,7 @@ static class Type
 {
 	public const int ANIMATOR = 0;
 	public const int ANIMATION = 1;
+	public const int NONE = 2;
 }
 
 static class Constants
@@ -36,11 +37,12 @@ static class AniType
 	public const int CAN_BACK_PLAY = 4; // 뒤로도 재생이 필요한 애니메이션(구현)
 	public const int CYCLE_NEED_TIME = 5; // 싸이클이 필요하지만 처음과 끝이 같지 않는 애니메이션 
 	public const int CONTINUOUS_PLAYBACK = 6; // 재생이 끊기지 않고, 다음 인덱스 애니메이션이 자동 실행
+	public const int PLAY_NOW = 7;
 }
 
 public class FBX_Exporter : MonoBehaviour
 {
-    private static FileStream fs = new FileStream("Astronaut.bss", FileMode.Create);
+    private static FileStream fs = new FileStream("NewAstronaut.bss", FileMode.Create);
     private BinaryWriter bw = new BinaryWriter(fs);
     private Animation ani;
     private Animator ani_T;
@@ -50,18 +52,21 @@ public class FBX_Exporter : MonoBehaviour
 	private int aniType = new int();
 
     void Start()
-    {
+	{
+		aniType = Type.ANIMATOR; // 애니메이션 타입
+
 		smr = GetComponentsInChildren<SkinnedMeshRenderer>();
         num = 0;
         Transform t = GetComponent<Transform>();
         Made(t, bw);
-		aniType = Type.ANIMATOR;
+
+		bw.Write(true); //애니메이션 유무
 		
 		aninum = -2;
 		
 		if(aniType == Type.ANIMATION)
 			ani = GetComponent<Animation>();
-		else
+		else if(aniType == Type.ANIMATOR)
 			ani_T = GetComponent<Animator>();
 	}
     private void Made(Transform mt, BinaryWriter bw)
@@ -92,43 +97,45 @@ public class FBX_Exporter : MonoBehaviour
 			bw.Write(Constants.SKINNEDMESH); // 
 
 			Mesh objMesh = SkinnedMesh.sharedMesh;
-			int num = new int();
 			
-			string[] strNme = { "Legacy Shaders/Diffuse", "Legacy Shaders/Lightmapped/Diffuse",
-					"Legacy Shaders/Bumped Diffuse", "Legacy Shaders/Bumped Specular",
-					"Legacy Shaders/Diffuse Detail" , "Legacy Shaders/Lightmapped/Bumped Specular", "Standard"};
-
-			for (int nStr = 0; nStr < strNme.Length; ++nStr)
-			{
-				if (strNme[nStr] == SkinnedMesh.material.shader.name)
-				{
-					if (nStr == 0)
-					{
-						num = 1;
-					}
-					else if (nStr == 1 || nStr == 2 || nStr == 3)
-					{
-						num = 2;
-					}
-					else if (nStr == 5)
-					{
-						num = 3;
-					}
-					else if (nStr == 6)
-					{
-						num = 2;
-					}
-					else
-					{
-						num = 1;
-					}
-					break;
-				}
-			}
 
 			for (int sub = 0; sub < objMesh.subMeshCount; sub++)
 			{
 				bw.Write(objMesh.subMeshCount); // 서브 메쉬 갯수
+
+				int num = new int();
+
+				string[] strNme = { "Legacy Shaders/Diffuse", "Legacy Shaders/Lightmapped/Diffuse",
+					"Legacy Shaders/Bumped Diffuse", "Legacy Shaders/Bumped Specular",
+					"Legacy Shaders/Diffuse Detail" , "Legacy Shaders/Lightmapped/Bumped Specular", "Standard"};
+
+				for (int nStr = 0; nStr < strNme.Length; ++nStr)
+				{
+					if (strNme[nStr] == SkinnedMesh.materials[sub].shader.name)
+					{
+						if (nStr == 0)
+						{
+							num = 1;
+						}
+						else if (nStr == 1 || nStr == 2 || nStr == 3)
+						{
+							num = 2;
+						}
+						else if (nStr == 5)
+						{
+							num = 3;
+						}
+						else if (nStr == 6)
+						{
+							num = 2;
+						}
+						else
+						{
+							num = 1;
+						}
+						break;
+					}
+				}
 
 				bw.Write(num); // 그리기 타입
 				
@@ -144,8 +151,12 @@ public class FBX_Exporter : MonoBehaviour
 								
 				int[] Indices = objMesh.triangles;
 
-				bw.Write(Indices.Length); // 인덱스 갯수
-				for (int i = 0; i < Indices.Length; i++)
+				uint Indexstart = objMesh.GetIndexStart(sub);
+				uint Indexcount = objMesh.GetIndexCount(sub);
+
+				bw.Write(Indexcount); // 인덱스 갯수
+
+				for (uint i = Indexstart; i < Indexstart + Indexcount; i++)
 				{// 인덱스
 					bw.Write(Indices[i]);
 				}
@@ -235,6 +246,43 @@ public class FBX_Exporter : MonoBehaviour
 						bw.Write(str[i]);
 					}
 				}
+				if (num > 2)
+				{
+					str = SkinnedMesh.materials[sub].mainTexture.name;
+					str += '2';
+					str += '\0';
+					bw.Write(str.Length);
+					for (int i = 0; i < str.Length; i++)
+					{
+						bw.Write(str[i]);
+					}
+				}
+
+				string objectName = mt.name;
+				objectName += '\0';
+
+				bw.Write(objectName.Length); //본 이름 길이
+				for (int i = 0; i < objectName.Length; i++)
+					bw.Write(objectName[i]); // 본 이름
+
+				if (mt.name == "ScifiGrenadeLauncherStatic")
+					bw.Write(1); // 총
+				else if (mt.name == "Bip001 Spine1")
+					bw.Write(2); // 허리
+				else
+					bw.Write(0);
+
+				for (int boneNum = 0; boneNum < smr[0].bones.Length; boneNum++)
+				{
+					if (mt.name == smr[0].bones[boneNum].name)
+					{
+						bw.Write(boneNum); // 본 인덱스 
+						break;
+					}
+					else if (boneNum == smr[0].bones.Length - 1)
+						bw.Write(-1);
+				}
+
 			}
 		}
 		else if (MeshRender != null)
@@ -244,42 +292,43 @@ public class FBX_Exporter : MonoBehaviour
 			bw.Write(Constants.RENDERMESH); // 
 
 			Mesh objMesh = meshFilter.sharedMesh;
-			
-			string[] strNme = { "Legacy Shaders/Diffuse", "Legacy Shaders/Lightmapped/Diffuse",
-					"Legacy Shaders/Bumped Diffuse", "Legacy Shaders/Bumped Specular",
-					"Legacy Shaders/Diffuse Detail" , "Legacy Shaders/Lightmapped/Bumped Specular", "Standard"};
-
-			for (int nStr = 0; nStr < strNme.Length; ++nStr)
-			{
-				if (strNme[nStr] == MeshRender.material.shader.name)
-				{
-					if (nStr == 0)
-					{
-						num = 1;
-					}
-					else if (nStr == 1 || nStr == 2 || nStr == 3)
-					{
-						num = 2;
-					}
-					else if (nStr == 5)
-					{
-						num = 3;
-					}
-					else if (nStr == 6)
-					{
-						num = 2;
-					}
-					else
-					{
-						num = 1;
-					}
-					break;
-				}
-			}
+				
 
 			for (int sub = 0; sub < objMesh.subMeshCount; sub++)
 			{
 				bw.Write(objMesh.subMeshCount); // 서브 메쉬 갯수
+
+				string[] strNme = { "Legacy Shaders/Diffuse", "Legacy Shaders/Lightmapped/Diffuse",
+					"Legacy Shaders/Bumped Diffuse", "Legacy Shaders/Bumped Specular",
+					"Legacy Shaders/Diffuse Detail" , "Legacy Shaders/Lightmapped/Bumped Specular", "Standard", ""};
+
+				for (int nStr = 0; nStr < strNme.Length; ++nStr)
+				{
+					if (strNme[nStr] == MeshRender.materials[sub].shader.name)
+					{
+						if (nStr == 0)
+						{
+							num = 1;
+						}
+						else if (nStr == 1 || nStr == 2 || nStr == 3)
+						{
+							num = 2;
+						}
+						else if (nStr == 5)
+						{
+							num = 3;
+						}
+						else if (nStr == 6)
+						{
+							num = 2;
+						}
+						else
+						{
+							num = 1;
+						}
+						break;
+					}
+				}
 
 				bw.Write(num); // 그리기 타입
 
@@ -348,42 +397,100 @@ public class FBX_Exporter : MonoBehaviour
 						bw.Write(str[i]);
 					}
 				}
+				if (num > 2)
+				{
+					str = MeshRender.materials[sub].mainTexture.name;
+					str += '2';
+					str += '\0';
+					bw.Write(str.Length);
+					for (int i = 0; i < str.Length; i++)
+					{
+						bw.Write(str[i]);
+					}
+				}
+
+				if (aniType != Type.NONE)
+				{
+					bw.Write(mt.localScale.x);
+
+					string objectName = mt.name;
+					objectName += '\0';
+
+					bw.Write(objectName.Length); //본 이름 길이
+					for (int i = 0; i < objectName.Length; i++)
+						bw.Write(objectName[i]); // 본 이름
+
+					if (mt.name == "ScifiGrenadeLauncherStatic")
+						bw.Write(1); // 총
+					else if (mt.name == "Bip001 Spine1")
+						bw.Write(2); // 허리
+					else
+						bw.Write(0);
+				}
+
+
+				if (aniType != Type.NONE)
+				{
+					for (int boneNum = 0; boneNum < smr[0].bones.Length; boneNum++)
+					{
+						if (mt.name == smr[0].bones[boneNum].name)
+						{
+							bw.Write(boneNum); // 본 인덱스 
+							break;
+						}
+						else if (boneNum == smr[0].bones.Length - 1)
+							bw.Write(-1);
+					}
+				}
 			}
 		}
 		else
 		{
 			bw.Write(Constants.LAYER);
-		}
-		
-		string objectName = mt.name;
-		objectName += '\0';
 
-		bw.Write(objectName.Length); //본 이름 길이
-		for(int i=0;i< objectName.Length; i++)
-			bw.Write(objectName[i]); // 본 이름
 
-		
-		for (int boneNum = 0; boneNum < smr[0].bones.Length; boneNum++)
-		{
-			if (mt.name == smr[0].bones[boneNum].name)
+			string objectName = mt.name;
+			objectName += '\0';
+
+			bw.Write(objectName.Length); //본 이름 길이
+			for (int i = 0; i < objectName.Length; i++)
+				bw.Write(objectName[i]); // 본 이름
+
+			if (mt.name == "ScifiGrenadeLauncherStatic")
+				bw.Write(1); // 총
+			else if (mt.name == "Bip001 Spine1")
+				bw.Write(2); // 허리
+			else
+				bw.Write(0);
+
+			for (int boneNum = 0; boneNum < smr[0].bones.Length; boneNum++)
 			{
-				bw.Write(boneNum); // 본 인덱스 
-				break;
+				if (mt.name == smr[0].bones[boneNum].name)
+				{
+					bw.Write(boneNum); // 본 인덱스 
+					break;
+				}
+				else if (boneNum == smr[0].bones.Length - 1)
+					bw.Write(-1);
 			}
-			else if (boneNum == smr[0].bones.Length - 1)
-				bw.Write(-1);
 		}
+		
 	}
     private void AnimationWrite(Transform mt)
     {
-			bw.Write(mt.localPosition.x);
-			bw.Write(mt.localPosition.y);
-			bw.Write(mt.localPosition.z);
+		bw.Write(mt.localPosition.x);	
 
-			bw.Write(mt.localRotation.x);
-			bw.Write(mt.localRotation.y);
-			bw.Write(mt.localRotation.z);
-			bw.Write(mt.localRotation.w);
+		if(mt.name == "Bip001")
+			bw.Write(mt.localPosition.y - 1.1654701f);
+		else
+			bw.Write(mt.localPosition.y);
+
+		bw.Write(mt.localPosition.z);
+
+		bw.Write(mt.localRotation.x);
+		bw.Write(mt.localRotation.y);
+		bw.Write(mt.localRotation.z);
+		bw.Write(mt.localRotation.w);
 		
 		for (int i = 0; i < mt.childCount; i++)
 		{
@@ -391,15 +498,18 @@ public class FBX_Exporter : MonoBehaviour
 			AnimationWrite(ct);
 		}
 	}
+
 	// Update is called once per frame
+
 	void Update()
 	{
 		Transform tr = GetComponent<Transform>();
-		string[] aniName = { "Standing", "StandToWalk01", "Walk01 0", "BunnyHop", "Jump01", "JumpToStanding" }; // 애니메이션 이름
-		float[] aniLength = { 1.8f, 0.156f, 1.04f, 0.832f, 0.57f, 1.02f}; // 시간
-		int[] length = {100, 20, 76, 30, 20, 26};
-		int[] type = { AniType.NOT_ALL, AniType.CONTINUOUS_PLAYBACK, AniType.CAN_BACK_PLAY, AniType.CONTINUOUS_PLAYBACK, AniType.CONTINUOUS_PLAYBACK, AniType.ALL };
-
+		string[] aniName = { "idle", "walk", "왼쪽 걷기", "오른쪽 걷기", "발사", "점프1", "점프2", "점프3", "죽음", "댄스"}; // 애니메이션 이름
+		float[] aniLength = { 9.26f, 1.0f, 1.0f, 1.0f, 1.3f, 0.27f, 1.03f, 0.25f, 3.07f,22.43f }; // 시간
+		int[] length = {595, 61, 61, 61, 115, 27, 63, 23, 188, 1178};
+		int[] type = { AniType.NOT_ALL, AniType.CAN_BACK_PLAY, AniType.NOT_ALL, AniType.NOT_ALL, AniType.ALL,
+		AniType.ALL, AniType.NOT_ALL, AniType.PLAY_NOW,  AniType.NOT_CYCLE,  AniType.ALL};
+		
 		if (aniType == Type.ANIMATION)
 		{
 			if (aninum == -2)
@@ -440,7 +550,7 @@ public class FBX_Exporter : MonoBehaviour
 			if (aninum < ani.GetClipCount() - 1)
 				num++;
 		}
-		else
+		else if (aniType == Type.ANIMATOR)
 		{
 			if (aninum == -2)
 			{
@@ -476,6 +586,10 @@ public class FBX_Exporter : MonoBehaviour
 				bw.Close();
 			}
 			num++;
+		}
+		else
+		{
+			bw.Close();
 		}
 	}
 }
