@@ -413,6 +413,8 @@ void CGameFramework::CreateDepthStencilView()
 	m_d3dDsvDepthStencilBufferCPUHandle = m_pd3dDsvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
 
 	m_pd3dDevice->CreateDepthStencilView(m_pd3dDepthStencilBuffer, NULL, m_d3dDsvDepthStencilBufferCPUHandle);
+
+	::SynchronizeResourceTransition(m_pd3dScreenCommandList, m_pd3dDepthStencilBuffer, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_DEPTH_WRITE);
 }
 
 void CGameFramework::OnResizeBackBuffers()
@@ -1097,6 +1099,8 @@ void CGameFramework::ProcessInput()
 				{
 					if (m_pPlayer->IsOnGround())
 					{
+						g_fgravity = -10.1f;
+						m_pPxScene->setGravity(PxVec3(0, g_fgravity, 0));
 						m_pPlayer->SetFallVelocity(100);
 						m_pPlayer->SetJumpState(true);
 						g_player_info[g_myid].anim_state = 1;
@@ -1108,6 +1112,7 @@ void CGameFramework::ProcessInput()
 				}
 				if (pKeysBuffer[VK_LSHIFT] & 0xF0)
 				{
+
 					m_ppScenes[CHARACTER]->ChangeAnimation(9);
 					IsInput = true;
 					keystate = true;
@@ -1115,7 +1120,7 @@ void CGameFramework::ProcessInput()
 			}
 			float cxDelta = 0.0f, cyDelta = 0.0f;
 			POINT ptCursorPos;
-			if (true) // GetCapture() == m_hWnd [카메라 고정]
+			if (GetCapture() == m_hWnd) // GetCapture() == m_hWnd [카메라 고정]
 			{
 				GetCursorPos(&ptCursorPos);
 				if (GetCapture() == m_hWnd 

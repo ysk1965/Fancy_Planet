@@ -203,8 +203,6 @@ SRT AnimationController::Interpolate(int iBoneNum, float fTime, float fRendererS
 
 	if (m_pRootObject->m_pAnimationFactors->m_iNewState >= 0)
 	{
-		//assert(fTimeRate <= 1);
-
 		XMStoreFloat4(&result.R, XMQuaternionSlerp(XMLoadFloat4(&m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iSaveState].pFrame[m_nBone*(UINT)m_pRootObject->m_pAnimationFactors->m_fSaveLastFrame + iBoneNum].RotationQuat)
 			, XMLoadFloat4(&m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iNewState].pFrame[iBoneNum].RotationQuat), fTimeRate));
 
@@ -241,59 +239,49 @@ SRT AnimationController::Interpolate(int iBoneNum, float fTime, float fRendererS
 }
 void AnimationController::SetToParentTransforms()
 {
-	stack<CAnimationObject*> FrameStack;
-	FrameStack.push(m_pRootObject);
 
 	float fTime = std::chrono::duration_cast<std::chrono::milliseconds>(chrono::system_clock::now() - m_pRootObject->m_pAnimationFactors->m_chronoStart).count() / 1000.0f;
 	bool bStop = false;
 
-	if (m_pRootObject->m_pAnimationFactors->m_iState == CHANG_INDEX)
+	if (m_pRootObject->m_pAnimationFactors->m_iState != CHANGE_TIME)
 	{
-		if (CHANGE_TIME < fTime)
+		if (m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].fTime < fTime)
 		{
-			if (m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].nType == ALL)
+			if (m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].nType == ALL ||
+				m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].nType == PLAY_NOW)
 			{
 				ChangeAnimation(0);
 				fTime = 0;
 			}
-			if (m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].nType == CONTINUOUS_PLAYBACK)
+			else if (m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].nType == CONTINUOUS_PLAYBACK)
 			{
 				ChangeAnimation(m_pRootObject->m_pAnimationFactors->m_iState + 1);
 				fTime = 0;
 			}
+			else if (m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].nType == NOT_CYCLE)
+			{
+				bStop = true;
+				fTime = 0;
+			}
 		}
 	}
-	else if (m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].fTime < fTime)
-	{
-		if (m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].nType == ALL || 
-			m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].nType == PLAY_NOW)
-		{
-			ChangeAnimation(0);
-			fTime = 0;
-		}
-		else if (m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].nType == CONTINUOUS_PLAYBACK)
-		{
-			ChangeAnimation(m_pRootObject->m_pAnimationFactors->m_iState + 1);
-			fTime = 0;
-		}
-		if (m_pAnimation[m_pRootObject->m_pAnimationFactors->m_iState].nType == NOT_CYCLE)
-		{
-			bStop = true;
-		}
-	}
-
+	
 	if (m_pRootObject->m_pAnimationFactors->m_iState == CHANG_INDEX && (fTime > CHANGE_TIME))
 	{
 		ChangeAnimation(CHANG_INDEX);
 	}
+
 	if (m_pRootObject->m_pAnimationFactors->m_iState != CHANG_INDEX)		
 			GetCurrentFrame(bStop); // 현재 프레임 계산
-	
+
+	stack<CAnimationObject*> FrameStack;
+	FrameStack.push(m_pRootObject); // 루트 노드 부터 시작
 	for (int i = 0;; i++)
-	{
+	{// 스택에 더이상 노드가 없으면 루프를 빠져 나온다.
 		if (FrameStack.empty())
 			break;
-
+		// 애니메이션 데이터를 저장할 때, 깊이우선 방식으로 저장했기
+		// 그 순서대로 노드를 돌면서 행렬을 채워 넣는다.
 		CAnimationObject* TargetFrame = FrameStack.top();
 		FrameStack.pop();
 
@@ -301,7 +289,8 @@ void AnimationController::SetToParentTransforms()
 		{
 			SRT srt;
 			float fRendererScale = TargetFrame->GetRndererScale();
-
+			// 애니메이션과 애니메이션 사이는 특정시간동안 보간하여
+			// 애니메이션 전환을 자연스럽게 한다.
 			if (m_pRootObject->m_pAnimationFactors->m_iState != CHANG_INDEX)
 				srt = Interpolate(i, fRendererScale);
 			else
@@ -312,7 +301,7 @@ void AnimationController::SetToParentTransforms()
 			XMVECTOR Q = XMLoadFloat4(&srt.R);
 
 			XMVECTOR zero = XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);
-
+			// 애니메이션데이터로 부터 얻어진 Position값과 Quaternion값을 가지고 행렬을 만들어, ToParent행렬에 대입.
 			XMStoreFloat4x4(&TargetFrame->m_xmf4x4ToParentTransform, XMMatrixAffineTransformation(S, zero, Q, P));
 		}
 
@@ -323,7 +312,7 @@ void AnimationController::SetToParentTransforms()
 	}
 }
 void AnimationController::SetToRootTransforms()
-{
+{// 깊이 우선 탐색을 실시한다.
 	stack<CAnimationObject*> FrameStack;
 	FrameStack.push(m_pRootObject->m_pChild);
 
@@ -334,16 +323,17 @@ void AnimationController::SetToRootTransforms()
 
 		CAnimationObject* TargetFrame = FrameStack.top();
 		FrameStack.pop();
-
+		// 루트의 자식 노드부터 시작해서, 위부터 아래로 ToParent행렬을 곱해서 갱신해, ToRoot행렬을 만든다.
 		if (TargetFrame->m_pParent != NULL && TargetFrame != m_pRootObject->m_pChild)
-			TargetFrame->m_xmf4x4ToRootTransform = Matrix4x4::Multiply(TargetFrame->m_xmf4x4ToParentTransform, TargetFrame->m_pParent->m_xmf4x4ToRootTransform);
-		else
+			TargetFrame->m_xmf4x4ToRootTransform =  
+			Matrix4x4::Multiply(TargetFrame->m_xmf4x4ToParentTransform, TargetFrame->m_pParent->m_xmf4x4ToRootTransform);
+		else // 위로 부모 노드가 없으면 자신의 ToParent행렬이 곧 ToRoot행렬이 된다.
 			TargetFrame->m_xmf4x4ToRootTransform = TargetFrame->m_xmf4x4ToParentTransform;
-
-		if (TargetFrame->m_pChild)
-			FrameStack.push(TargetFrame->m_pChild);
+		
 		if (TargetFrame->m_pSibling)
 			FrameStack.push(TargetFrame->m_pSibling);
+		if (TargetFrame->m_pChild)
+			FrameStack.push(TargetFrame->m_pChild);
 	}
 }
 void AnimationController::AdvanceAnimation(ID3D12GraphicsCommandList* pd3dCommandList)
@@ -354,10 +344,14 @@ void AnimationController::AdvanceAnimation(ID3D12GraphicsCommandList* pd3dComman
 
 	for (UINT i = 0; i < m_pRootObject->m_pAnimationFactors->m_nBindpos; i++)
 	{
-		XMMATRIX offset = XMLoadFloat4x4(&m_pBindPoses[i]); // 본오프셋 행렬
-		XMMATRIX toRoot = XMLoadFloat4x4(&m_ppBoneObject[i]->m_xmf4x4ToRootTransform);
+		// 월드 좌표계에서 해당 노드의 좌표계로 이동시키는 행렬
+		XMMATRIX offset = XMLoadFloat4x4(&m_pBindPoses[i]); 
+		// 애니메이션 정보를 담고, 해당 노드의 좌표계에서 월드 좌표계로 이동시키는 행렬
+		XMMATRIX toRoot = XMLoadFloat4x4(&m_ppBoneObject[i]->m_xmf4x4ToRootTransform); 
 		XMMATRIX finalTransform = XMMatrixMultiply(XMMatrixTranspose(offset), (toRoot));
 
+		// 상수버퍼는 제한이 있기때문에 한번에 32개의 행렬밖에 쉐이더로 넘겨주지 못한다.
+		// 하여 상수버퍼 3개를 사용해 값을 전달한다. 
 		if (i < BONE_TRANSFORM_NUM)
 			XMStoreFloat4x4(&m_pRootObject->m_BoneTransforms->m_xmf4x4BoneTransform[i], XMMatrixTranspose(finalTransform));
 		else if (i >= BONE_TRANSFORM_NUM && i < (BONE_TRANSFORM_NUM2 + BONE_TRANSFORM_NUM))
@@ -614,6 +608,7 @@ void CGameObject::SetMesh(int nIndex, CMesh *pMesh)
 		if (m_ppMeshes[nIndex])
 			m_ppMeshes[nIndex]->Release();
 		m_ppMeshes[nIndex] = pMesh;
+
 		if (pMesh)
 			pMesh->AddRef();
 	}
@@ -1841,6 +1836,15 @@ void CPhysXObject::BuildObject(PxPhysics* pPxPhysics, PxScene* pPxScene, PxMater
 
 	XMFLOAT3 vMax = (XMFLOAT3(1, 1, 1));
 	vMax.x *= vScale.x;	 vMax.y *= vScale.y;  vMax.z *= vScale.z;
+
+	if (name == "Bullet") {
+		XMFLOAT3 tempMultiply = (XMFLOAT3(1, 1, 1));
+		tempMultiply.x = 100;
+		tempMultiply.y = 100;
+		tempMultiply.z = 100;
+
+		CGameObject::SetScale(tempMultiply.x, tempMultiply.y, tempMultiply.z);
+	}
 
 	XMFLOAT3 _d3dxvExtents = // 피직스 범위
 		XMFLOAT3((abs(vMin.x) + abs(vMax.x)) / 2, (abs(vMin.y) + abs(vMax.y)) / 2, (abs(vMin.z) + abs(vMax.z)) / 2);
