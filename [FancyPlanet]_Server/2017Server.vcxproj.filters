@@ -13,6 +13,12 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="00.PhysX">
+      <UniqueIdentifier>{3a47f70c-56e8-4055-9c71-d326c10e8029}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="99.Etc">
+      <UniqueIdentifier>{a33b0f21-c843-4788-92d5-55a2facb08b5}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="protocol.h">
@@ -21,6 +27,9 @@
     <ClInclude Include="Timer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="PhysXFramework.h">
+      <Filter>00.PhysX</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="server_main.cpp">
@@ -28,6 +37,12 @@
     </ClCompile>
     <ClCompile Include="Timer.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="stdafx.h">
+      <Filter>99.Etc</Filter>
+    </ClCompile>
+    <ClCompile Include="PhysXFramework.cpp">
+      <Filter>00.PhysX</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

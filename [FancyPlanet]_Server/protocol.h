@@ -8,6 +8,9 @@ using namespace std;
 using namespace DirectX;
 
 
+#include "PhysXFramework.h"
+
+class CPhysXFramework;
 enum  PLAYER_STATE
 {
 	STAND,
