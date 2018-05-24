@@ -378,7 +378,7 @@ public:
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera, UINT nInstances);
 	void LoadAnimation(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ifstream& InFile, AnimationController* pAnimationController);
 	virtual void LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList,
-		ID3D12RootSignature *pd3dGraphicsRootSignature, ifstream& InFile, UINT nType, UINT nSub);
+		ID3D12RootSignature *pd3dGraphicsRootSignature, ifstream& InFile, UINT nType, UINT nSub, CMesh* pCMesh);
 	void LoadGeometryFromFile(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature
 		, TCHAR *pstrFileName, AnimationController* pAnimationController);
 	virtual void UpdateTransform(XMFLOAT4X4 *pxmf4x4Parent = NULL);
@@ -402,8 +402,9 @@ public:
 	CAnimationObject 					*m_pParent = NULL;
 	CAnimationObject 					*m_pChild = NULL;
 	CAnimationObject 					*m_pSibling = NULL;
-
+	// 부모좌표계로 변환하는 행렬
 	XMFLOAT4X4						m_xmf4x4ToRootTransform;
+	// 현재 노드에서 월드좌표계로 변환하는 행렬
 	XMFLOAT4X4						m_xmf4x4ToParentTransform;
 
 	BONE_TRANSFORMS			*m_BoneTransforms;
@@ -413,7 +414,7 @@ public:
 	TCHAR							m_strFrameName[256] = { '\0' };
 	bool							m_bRoot = false;
 	int								m_iBoneIndex = -1;
-
+	// 
 	AnimationController				*m_pAnimationController = NULL;
 	AnimationFactors				*m_pAnimationFactors = NULL;
 

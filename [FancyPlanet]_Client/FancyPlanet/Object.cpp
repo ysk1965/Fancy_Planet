@@ -1325,11 +1325,12 @@ void CAnimationObject::LoadAnimation(ID3D12Device *pd3dDevice, ID3D12GraphicsCom
 	}
 }
 void CAnimationObject::LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList,
-	ID3D12RootSignature *pd3dGraphicsRootSignature, ifstream& InFile, UINT nType, UINT nSub)
+	ID3D12RootSignature *pd3dGraphicsRootSignature, ifstream& InFile, UINT nType, UINT nSub, CMesh* pCMesh)
 {
 	int m_nType = -1;
 	int nSubMesh = 0;
 	static UINT nRendererMesh = 0;
+	CMesh* pMesh = NULL;
 
 	if (nType != SKIP)
 		InFile.read((char*)&m_nType, sizeof(int)); // 타입 받기
@@ -1361,7 +1362,7 @@ void CAnimationObject::LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, ID3D
 		char* pstrSpecularTextureName = NULL;
 		UINT *pIndices = NULL;
 
-		int nVertices = 0, nIndices = 0;
+		int nVertices = 0, nIndices = 0, nSubIndices = 0, nStartIndex = 0;
 
 		CMaterial *pMaterial = NULL;
 
@@ -1369,43 +1370,85 @@ void CAnimationObject::LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, ID3D
 
 		InFile.read((char*)&m_nDrawType, sizeof(int)); // 그리기 타입 받기
 
-		InFile.read((char*)&nVertices, sizeof(int)); // 정점 갯수 받기
-		InFile.read((char*)&nIndices, sizeof(int)); // 정점 갯수 받기
+		InFile.read((char*)&nStartIndex, sizeof(int)); // 인덱스 시작 위치
+		InFile.read((char*)&nSubIndices, sizeof(int)); // 서브인덱스 갯수 받기
 
-		pIndices = new UINT[nIndices];
-		pxmf3Positions = new XMFLOAT3[nVertices];
-		pxmf2TextureCoords0 = new XMFLOAT2[nVertices];
-		pxmf3Normals = new XMFLOAT3[nVertices];
-		pxmf3Tangents = new XMFLOAT3[nVertices];
-		pxmf3BoneWeights = new XMFLOAT3[nVertices];
-		pxmi4BoneIndices = new XMINT4[nVertices];
-
-		InFile.read((char*)pIndices, sizeof(UINT) * nIndices); // 인덱스 받기
-		InFile.read((char*)pxmf3Positions, sizeof(XMFLOAT3) * nVertices); // 정점 받기
-		InFile.read((char*)pxmf2TextureCoords0, sizeof(XMFLOAT2) * nVertices); // uv 받기
-
-		if (m_nDrawType > 1)
+		if((nSubMesh > 1 && nSub == 1) || nSubMesh == 1)
 		{
-			InFile.read((char*)pxmf3Normals, sizeof(XMFLOAT3) * nVertices); // 법선 받기
-			InFile.read((char*)pxmf3Tangents, sizeof(XMFLOAT3) * nVertices); // 탄젠트 받기
+			InFile.read((char*)&nVertices, sizeof(int)); // 정점 갯수 받기
+			InFile.read((char*)&nIndices, sizeof(int)); // 전체 인덱스 갯수 받기
+
+			pIndices = new UINT[nIndices];
+			pxmf3Positions = new XMFLOAT3[nVertices];
+			pxmf2TextureCoords0 = new XMFLOAT2[nVertices];
+			pxmf3Normals = new XMFLOAT3[nVertices];
+			pxmf3Tangents = new XMFLOAT3[nVertices];
+			pxmf3BoneWeights = new XMFLOAT3[nVertices];
+			pxmi4BoneIndices = new XMINT4[nVertices];
+
+			InFile.read((char*)pIndices, sizeof(UINT) * nIndices); // 인덱스 받기
+			InFile.read((char*)pxmf3Positions, sizeof(XMFLOAT3) * nVertices); // 정점 받기
+			InFile.read((char*)pxmf2TextureCoords0, sizeof(XMFLOAT2) * nVertices); // uv 받기
+
+			if (m_nDrawType > 1)
+			{
+				InFile.read((char*)pxmf3Normals, sizeof(XMFLOAT3) * nVertices); // 법선 받기
+				InFile.read((char*)pxmf3Tangents, sizeof(XMFLOAT3) * nVertices); // 탄젠트 받기
+			}
+			if (m_nType == SKINNEDMESH)
+			{
+				InFile.read((char*)pxmf3BoneWeights, sizeof(XMFLOAT3) * nVertices); // 본가중치 받기
+				InFile.read((char*)pxmi4BoneIndices, sizeof(XMINT4) * nVertices); // 본인덱스 받기
+
+				int nBindPoses;
+
+				InFile.read((char*)&nBindPoses, sizeof(int)); // 본포즈 길이 받기
+
+				if (GetRootObject()->m_pAnimationFactors == NULL)
+					GetRootObject()->m_pAnimationFactors = new AnimationFactors(nBindPoses);
+
+				GetRootObject()->m_pBindPoses = new XMFLOAT4X4[nBindPoses];
+
+				InFile.read((char*)GetRootObject()->m_pBindPoses, sizeof(XMFLOAT4X4) * nBindPoses); // 본포즈 받기
+			}
+			
+
+			if (nVertices > 0 && m_nDrawType > 1 && m_nType == SKINNEDMESH)
+				pMesh = new CAnimationMesh(pd3dDevice, pd3dCommandList, nVertices, pxmf3Positions, pxmf3Tangents
+					, pxmf3Normals, pxmf2TextureCoords0, pxmf3BoneWeights, pxmi4BoneIndices, nSubIndices, pIndices);
+			else if (nVertices > 0 && m_nType == SKINNEDMESH)
+				pMesh = new CMeshAnimationTextured(pd3dDevice, pd3dCommandList, nVertices, pxmf3Positions, pxmf2TextureCoords0, pxmf3BoneWeights, pxmi4BoneIndices, nSubIndices, pIndices);
+			else if (m_nType == RENDERMESH)
+				pMesh = new CRendererMesh(pd3dDevice, pd3dCommandList, nVertices, pxmf3Positions, pxmf3Tangents, pxmf3Normals, pxmf2TextureCoords0, m_nRendererMesh, nSubIndices, pIndices);
+
+			pMesh->SetStartIndex(nStartIndex);
+
+			if (pMesh)
+				SetMesh(0, pMesh);
+			else
+				ResizeMeshes(0);
+
+			if (pxmf3Positions)
+				delete[] pxmf3Positions;
+
+			if (pxmf2TextureCoords0)
+				delete[] pxmf2TextureCoords0;
+
+			if (pxmf3Normals)
+				delete[] pxmf3Normals;
+
+			if (pxmf3Tangents)
+				delete[] pxmf3Tangents;
+
+			if (pIndices)
+				delete[] pIndices;
 		}
-		if (m_nType == SKINNEDMESH)
+		else if(nSubMesh > nSub)
 		{
-			InFile.read((char*)pxmf3BoneWeights, sizeof(XMFLOAT3) * nVertices); // 본가중치 받기
-			InFile.read((char*)pxmi4BoneIndices, sizeof(XMINT4) * nVertices); // 본인덱스 받기
-
-			int nBindPoses;
-
-			InFile.read((char*)&nBindPoses, sizeof(int)); // 본포즈 길이 받기
-
-			if (GetRootObject()->m_pAnimationFactors == NULL)
-				GetRootObject()->m_pAnimationFactors = new AnimationFactors(nBindPoses);
-
-			GetRootObject()->m_pBindPoses = new XMFLOAT4X4[nBindPoses];
-
-			InFile.read((char*)GetRootObject()->m_pBindPoses, sizeof(XMFLOAT4X4) * nBindPoses); // 본포즈 받기
+			pMesh = new EmptyMesh(pCMesh->GetVertexBuffer(), pCMesh->GetIndexBuffer(), pCMesh->GetStride(), pCMesh->m_nVertices, nStartIndex, nSubIndices);
+			pMesh->SetStartIndex(nStartIndex);
 		}
-
+		
 		int Namesize;
 
 		InFile.read((char*)&Namesize, sizeof(int)); // 디퓨즈맵이름 받기
@@ -1424,36 +1467,6 @@ void CAnimationObject::LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, ID3D
 			pstrSpecularTextureName = new char[Namesize];
 			InFile.read(pstrSpecularTextureName, sizeof(char)*Namesize);
 		}
-
-		CMesh* pMesh = NULL;
-
-		if (nVertices > 0 && m_nDrawType > 1 && m_nType == SKINNEDMESH)
-			pMesh = new CAnimationMesh(pd3dDevice, pd3dCommandList, nVertices, pxmf3Positions, pxmf3Tangents
-				, pxmf3Normals, pxmf2TextureCoords0, pxmf3BoneWeights, pxmi4BoneIndices, nIndices, pIndices);
-		else if (nVertices > 0 && m_nType == SKINNEDMESH)
-			pMesh = new CMeshAnimationTextured(pd3dDevice, pd3dCommandList, nVertices, pxmf3Positions, pxmf2TextureCoords0, pxmf3BoneWeights, pxmi4BoneIndices, nIndices, pIndices);
-		else if (m_nType == RENDERMESH)
-			pMesh = new CRendererMesh(pd3dDevice, pd3dCommandList, nVertices, pxmf3Positions, pxmf3Tangents, pxmf3Normals, pxmf2TextureCoords0, m_nRendererMesh, nIndices, pIndices);
-
-		if (pMesh)
-			SetMesh(0, pMesh);
-		else
-			ResizeMeshes(0);
-
-		if (pxmf3Positions)
-			delete[] pxmf3Positions;
-
-		if (pxmf2TextureCoords0)
-			delete[] pxmf2TextureCoords0;
-
-		if (pxmf3Normals)
-			delete[] pxmf3Normals;
-
-		if (pxmf3Tangents)
-			delete[] pxmf3Tangents;
-
-		if (pIndices)
-			delete[] pIndices;
 
 		pMaterial = new CMaterial();
 
@@ -1559,7 +1572,7 @@ void CAnimationObject::LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, ID3D
 				{
 					CAnimationObject *pChild = new CAnimationObject(0);
 					SetChild(pChild);
-					pChild->LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, InFile, GET_TYPE, 1);
+					pChild->LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, InFile, GET_TYPE, 1, NULL);
 				}
 			}
 		}
@@ -1567,7 +1580,7 @@ void CAnimationObject::LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, ID3D
 		{
 			CAnimationObject *pSibling = new CAnimationObject(0);
 			SetChild(pSibling);
-			pSibling->LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, InFile, SKIP, ++nSub);
+			pSibling->LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, InFile, SKIP, ++nSub, pMesh);
 
 		}
 	}
@@ -1585,7 +1598,7 @@ void CAnimationObject::LoadGeometryFromFile(ID3D12Device *pd3dDevice, ID3D12Grap
 	}
 	m_bRoot = true;
 
-	LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, fi, GET_TYPE, 1);
+	LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, fi, GET_TYPE, 1, NULL);
 
 	bool bAnimation;
 	fi.read((char*)&bAnimation, sizeof(bool));

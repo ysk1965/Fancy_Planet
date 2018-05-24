@@ -115,13 +115,13 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>D:\FancyPlanet\FancyPlanet\EASTL-master\test\packages\EABase\include\Common;D:\FancyPlanet\FancyPlanet\EASTL-master\include;D:\FancyPlanet\FancyPlanet\PhysX\Include;PhysX\Include;C:\Users\DELL\Desktop\FancyPlanet\PhysX\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\FancyPlanet\FancyPlanet\EASTL-master\test\packages\EABase\include\Common;D:\FancyPlanet\FancyPlanet\EASTL-master\include;D:\FancyPlanet\FancyPlanet\PhysX\Include;PhysX\Include;C:\Users\DELL\Desktop\180513\FancyPlanet\PhysX\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>C:\Users\DELL\Desktop\180513\FancyPlanet\PhysX\vc14win64;D:\FancyPlanet\FancyPlanet\x64\Debug;D:\FancyPlanet\FancyPlanet\PhysX\vc14win64;D:\FancyPlanet\FancyPlanet\x64\Release;PhysX\vc14win64;C:\Users\DELL\Desktop\FancyPlanet\PhysX\vc14win64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>C:\Users\DELL\Desktop\180513\FancyPlanet\PhysX\vc14win64;D:\FancyPlanet\FancyPlanet\x64\Debug;D:\FancyPlanet\FancyPlanet\PhysX\vc14win64;D:\FancyPlanet\FancyPlanet\x64\Release;PhysX\vc14win64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>dinput8.lib;d3dcompiler.lib;dxguid.lib;winmm.lib;dxgi.lib;comctl32.lib;PhysX3ExtensionsDEBUG.lib;physx3DEBUG_x64.lib;physx3commonDEBUG_x64.lib;PhysXVisualDebuggerSDKDEBUG.lib;PhysX3CharacterKinematicDEBUG_x64.lib;PxTaskDEBUG.lib;PhysXProfileSDKDEBUG.lib;PhysX3CookingDEBUG_x64.lib;LowLevelClothDEBUG.lib;LowLevelDEBUG.lib;physX3VehicleDEBUG.lib;PvdRuntimeDEBUG.lib;SceneQueryDEBUG.lib;SimulationControllerDEBUG.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>

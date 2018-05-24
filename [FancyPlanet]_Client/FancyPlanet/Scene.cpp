@@ -95,7 +95,7 @@ void TerrainAndSkyBoxScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12Graphic
 	XMFLOAT4 xmf4Color(0.0f, 0.5f, 0.0f, 0.0f);
 
 	m_pTerrain = new CHeightMapTerrain(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature,
-		_T("../Assets/Image/Terrain/HeightMap3.raw"), 257, 257, 257, 257, xmf3Scale, xmf4Color,
+		_T("../Assets/Image/Terrain/HeightMap2.raw"), 257, 257, 257, 257, xmf3Scale, xmf4Color,
 		m_pPxPhysicsSDK, m_pPxScene, m_pPxControllerManager, m_pCooking);
 
 	m_pSkyBox = new CSkyBox(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
@@ -327,9 +327,9 @@ void CharacterScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsComman
 	for (int i = 0; i < m_nObjects; i++)
 	{
 		m_ppSoldierObjects[i]->m_pAnimationFactors->SetBoneObject(m_ppSoldierObjects[i]);
-		m_ppSoldierObjects[i]->SetPosition(1000, 500, 1000);
+		m_ppSoldierObjects[i]->SetPosition(10, 200, 10);
 		if (i != m_nObjects - 1)
-			m_ppSoldierObjects[i]->SetScale(10.0f, 10.0f, 10.0f);
+			m_ppSoldierObjects[i]->SetScale(50.0f, 50.0f, 50.0f);
 		else
 			m_ppSoldierObjects[m_nObjects - 1]->SetPlayerScale(10);
 	}

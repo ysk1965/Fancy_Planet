@@ -265,8 +265,21 @@ public:
 class CMesh
 {
 public:
+	CMesh() {};
 	CMesh(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList);
 	CMesh(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, UINT nVertices, XMFLOAT3 *pxmf3Positions, UINT nIndices, UINT *pnIndices);
+	UINT GetStartIndex()
+	{
+		return m_nStartIndex;
+	};
+	void SetStartIndex(UINT nStartIndex)
+	{
+		m_nStartIndex = nStartIndex;
+	};
+	UINT GetStride()
+	{
+		return m_nStride;
+	};
 	virtual ~CMesh();
 
 private:
@@ -312,6 +325,35 @@ public:
 	UINT							m_nVertices = 0;
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList);
 	void Render(ID3D12GraphicsCommandList *pd3dCommandList, UINT nInstances);
+	ID3D12Resource* GetVertexBuffer()
+	{
+		return m_pd3dVertexBuffer;
+	}
+	ID3D12Resource* GetIndexBuffer()
+	{
+		return m_pd3dIndexBuffer;
+	}
+};
+class EmptyMesh : public CMesh
+{
+public:
+	EmptyMesh(ID3D12Resource* pd3dVertexBuffer, ID3D12Resource* pd3dIndexBuffer, UINT nStride, UINT nVertices, UINT nStartIndex, UINT nIndices)
+	{
+		m_pd3dVertexBuffer = pd3dVertexBuffer;
+		m_pd3dIndexBuffer = pd3dIndexBuffer;
+		m_nStride = nStride;
+		m_nVertices = nVertices;
+
+		m_d3dVertexBufferView.BufferLocation = m_pd3dVertexBuffer->GetGPUVirtualAddress();
+		m_d3dVertexBufferView.StrideInBytes = nStride;
+		m_d3dVertexBufferView.SizeInBytes = nStride * nVertices;
+
+		m_nStartIndex = nStartIndex;
+		m_nIndices = nIndices;
+		m_d3dIndexBufferView.BufferLocation = m_pd3dIndexBuffer->GetGPUVirtualAddress() + m_nStartIndex;
+		m_d3dIndexBufferView.Format = DXGI_FORMAT_R32_UINT;
+		m_d3dIndexBufferView.SizeInBytes = sizeof(UINT) * m_nIndices;
+	}
 };
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

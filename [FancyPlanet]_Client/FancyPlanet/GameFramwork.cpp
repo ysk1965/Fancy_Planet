@@ -283,7 +283,7 @@ void CGameFramework::CreateRenderTargetViews()
 	D3D12_CLEAR_VALUE d3dClearValue = { DXGI_FORMAT_R8G8B8A8_UNORM,{ 0.0f, 0.0f, 0.0f, 1.0f } };
 	for (UINT i = 0; i < m_nRenderTargetBuffers; i++)
 	{
-		//ë²„í¼ë¥¼ ë§Œë“ ë‹¤.
+		//¹öÆÛ¸¦ ¸¸µç´Ù.
 		m_ppd3dRenderTargetBuffers[i] = pTexture->CreateTexture(m_pd3dDevice, m_pd3dScreenCommandList, m_nWndClientWidth, m_nWndClientHeight, DXGI_FORMAT_R8G8B8A8_UNORM, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ, &d3dClearValue, i);
 		m_ppd3dRenderTargetBuffers[i]->AddRef();
 	}
@@ -300,7 +300,7 @@ void CGameFramework::CreateRenderTargetViews()
 	for (UINT i = 0; i < m_nRenderTargetBuffers; i++)
 	{
 		m_pd3dRtvRenderTargetBufferCPUHandles[i] = d3dRtvCPUDescriptorHandle;
-		//ë²„í¼ì˜ ì£¼ì†Œê°€ ë°±ë²„í¼ ì£¼ì†Œê°€ ì•„ë‹ˆê³ , ë°©ê¸ˆ ë§Œë“  ì£¼ì†Œë¥¼ ì‚¬ìš©í•œë‹¤.
+		//¹öÆÛÀÇ ÁÖ¼Ò°¡ ¹é¹öÆÛ ÁÖ¼Ò°¡ ¾Æ´Ï°í, ¹æ±İ ¸¸µç ÁÖ¼Ò¸¦ »ç¿ëÇÑ´Ù.
 		m_pd3dDevice->CreateRenderTargetView(pTexture->GetTexture(i), &d3dRenderTargetViewDesc, m_pd3dRtvRenderTargetBufferCPUHandles[i]);
 		d3dRtvCPUDescriptorHandle.ptr += m_nRtvDescriptorIncrementSize;
 	}
@@ -412,7 +412,7 @@ void CGameFramework::CreateDepthStencilView()
 
 	m_d3dDsvDepthStencilBufferCPUHandle = m_pd3dDsvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
 
-	m_pd3dDevice->CreateDepthStencilView(m_pd3dDepthStencilBuffer, NULL, m_d3dDsvDepthStencilBufferCPUHandle);	
+	m_pd3dDevice->CreateDepthStencilView(m_pd3dDepthStencilBuffer, NULL, m_d3dDsvDepthStencilBufferCPUHandle);
 }
 
 void CGameFramework::OnResizeBackBuffers()
@@ -546,7 +546,7 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 
 
 			g_my_info.pos = GetPlayerMatrix();
-			printf("ì´ë™ ìºë¦­í„° í¬ì§€ì…˜ %f,%f,%f\n", GetPlayerMatrix()._41, GetPlayerMatrix()._42, GetPlayerMatrix()._43);
+			printf("ÀÌµ¿ Ä³¸¯ÅÍ Æ÷Áö¼Ç %f,%f,%f\n", GetPlayerMatrix()._41, GetPlayerMatrix()._42, GetPlayerMatrix()._43);
 			DWORD iobyte;
 			WSASend(g_mysocket, &send_wsabuf, 1, &iobyte, 0, NULL, NULL);
 
@@ -645,7 +645,7 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 			my_packet->state = g_my_info.m_isready;
 			DWORD iobyte;
 			printf("packet : READY  \n");
-			if (g_my_info.m_scene == 0)//ë ˆë””íŒ¨í‚·ì€ ë¡œë¹„ì¼ëŒ€ë§Œ
+			if (g_my_info.m_scene == 0)//·¹µğÆĞÅ¶Àº ·ÎºñÀÏ´ë¸¸
 			{
 				int ret = WSASend(g_mysocket, &send_wsabuf, 1, &iobyte, 0, NULL, NULL);
 
@@ -1118,7 +1118,7 @@ void CGameFramework::ProcessInput()
 			}
 			float cxDelta = 0.0f, cyDelta = 0.0f;
 			POINT ptCursorPos;
-			if(true) // GetCapture() == m_hWnd [ì¹´ë©”ë¼ ê³ ì •]
+			if (true) // GetCapture() == m_hWnd [Ä«¸Ş¶ó °íÁ¤]
 			{
 				GetCursorPos(&ptCursorPos);
 				if (GetCapture() == m_hWnd 
@@ -1375,7 +1375,7 @@ void CGameFramework::FrameAdvance()
 	m_pTimeNumberShader->SetAndCalculateScoreLocation(60 - g_fgametime);
 	m_pHPNumberShader->SetAndCalculateHPLocation(g_my_info.hp);
 	m_ppScenes[CHARACTER]->ModelsSetPosition(g_player_info, g_myid);
-	CollisionCheckByBullet();//ì´ì•Œì¶©ëŒì²´í¬
+	CollisionCheckByBullet();//ÃÑ¾ËÃæµ¹Ã¼Å©
 	for (int i = 0; i < NUM_SUBSETS; i++)
 	{
 		SetEvent(m_workerBeginRenderFrame[i]);
@@ -1407,7 +1407,7 @@ void CGameFramework::FrameAdvance()
 	m_pd3dScreenCommandList->ClearDepthStencilView(m_d3dDsvDepthStencilBufferCPUHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, NULL);
 	m_pd3dScreenCommandList->ClearRenderTargetView(m_pd3dRtvSwapChainBackBufferCPUHandles[m_nSwapChainBufferIndex], Colors::Azure, 0, NULL);
 	m_pd3dScreenCommandList->OMSetRenderTargets(1, &m_pd3dRtvSwapChainBackBufferCPUHandles[m_nSwapChainBufferIndex], TRUE, &m_d3dDsvDepthStencilBufferCPUHandle);
-	//ì›ë˜ëŒ€ë¡œ ë°±ë²„í¼ì— ê·¸ë¦°ë‹¤.
+	//¿ø·¡´ë·Î ¹é¹öÆÛ¿¡ ±×¸°´Ù.
 
 	RenderUI();
 
@@ -1433,49 +1433,49 @@ void CGameFramework::FrameAdvance()
 void CGameFramework::InitializePhysxEngine()
 {
 	m_pPxFoundation = PxCreateFoundation(PX_PHYSICS_VERSION, m_PxDefaultAllocatorCallback, m_PxDefaultErrorCallback);
-	// íŒŒìš´ë°ì´ì…˜ í´ë˜ìŠ¤ì˜ ì¸ìŠ¤í„´ìŠ¤ë¥¼ ì‘ì„±
+	// ÆÄ¿îµ¥ÀÌ¼Ç Å¬·¡½ºÀÇ ÀÎ½ºÅÏ½º¸¦ ÀÛ¼º
 
 	PxTolerancesScale PxScale = PxTolerancesScale();
-	// ì‹œë®¬ë ˆì´ì…˜ì´ ì‹¤í–‰ë˜ëŠ” ìŠ¤ì¼€ì¼ì„ ì •ì˜í•˜ëŠ” í´ë˜ìŠ¤
-	// ì‹œë®¬ë ˆì´ì…˜ ìŠ¤ì¼€ì¼ì„ ë³€ê²½í•˜ë ¤ë©´ ì¥ë©´ì˜ ê¸°ë³¸ ì¤‘ë ¥ ê°’ì„ ë³€ê²½í•˜ë ¤ëŠ” ê²ƒì´ë¨, ì•ˆì •ì ì¸ ì‹œë®¬ë ˆì´ì…˜ì—ì„œëŠ” bounceThresholdë¥¼ ë³€ê²½í•´ì•¼í•  ìˆ˜ë„ ìˆìŒ.
+	// ½Ã¹Ä·¹ÀÌ¼ÇÀÌ ½ÇÇàµÇ´Â ½ºÄÉÀÏÀ» Á¤ÀÇÇÏ´Â Å¬·¡½º
+	// ½Ã¹Ä·¹ÀÌ¼Ç ½ºÄÉÀÏÀ» º¯°æÇÏ·Á¸é Àå¸éÀÇ ±âº» Áß·Â °ªÀ» º¯°æÇÏ·Á´Â °ÍÀÌµÊ, ¾ÈÁ¤ÀûÀÎ ½Ã¹Ä·¹ÀÌ¼Ç¿¡¼­´Â bounceThreshold¸¦ º¯°æÇØ¾ßÇÒ ¼öµµ ÀÖÀ½.
 
 	if (FAILED(m_pPxPhysicsSDK == NULL))
 	{
 		MSG_BOX(L"PhysicsSDK Initialize Failed");
-		// ì‹¤íŒ¨ë©”ì„¸ì§€ í•„ìš”í•˜ë©´ ë„£ê¸°
+		// ½ÇÆĞ¸Ş¼¼Áö ÇÊ¿äÇÏ¸é ³Ö±â
 	}
 
 	m_pPxPhysicsSDK = PxCreatePhysics(PX_PHYSICS_VERSION, *m_pPxFoundation, PxScale, false);
-	// PhysX SDKì˜ ì¸ìŠ¤í„´ìŠ¤ ìƒì„±
+	// PhysX SDKÀÇ ÀÎ½ºÅÏ½º »ı¼º
 
 
 	//Cooking Init
-	PxCookingParams params(PxScale); // ë©”ì‰¬ Cookingì— ì˜í–¥ì„ ë¯¸ì¹˜ëŠ” ë§¤ê°œ ë³€ìˆ˜ ì„¤ëª…
-	params.meshWeldTolerance = 0.001f; //ë©”ì‰¬ ìš©ì ‘ ê³µì°¨
+	PxCookingParams params(PxScale); // ¸Ş½¬ Cooking¿¡ ¿µÇâÀ» ¹ÌÄ¡´Â ¸Å°³ º¯¼ö ¼³¸í
+	params.meshWeldTolerance = 0.001f; //¸Ş½¬ ¿ëÁ¢ °øÂ÷
 	params.meshPreprocessParams = PxMeshPreprocessingFlags(PxMeshPreprocessingFlag::eWELD_VERTICES |
 		PxMeshPreprocessingFlag::eREMOVE_UNREFERENCED_VERTICES | PxMeshPreprocessingFlag::eREMOVE_DUPLICATED_TRIANGLES);
-	// ë©”ì‰¬ ì „ì²˜ë¦¬ ë§¤ê°œ ë³€ìˆ˜, ì˜µì…˜ ì œì–´í•˜ëŠ”ë° ì‚¬ìš©
+	// ¸Ş½¬ ÀüÃ³¸® ¸Å°³ º¯¼ö, ¿É¼Ç Á¦¾îÇÏ´Âµ¥ »ç¿ë
 	m_pCooking = PxCreateCooking(PX_PHYSICS_VERSION, *m_pPxFoundation, params);
-	// Cooking ì¸í„°í˜ì´ìŠ¤ì˜ ì¸ìŠ¤í„´ìŠ¤ë¥¼ ìƒì„±
+	// Cooking ÀÎÅÍÆäÀÌ½ºÀÇ ÀÎ½ºÅÏ½º¸¦ »ı¼º
 
-	PxInitExtensions(*m_pPxPhysicsSDK); // PhysXExtensions ë¼ì´ë¸ŒëŸ¬ë¦¬ ì´ˆê¸°í™”
-	PxSceneDesc sceneDesc(m_pPxPhysicsSDK->getTolerancesScale()); // Sceneì˜ ì„¤ëª…ì í´ë˜ìŠ¤
-	sceneDesc.gravity = PxVec3(0.0f, 2 - rand() % 10, 0.0f); // ì¤‘ë ¥ ê°’
+	PxInitExtensions(*m_pPxPhysicsSDK); // PhysXExtensions ¶óÀÌºê·¯¸® ÃÊ±âÈ­
+	PxSceneDesc sceneDesc(m_pPxPhysicsSDK->getTolerancesScale()); // SceneÀÇ ¼³¸íÀÚ Å¬·¡½º
+	sceneDesc.gravity = PxVec3(0.0f, 2 - rand() % 10, 0.0f); // Áß·Â °ª
 
 	if (!sceneDesc.cpuDispatcher)
 	{
 		PxDefaultCpuDispatcher* pCpuDispatcher = PxDefaultCpuDispatcherCreate(1);
-		// CPU Task ë””ìŠ¤íŒ¨ì³ì˜ ê¸°ë³¸ êµ¬í˜„ (ê¸°ë³¸ ë””ìŠ¤íŒ¨ì³ ìƒì„± ê·¸ë¦¬ê³  ì´ˆê¸°í™”)
+		// CPU Task µğ½ºÆĞÃÄÀÇ ±âº» ±¸Çö (±âº» µğ½ºÆĞÃÄ »ı¼º ±×¸®°í ÃÊ±âÈ­)
 		sceneDesc.cpuDispatcher = pCpuDispatcher;
 	}
 
 	if (!sceneDesc.filterShader)
 		sceneDesc.filterShader = PxDefaultSimulationFilterShader;
-	// ê°„ë‹¨í•œ í•„í„° ì…°ì´ë” êµ¬í˜„
+	// °£´ÜÇÑ ÇÊÅÍ ¼ÎÀÌ´õ ±¸Çö
 
-	m_pPxScene = m_pPxPhysicsSDK->createScene(sceneDesc); // ì”¬ ìƒì„±
+	m_pPxScene = m_pPxPhysicsSDK->createScene(sceneDesc); // ¾À »ı¼º
 
-	m_pPxControllerManager = PxCreateControllerManager(*m_pPxScene); // ì»¨íŠ¸ë¡¤ëŸ¬ ìƒì„±
+	m_pPxControllerManager = PxCreateControllerManager(*m_pPxScene); // ÄÁÆ®·Ñ·¯ »ı¼º
 
 																	 // Physx Visual Debugger
 	if (NULL == m_pPxPhysicsSDK->getPvdConnectionManager())
@@ -1485,7 +1485,7 @@ void CGameFramework::InitializePhysxEngine()
 	PxVisualDebuggerConnectionFlags connectionFlags = PxVisualDebuggerExt::getAllConnectionFlags();
 	m_pPxPhysicsSDK->getVisualDebugger()->setVisualDebuggerFlag(PxVisualDebuggerFlag::eTRANSMIT_SCENEQUERIES, true);
 	m_pPVDConnection = PxVisualDebuggerExt::createConnection(m_pPxPhysicsSDK->getPvdConnectionManager(), "127.0.0.1", 5425, 1000, connectionFlags);
-	// PVD ì…‹íŒ…
+	// PVD ¼ÂÆÃ
 }
 
 void CGameFramework::ReleasePhysxEngine()
@@ -1506,7 +1506,7 @@ void CGameFramework::ReleasePhysxEngine()
 void CGameFramework::InitNetwork(HWND main_window)
 {
 	string s_ip;
-	//ì›ì†í•¨ìˆ˜ë“¤ì„ ì„¸íŒ…í•©ë‹ˆë‹¤.
+	//¿ø¼ÓÇÔ¼öµéÀ» ¼¼ÆÃÇÕ´Ï´Ù.
 	WSADATA	wsadata;
 	WSAStartup(MAKEWORD(2, 2), &wsadata);
 
@@ -1519,7 +1519,7 @@ void CGameFramework::InitNetwork(HWND main_window)
 	ZeroMemory(&ServerAddr, sizeof(SOCKADDR_IN));
 	ServerAddr.sin_family = AF_INET;
 	ServerAddr.sin_port = htons(MY_SERVER_PORT);
-	ServerAddr.sin_addr.s_addr = inet_addr("127.0.0.1"); // ì¬ìš©
+	ServerAddr.sin_addr.s_addr = inet_addr("127.0.0.1"); // Àç¿ë
 	//ServerAddr.sin_addr.s_addr = inet_addr("10.30.1.33");
 
 	int Result = WSAConnect(g_mysocket, (sockaddr *)&ServerAddr, sizeof(ServerAddr), NULL, NULL, NULL, NULL);
@@ -1542,21 +1542,21 @@ void CGameFramework::ProcessPacket(char *ptr)
 
 	static bool first_time = true;
 
-	switch (ptr[1])//íŒ¨í‚·ì˜ 1ë²ˆ ì¸ë±ìŠ¤ì—ëŠ” íŒ¨í‚·ì˜ ì¢…ë¥˜ì— ëŒ€í•œ ì •ë³´ê°€ ë“¤ì–´ìˆìŠµë‹ˆë‹¤.
+	switch (ptr[1])//ÆĞÅ¶ÀÇ 1¹ø ÀÎµ¦½º¿¡´Â ÆĞÅ¶ÀÇ Á¾·ù¿¡ ´ëÇÑ Á¤º¸°¡ µé¾îÀÖ½À´Ï´Ù.
 	{
-	case SC_PUT_PLAYER://í´ë¼ì´ì–¸íŠ¸ ì •ë³´ì— ëŒ€í•œ íŒ¨í‚·.
+	case SC_PUT_PLAYER://Å¬¶óÀÌ¾ğÆ® Á¤º¸¿¡ ´ëÇÑ ÆĞÅ¶.
 	{
 		sc_packet_put_player *my_packet = reinterpret_cast<sc_packet_put_player *>(ptr);
 		int id = my_packet->id;
 
 
-		if (first_time) //íŒ¨í‚·ì„ ì²˜ìŒ ì£¼ê³  ë°›ì•˜ì„ ë•Œ == ë‚´ê°€ ì ‘ì†í–ˆì„ ë•Œ
+		if (first_time) //ÆĞÅ¶À» Ã³À½ ÁÖ°í ¹Ş¾ÒÀ» ¶§ == ³»°¡ Á¢¼ÓÇßÀ» ¶§
 		{
-			first_time = false; //ì´ì   ì²˜ìŒì´ ì•„ë‹ˆë¯€ë¡œ falseë¡œ ì „í™˜
-			g_myid = id; //ê·¸ë ‡ë‹¤ë©´ ë‚´ ì•„ì´ë””ëŠ” íŒ¨í‚·ì˜ ì•„ì´ë””ì™€ ê°™ê² ì£ .
+			first_time = false; //ÀÌÁ¨ Ã³À½ÀÌ ¾Æ´Ï¹Ç·Î false·Î ÀüÈ¯
+			g_myid = id; //±×·¸´Ù¸é ³» ¾ÆÀÌµğ´Â ÆĞÅ¶ÀÇ ¾ÆÀÌµğ¿Í °°°ÚÁÒ.
 		}
-		if (id == g_myid) { // ë‚´ ì•„ì´ë””ì™€ íŒ¨í‚·ì˜ ì•„ì´ë””ê°€ ê°™ë‹¤ë©´? == ìœ„ì˜ ì¡°ê±´ë¬¸ì„ ëŒì•˜ë‹¤ == ë‚´ ì •ë³´
-			g_my_info.pos._11 = my_packet->m_pos._11; // ë‚´ í”Œë ˆì´ì–´ êµ¬ì¡°ì²´ì— íŒ¨í‚·ì˜ ì¢Œí‘œê°’ì„ ì €ì¥í•©ë‹ˆë‹¤.
+		if (id == g_myid) { // ³» ¾ÆÀÌµğ¿Í ÆĞÅ¶ÀÇ ¾ÆÀÌµğ°¡ °°´Ù¸é? == À§ÀÇ Á¶°Ç¹®À» µ¹¾Ò´Ù == ³» Á¤º¸
+			g_my_info.pos._11 = my_packet->m_pos._11; // ³» ÇÃ·¹ÀÌ¾î ±¸Á¶Ã¼¿¡ ÆĞÅ¶ÀÇ ÁÂÇ¥°ªÀ» ÀúÀåÇÕ´Ï´Ù.
 			g_my_info.pos._12 = my_packet->m_pos._12;
 			g_my_info.pos._13 = my_packet->m_pos._13;
 			g_my_info.pos._21 = my_packet->m_pos._21;
@@ -1580,7 +1580,7 @@ void CGameFramework::ProcessPacket(char *ptr)
 		}
 		else {
 			g_player_info[id].m_isconnected = true;
-			g_player_info[id].pos._11 = my_packet->m_pos._11; // ë‚´ í”Œë ˆì´ì–´ êµ¬ì¡°ì²´ì— íŒ¨í‚·ì˜ ì¢Œí‘œê°’ì„ ì €ì¥í•©ë‹ˆë‹¤.
+			g_player_info[id].pos._11 = my_packet->m_pos._11; // ³» ÇÃ·¹ÀÌ¾î ±¸Á¶Ã¼¿¡ ÆĞÅ¶ÀÇ ÁÂÇ¥°ªÀ» ÀúÀåÇÕ´Ï´Ù.
 			g_player_info[id].pos._12 = my_packet->m_pos._12;
 			g_player_info[id].pos._13 = my_packet->m_pos._13;
 			g_player_info[id].pos._21 = my_packet->m_pos._21;
@@ -1607,12 +1607,12 @@ void CGameFramework::ProcessPacket(char *ptr)
 		break;
 	}
 	case
-		SC_POS://ì¢Œí‘œê°’ì—ëŒ€í•œ íŒ¨í‚·.
+		SC_POS://ÁÂÇ¥°ª¿¡´ëÇÑ ÆĞÅ¶.
 	{
 		sc_packet_pos *my_packet = reinterpret_cast<sc_packet_pos *>(ptr);
 		int id = my_packet->id;
 
-		g_player_info[id].pos._11 = my_packet->m_pos._11; // ë‚´ í”Œë ˆì´ì–´ êµ¬ì¡°ì²´ì— íŒ¨í‚·ì˜ ì¢Œí‘œê°’ì„ ì €ì¥í•©ë‹ˆë‹¤.
+		g_player_info[id].pos._11 = my_packet->m_pos._11; // ³» ÇÃ·¹ÀÌ¾î ±¸Á¶Ã¼¿¡ ÆĞÅ¶ÀÇ ÁÂÇ¥°ªÀ» ÀúÀåÇÕ´Ï´Ù.
 		g_player_info[id].pos._12 = my_packet->m_pos._12;
 		g_player_info[id].pos._13 = my_packet->m_pos._13;
 		g_player_info[id].pos._21 = my_packet->m_pos._21;
@@ -1630,25 +1630,25 @@ void CGameFramework::ProcessPacket(char *ptr)
 		g_player_info[id].pos._44 = 1.f;
 		g_player_info[id].anim_state = my_packet->animstate;
 
-		//printf("ì´ë™ ìºë¦­í„° [%d], í¬ì§€ì…˜ %f,%f,%f", id, g_player_info[id].pos._41, g_player_info[id].pos._42, g_player_info[id].pos._43);
+		//printf("ÀÌµ¿ Ä³¸¯ÅÍ [%d], Æ÷Áö¼Ç %f,%f,%f", id, g_player_info[id].pos._41, g_player_info[id].pos._42, g_player_info[id].pos._43);
 		break;
 	}
 
-	case SC_REMOVE_PLAYER://ì ‘ì† ì¢…ë£Œì— ë”°ë¥¸ íŒ¨í‚·
+	case SC_REMOVE_PLAYER://Á¢¼Ó Á¾·á¿¡ µû¸¥ ÆĞÅ¶
 	{
 		sc_packet_remove_player *my_packet = reinterpret_cast<sc_packet_remove_player *>(ptr);
 		int id = my_packet->id;
-		if (id == g_myid) {//ë‚´ ìºë¦­í„°ì˜ ì¢…ë£Œë¼ë©´??
+		if (id == g_myid) {//³» Ä³¸¯ÅÍÀÇ Á¾·á¶ó¸é??
 
 		}
-		else {//ë‹¤ë¥¸ ìºë¦­í„°ì˜ ì¢…ë£Œë¼ë©´??
+		else {//´Ù¸¥ Ä³¸¯ÅÍÀÇ Á¾·á¶ó¸é??
 
 			g_player_info[id].m_isconnected = false;
 
 		}
 		break;
 	}
-	case SC_READY://ë ˆë””ìƒíƒœì— ëŒ€í•œ ì²´í¬
+	case SC_READY://·¹µğ»óÅÂ¿¡ ´ëÇÑ Ã¼Å©
 	{
 		sc_packet_ready *my_packet = reinterpret_cast<sc_packet_ready *>(ptr);
 		int id = my_packet->id;
@@ -1661,7 +1661,7 @@ void CGameFramework::ProcessPacket(char *ptr)
 				printf("My Client is Not Ready\n");
 		}
 		else
-		{//ë‹¤ë¥¸ ìºë¦­í„°ì˜ ì¤€ë¹„ íŒ¨í‚·ì´ë¼ë©´?
+		{//´Ù¸¥ Ä³¸¯ÅÍÀÇ ÁØºñ ÆĞÅ¶ÀÌ¶ó¸é?
 			g_player_info[id].m_isready = my_packet->state;
 			{
 				if (true == g_player_info[id].m_isready)
@@ -1676,8 +1676,8 @@ void CGameFramework::ProcessPacket(char *ptr)
 	{
 		sc_packet_scene_change *my_packet = reinterpret_cast<sc_packet_scene_change *>(ptr);
 		g_my_info.m_scene = my_packet->scenestate;
-		printf("ì”¬ ì²´ì¸ì§€! ì”¬ ë²ˆí˜¸ : %d", my_packet->scenestate);
-		if (my_packet->scenestate == 1)//ê²Œì„ì‹œì‘ íŒ¨í‚·ì¼ ë•Œ
+		printf("¾À Ã¼ÀÎÁö! ¾À ¹øÈ£ : %d", my_packet->scenestate);
+		if (my_packet->scenestate == 1)//°ÔÀÓ½ÃÀÛ ÆĞÅ¶ÀÏ ¶§
 		{
 			cs_packet_pos * my_pos_packet = reinterpret_cast<cs_packet_pos *>(send_buffer);
 			my_pos_packet->size = sizeof(cs_packet_pos);
@@ -1726,7 +1726,7 @@ void CGameFramework::ProcessPacket(char *ptr)
 	{
 		sc_packet_time *my_packet = reinterpret_cast<sc_packet_time *>(ptr);
 		g_fgametime = my_packet->m_ftime;
-		printf("ê²Œì„ ì‹œê°„ : %f", g_fgametime);
+		printf("°ÔÀÓ ½Ã°£ : %f", g_fgametime);
 
 		break;
 	}
@@ -1735,7 +1735,7 @@ void CGameFramework::ProcessPacket(char *ptr)
 		sc_gravity_change *my_packet = reinterpret_cast<sc_gravity_change*>(ptr);
 		g_fgravity = my_packet->gravity_state;
 		m_pPxScene->setGravity(PxVec3(0, g_fgravity, 0));
-		printf("ì¤‘ë ¥ ë³€ê²½ : %f\n", g_fgravity);
+		printf("Áß·Â º¯°æ : %f\n", g_fgravity);
 		break;
 	}
 	case SC_ATTACKED:
@@ -1747,7 +1747,7 @@ void CGameFramework::ProcessPacket(char *ptr)
 			g_my_info.hp = my_packet->hp;
 		}
 		else g_player_info[my_packet->id].hp = my_packet->hp;
-		printf("%d í´ë¼ì´ì–¸íŠ¸ê°€ ê³µê²©ë°›ì•˜ìŠµë‹ˆë‹¤. hp : %d\n", my_packet->id, my_packet->hp);
+		printf("%d Å¬¶óÀÌ¾ğÆ®°¡ °ø°İ¹Ş¾Ò½À´Ï´Ù. hp : %d\n", my_packet->id, my_packet->hp);
 		break;
 	}
 	case SC_PLAYER_STATE_CHANGE:
@@ -1760,14 +1760,14 @@ void CGameFramework::ProcessPacket(char *ptr)
 
 			if (my_packet->id == g_myid)
 			{
-				printf("ë‚´ ìºë¦­í„°ê°€ ì£½ì—ˆìŠµë‹ˆë‹¤\n");
+				printf("³» Ä³¸¯ÅÍ°¡ Á×¾ú½À´Ï´Ù\n");
 				g_my_info.state = my_packet->state;
-				m_ppScenes[CHARACTER]->ChangeAnimation(8); // ì£½ëŠ” ì• ë‹ˆë©”ì´ì…˜
+				m_ppScenes[CHARACTER]->ChangeAnimation(8); // Á×´Â ¾Ö´Ï¸ŞÀÌ¼Ç
 			}
 			else
 			{
-				printf("í”Œë ˆì´ì–´ [%d]ê°€ ì£½ì—ˆìŠµë‹ˆë‹¤", my_packet->id);
-				//ë‹¤ë¥¸ í´ë¼ê°€ ì£½ì—ˆì„ ë•Œì— ëŒ€í•œ ì²˜ë¦¬
+				printf("ÇÃ·¹ÀÌ¾î [%d]°¡ Á×¾ú½À´Ï´Ù", my_packet->id);
+				//´Ù¸¥ Å¬¶ó°¡ Á×¾úÀ» ¶§¿¡ ´ëÇÑ Ã³¸®
 				g_player_info[my_packet->id].state = my_packet->state;
 				g_player_info[my_packet->id].anim_state = 8;
 			}
