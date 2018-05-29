@@ -69,6 +69,9 @@
     <ClInclude Include="UIShader.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
+    <ClInclude Include="ComputShader.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -107,6 +110,9 @@
     <ClCompile Include="UIShader.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
+    <ClCompile Include="ComputShader.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="FancyPlanet.rc">
@@ -139,6 +145,7 @@
     <FxCompile Include="UI.hlsl" />
     <FxCompile Include="Animation.hlsl" />
     <FxCompile Include="Object.hlsl" />
+    <FxCompile Include="Compute.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Assets\Image\Terrain\HeightMap.raw">

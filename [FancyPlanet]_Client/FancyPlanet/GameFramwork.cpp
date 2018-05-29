@@ -5,6 +5,7 @@
 #include "stdafx.h"
 #include "GameFramework.h"
 #include <process.h>
+
 CGameFramework* CGameFramework::m_pGFforMultiThreads = NULL;
 
 CGameFramework::CGameFramework()
@@ -38,6 +39,8 @@ CGameFramework::CGameFramework()
 
 	m_nWndClientWidth = FRAME_BUFFER_WIDTH;
 	m_nWndClientHeight = FRAME_BUFFER_HEIGHT;
+
+	m_pComputeShader = new CComputShader(m_nWndClientWidth, m_nWndClientHeight);
 
 	m_ptOldCursorPos.x = m_nWndClientWidth / 2;
 	m_ptOldCursorPos.y = m_nWndClientHeight / 2;
@@ -103,6 +106,11 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 	m_hWnd = hMainWnd;
 
 	CreateDirect3DDevice();
+
+	m_pComputeShader->CreateComputeRootSignature(m_pd3dDevice);
+	m_pComputeShader->BuildPSO(m_pd3dDevice);
+	m_pComputeShader->BuildTextures(m_pd3dDevice);
+
 	CreateCommandQueueAndList();
 	CreateRtvAndDsvDescriptorHeaps();
 	CreateSwapChain();
@@ -253,7 +261,6 @@ void CGameFramework::CreateCommandQueueAndList()
 		hResult = m_pd3dDevice->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_ppd3dCommandAllocators[i], NULL, __uuidof(ID3D12GraphicsCommandList), (void **)&m_ppd3dCommandLists[i]);
 		hResult = m_ppd3dCommandLists[i]->Close();
 	}
-
 	hResult = m_pd3dDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, __uuidof(ID3D12CommandAllocator), (void **)&m_pd3dScreenCommandAllocator);
 	hResult = m_pd3dDevice->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_pd3dScreenCommandAllocator, NULL, __uuidof(ID3D12GraphicsCommandList), (void **)&m_pd3dScreenCommandList);
 	hResult = m_pd3dScreenCommandList->Close();
@@ -284,7 +291,8 @@ void CGameFramework::CreateRenderTargetViews()
 	for (UINT i = 0; i < m_nRenderTargetBuffers; i++)
 	{
 		//버퍼를 만든다.
-		m_ppd3dRenderTargetBuffers[i] = pTexture->CreateTexture(m_pd3dDevice, m_pd3dScreenCommandList, m_nWndClientWidth, m_nWndClientHeight, DXGI_FORMAT_R8G8B8A8_UNORM, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ, &d3dClearValue, i);
+		m_ppd3dRenderTargetBuffers[i] = pTexture->CreateTexture(m_pd3dDevice, m_nWndClientWidth, m_nWndClientHeight
+, DXGI_FORMAT_R8G8B8A8_UNORM, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ, &d3dClearValue, i);
 		m_ppd3dRenderTargetBuffers[i]->AddRef();
 	}
 
@@ -418,8 +426,8 @@ void CGameFramework::CreateDepthStencilView()
 void CGameFramework::OnResizeBackBuffers()
 {
 	WaitForGpuComplete();
-
-	m_pd3dScreenCommandList->Reset(m_pd3dScreenCommandAllocator, NULL);
+	HRESULT hResult = m_pd3dScreenCommandAllocator->Reset();
+	hResult = m_pd3dScreenCommandList->Reset(m_pd3dScreenCommandAllocator, NULL);
 
 	for (int i = 0; i < m_nRenderTargetBuffers; i++)
 		if (m_ppd3dRenderTargetBuffers[i])
@@ -437,17 +445,17 @@ void CGameFramework::OnResizeBackBuffers()
 	m_pdxgiSwapChain->ResizeBuffers(0, 0, 0, DXGI_FORMAT_UNKNOWN, 0);
 	m_nSwapChainBufferIndex = 0;
 #else
-	//m_pdxgiSwapChain->ResizeBuffers(0, 0, 0, DXGI_FORMAT_UNKNOWN, DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH);
 	DXGI_SWAP_CHAIN_DESC dxgiSwapChainDesc;
 	m_pdxgiSwapChain->GetDesc(&dxgiSwapChainDesc);
 	m_pdxgiSwapChain->ResizeBuffers(m_nSwapChainBuffers, m_nWndClientWidth, m_nWndClientHeight, dxgiSwapChainDesc.BufferDesc.Format, dxgiSwapChainDesc.Flags);
 	m_nSwapChainBufferIndex = 0;
 #endif
+
 	CreateSwapChainRenderTargetViews();
 	CreateDepthStencilView();
 	CreateRenderTargetViews();
 
-	m_pd3dScreenCommandList->Close();
+	hResult = m_pd3dScreenCommandList->Close();
 
 	ID3D12CommandList *ppd3dCommandLists[] = { m_pd3dScreenCommandList };
 	m_pd3dCommandQueue->ExecuteCommandLists(1, ppd3dCommandLists);
@@ -772,6 +780,7 @@ void CGameFramework::BuildObjects()
 		m_ppd3dCommandAllocators[i]->Reset();
 		m_ppd3dCommandLists[i]->Reset(m_ppd3dCommandAllocators[i], NULL);
 	}
+
 	m_nDivision = 10;
 
 	m_ppScenes = new CScene*[NUM_SUBSETS];
@@ -802,20 +811,21 @@ void CGameFramework::BuildObjects()
 	}
 	m_pCamera = m_pPlayer->GetCamera();
 
-
 	m_ppbDivision = new bool*[m_nDivision];
+
 	for (int i = 0; i < m_nDivision; i++)
 	{
 		bool * pbNew = new bool;
 		*pbNew = false;
 		m_ppbDivision[i] = pbNew;
 	}
-
+	
 	for (int i = 0; i < NUM_SUBSETS; i++)
 	{
 		m_ppd3dCommandLists[i]->Close();
 	}
-	ID3D12CommandList *ppd3dCommandLists[] = { m_ppd3dCommandLists[0],  m_ppd3dCommandLists[1],  m_ppd3dCommandLists[2], m_ppd3dCommandLists[3] };
+
+	ID3D12CommandList *ppd3dCommandLists[] = { m_ppd3dCommandLists[0],  m_ppd3dCommandLists[1],  m_ppd3dCommandLists[2], m_ppd3dCommandLists[3]};
 
 	m_pd3dCommandQueue->ExecuteCommandLists(NUM_SUBSETS, ppd3dCommandLists);
 
@@ -913,6 +923,7 @@ void CGameFramework::CollisionCheckByBullet()
 		WSASend(g_mysocket, &send_wsabuf, 1, &iobyte, 0, NULL, NULL);
 		m_pPlayer->SetBeAttackedStateToFalse();
 	}
+	if (g_my_info.hp <= 0 && g_my_info.state != DIED)
 	if (g_my_info.hp <= 0 && g_my_info.state != DIED)
 	{
 		cs_packet_character_state * my_state_packet = reinterpret_cast<cs_packet_character_state *>(send_buffer);
@@ -1118,7 +1129,7 @@ void CGameFramework::ProcessInput()
 			}
 			float cxDelta = 0.0f, cyDelta = 0.0f;
 			POINT ptCursorPos;
-			if (true) // GetCapture() == m_hWnd [카메라 고정]
+			if (GetCapture() == m_hWnd) // GetCapture() == m_hWnd [카메라 고정]
 			{
 				GetCursorPos(&ptCursorPos);
 				if (GetCapture() == m_hWnd 
@@ -1268,6 +1279,7 @@ void CGameFramework::SpaceDivision()
 void CGameFramework::WaitForGpuComplete()
 {
 	const UINT64 nFenceValue = ++m_nFenceValues[m_nSwapChainBufferIndex];
+
 	HRESULT hResult = m_pd3dCommandQueue->Signal(m_pd3dFence, nFenceValue);
 
 	if (m_pd3dFence->GetCompletedValue() < nFenceValue)
@@ -1312,8 +1324,8 @@ void CGameFramework::PrepareFrame()
 		m_ppd3dCommandLists[i]->RSSetViewports(1, m_pCamera->GetViewport());
 		m_ppd3dCommandLists[i]->RSSetScissorRects(1, m_pCamera->GetScissorRect());
 	}
-	m_pd3dScreenCommandAllocator->Reset();
-	m_pd3dScreenCommandList->Reset(m_pd3dScreenCommandAllocator, NULL);
+	HRESULT hResult = m_pd3dScreenCommandAllocator->Reset();
+	hResult = m_pd3dScreenCommandList->Reset(m_pd3dScreenCommandAllocator, NULL);
 	m_pd3dScreenCommandList->RSSetViewports(1, m_pCamera->GetViewport());
 	m_pd3dScreenCommandList->RSSetScissorRects(1, m_pCamera->GetScissorRect());
 
@@ -1376,6 +1388,7 @@ void CGameFramework::FrameAdvance()
 	m_pHPNumberShader->SetAndCalculateHPLocation(g_my_info.hp);
 	m_ppScenes[CHARACTER]->ModelsSetPosition(g_player_info, g_myid);
 	CollisionCheckByBullet();//총알충돌체크
+
 	for (int i = 0; i < NUM_SUBSETS; i++)
 	{
 		SetEvent(m_workerBeginRenderFrame[i]);
@@ -1384,14 +1397,15 @@ void CGameFramework::FrameAdvance()
 
 	ID3D12CommandList *ppd3dCommandLists[] = { m_pd3dScreenCommandList, m_ppd3dCommandLists[0],  m_ppd3dCommandLists[1],  m_ppd3dCommandLists[2], m_ppd3dCommandLists[3] };
 	for (int i = 0; i < NUM_COMMANDLIST; i++)
+	{
 		HRESULT hResult = m_ppd3dCommandLists[i]->Close();
-
+	}
 	HRESULT hResult = m_pd3dScreenCommandList->Close();
 
 	m_pd3dCommandQueue->ExecuteCommandLists(NUM_SUBSETS + 1, ppd3dCommandLists);
 
 	WaitForGpuComplete();
-
+	
 	hResult = m_pd3dScreenCommandAllocator->Reset();
 	hResult = m_pd3dScreenCommandList->Reset(m_pd3dScreenCommandAllocator, NULL);
 	m_pd3dScreenCommandList->RSSetViewports(1, m_pCamera->GetViewport());
@@ -1407,13 +1421,10 @@ void CGameFramework::FrameAdvance()
 	m_pd3dScreenCommandList->ClearDepthStencilView(m_d3dDsvDepthStencilBufferCPUHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, NULL);
 	m_pd3dScreenCommandList->ClearRenderTargetView(m_pd3dRtvSwapChainBackBufferCPUHandles[m_nSwapChainBufferIndex], Colors::Azure, 0, NULL);
 	m_pd3dScreenCommandList->OMSetRenderTargets(1, &m_pd3dRtvSwapChainBackBufferCPUHandles[m_nSwapChainBufferIndex], TRUE, &m_d3dDsvDepthStencilBufferCPUHandle);
-	//원래대로 백버퍼에 그린다.
-
-	RenderUI();
-
+		
 	m_pScreenShader->Render(m_pd3dScreenCommandList, m_pCamera);
 
-	::SynchronizeResourceTransition(m_pd3dScreenCommandList, m_ppd3dSwapChainBackBuffers[m_nSwapChainBufferIndex], D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
+	::SynchronizeResourceTransition(m_pd3dScreenCommandList, m_ppd3dSwapChainBackBuffers[m_nSwapChainBufferIndex], D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_COPY_SOURCE);
 
 	hResult = m_pd3dScreenCommandList->Close();
 
@@ -1421,6 +1432,41 @@ void CGameFramework::FrameAdvance()
 
 	m_pd3dCommandQueue->ExecuteCommandLists(1, ppd3dScreenCommandLists);
 	WaitForGpuComplete();
+	
+	//계산쉐이더 부분
+	{
+		hResult = m_pd3dScreenCommandAllocator->Reset();
+		hResult = m_pd3dScreenCommandList->Reset(m_pd3dScreenCommandAllocator, NULL);
+		m_pd3dScreenCommandList->RSSetViewports(1, m_pCamera->GetViewport());
+		m_pd3dScreenCommandList->RSSetScissorRects(1, m_pCamera->GetScissorRect());
+
+		m_pComputeShader->Compute(m_pd3dDevice, m_pd3dScreenCommandList, m_ppd3dSwapChainBackBuffers[m_nSwapChainBufferIndex]);
+
+		hResult = m_pd3dScreenCommandList->Close();
+
+		m_pd3dCommandQueue->ExecuteCommandLists(1, ppd3dScreenCommandLists);
+
+		WaitForGpuComplete();
+	}
+
+	//UI 그리기
+	{
+		hResult = m_pd3dScreenCommandAllocator->Reset();
+		hResult = m_pd3dScreenCommandList->Reset(m_pd3dScreenCommandAllocator, NULL);
+		m_pd3dScreenCommandList->RSSetViewports(1, m_pCamera->GetViewport());
+		m_pd3dScreenCommandList->RSSetScissorRects(1, m_pCamera->GetScissorRect());
+
+		m_pd3dScreenCommandList->ClearDepthStencilView(m_d3dDsvDepthStencilBufferCPUHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, NULL);
+		m_pd3dScreenCommandList->OMSetRenderTargets(1, &m_pd3dRtvSwapChainBackBufferCPUHandles[m_nSwapChainBufferIndex], TRUE, &m_d3dDsvDepthStencilBufferCPUHandle);
+
+		RenderUI();
+
+		::SynchronizeResourceTransition(m_pd3dScreenCommandList, m_ppd3dSwapChainBackBuffers[m_nSwapChainBufferIndex], D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
+		hResult = m_pd3dScreenCommandList->Close();
+
+		m_pd3dCommandQueue->ExecuteCommandLists(1, ppd3dScreenCommandLists);
+		WaitForGpuComplete();
+	}
 
 	m_pdxgiSwapChain->Present(0, 0);
 

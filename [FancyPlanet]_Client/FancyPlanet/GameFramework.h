@@ -6,6 +6,7 @@
 #include "Timer.h"
 #include "Player.h"
 #include "Scene.h"
+#include "ComputShader.h"
 #include <chrono>
 enum
 {
@@ -73,6 +74,9 @@ public:
 	void PrepareFrame();
 private:
 	ID3D12GraphicsCommandList * m_pd3dScreenCommandList;
+
+	CComputShader* m_pComputeShader = NULL;
+
 	CTextureToFullScreenShader *m_pScreenShader = NULL;
 
 	MiniUIShader* m_pMiniUIShader = NULL;

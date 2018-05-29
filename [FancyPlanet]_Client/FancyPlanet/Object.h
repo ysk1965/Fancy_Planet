@@ -24,6 +24,8 @@ enum
 	GET_TYPE = 4,
 	SKIP = 5
 };
+
+
 #define DIR_FORWARD					0x01
 #define DIR_BACKWARD				0x02
 #define DIR_LEFT					0x04
@@ -157,7 +159,9 @@ public:
 	void SetRootArgument(int nIndex, UINT nRootParameterIndex, D3D12_GPU_DESCRIPTOR_HANDLE d3dsrvGpuDescriptorHandle);
 	void SetSampler(int nIndex, D3D12_GPU_DESCRIPTOR_HANDLE d3dSamplerGpuDescriptorHandle);
 
-	ID3D12Resource *CreateTexture(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, UINT nWidth, UINT nHeight, DXGI_FORMAT dxgiFormat, D3D12_RESOURCE_FLAGS d3dResourceFlags, D3D12_RESOURCE_STATES d3dResourceStates, D3D12_CLEAR_VALUE *pd3dClearValue, UINT nIndex);
+	ID3D12Resource *ComputeCreateTexture(ID3D12Device *pd3dDevice, UINT nWidth, UINT nHeight, DXGI_FORMAT dxgiFormat, D3D12_RESOURCE_FLAGS d3dResourceFlags, D3D12_RESOURCE_STATES d3dResourceStates, D3D12_CLEAR_VALUE *pd3dClearValue, UINT nIndex);
+	ID3D12Resource *CreateTexture(ID3D12Device *pd3dDevice, UINT nWidth, UINT nHeight, DXGI_FORMAT dxgiFormat, D3D12_RESOURCE_FLAGS d3dResourceFlags, D3D12_RESOURCE_STATES d3dResourceStates, D3D12_CLEAR_VALUE *pd3dClearValue, UINT nIndex);
+
 	void UpdateShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList);
 	void UpdateShaderVariable(ID3D12GraphicsCommandList *pd3dCommandList, int nIndex);
 	void ReleaseShaderVariables();

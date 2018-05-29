@@ -441,12 +441,17 @@ void CTexture::ReleaseShaderVariables()
 {
 }
 
-ID3D12Resource *CTexture::CreateTexture(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, UINT nWidth, UINT nHeight, DXGI_FORMAT dxgiFormat, D3D12_RESOURCE_FLAGS d3dResourceFlags, D3D12_RESOURCE_STATES d3dResourceStates, D3D12_CLEAR_VALUE *pd3dClearValue, UINT nIndex)
+ID3D12Resource *CTexture::CreateTexture(ID3D12Device *pd3dDevice, UINT nWidth, UINT nHeight, DXGI_FORMAT dxgiFormat, D3D12_RESOURCE_FLAGS d3dResourceFlags, D3D12_RESOURCE_STATES d3dResourceStates, D3D12_CLEAR_VALUE *pd3dClearValue, UINT nIndex)
 {
-	m_ppd3dTextures[nIndex] = ::CreateTexture2DResource(pd3dDevice, pd3dCommandList, nWidth, nHeight, dxgiFormat, d3dResourceFlags, d3dResourceStates, pd3dClearValue);
+	m_ppd3dTextures[nIndex] = ::CreateTexture2DResource(pd3dDevice, nWidth, nHeight, dxgiFormat, d3dResourceFlags, d3dResourceStates, pd3dClearValue);
 	return(m_ppd3dTextures[nIndex]);
 }
 
+ID3D12Resource *CTexture::ComputeCreateTexture(ID3D12Device *pd3dDevice, UINT nWidth, UINT nHeight, DXGI_FORMAT dxgiFormat, D3D12_RESOURCE_FLAGS d3dResourceFlags, D3D12_RESOURCE_STATES d3dResourceStates, D3D12_CLEAR_VALUE *pd3dClearValue, UINT nIndex)
+{
+	m_ppd3dTextures[nIndex] = ::CreateComputeTexture2DResource(pd3dDevice, nWidth, nHeight, dxgiFormat, d3dResourceFlags, d3dResourceStates, pd3dClearValue);
+	return(m_ppd3dTextures[nIndex]);
+}
 void CTexture::LoadTextureFromFile(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, wchar_t *pszFileName, UINT nIndex)
 {
 	m_ppd3dTextures[nIndex] = ::CreateTextureResourceFromFile(pd3dDevice, pd3dCommandList, pszFileName, &m_ppd3dTextureUploadBuffers[nIndex], D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
@@ -1377,6 +1382,7 @@ void CAnimationObject::LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, ID3D
 		{
 			InFile.read((char*)&nVertices, sizeof(int)); // Á¤Á¡ °¹¼ö ¹Þ±â
 			InFile.read((char*)&nIndices, sizeof(int)); // ÀüÃ¼ ÀÎµ¦½º °¹¼ö ¹Þ±â
+
 
 			pIndices = new UINT[nIndices];
 			pxmf3Positions = new XMFLOAT3[nVertices];
