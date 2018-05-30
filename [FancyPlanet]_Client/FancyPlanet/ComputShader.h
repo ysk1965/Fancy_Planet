@@ -23,7 +23,8 @@ class CComputShader
 	D3D12_GPU_DESCRIPTOR_HANDLE		m_d3dUavGPUDescriptorStartHandle[m_nTexture];
 	D3D12_CPU_DESCRIPTOR_HANDLE		m_d3dSrvCPUDescriptorStartHandle[m_nTexture];
 	D3D12_GPU_DESCRIPTOR_HANDLE		m_d3dSrvGPUDescriptorStartHandle[m_nTexture];
-
+	
+	float m_fValue;
 public:
 	CComputShader(UINT m_nWndClientWidth, UINT nWndClientHeight);
 	~CComputShader();
@@ -40,5 +41,10 @@ public:
 	D3D12_SHADER_BYTECODE CreateComputeShader(ID3DBlob **ppd3dShaderBlob);
 
 	void Compute(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12Resource* pBackBuffer);
+
+	void SetValue(float fValue)
+	{
+		m_fValue = fValue;
+	}
 };
 

@@ -110,14 +110,6 @@ public:
 	UIScene();
 	~UIScene();
 private:
-	MiniUIShader * m_pMiniUIShader = NULL;
-	MiniMapShader* m_pMiniMapShader = NULL;
-	ArrowShader* m_pArrowShader = NULL;
-	CrossShader* m_pCrossShader = NULL;
-	ScoreBoardShader* m_pScoreboardShader = NULL;
-	TimeNumberShader* m_pTimeNumberShader = NULL;
-	GravityBarShader* m_pGravityBarShader = NULL;
-	GravityPointerShader* m_pGravityPointerShader = NULL;
 };
 
 //애니메이션이 들어간 오브젝트를 그리는 씬

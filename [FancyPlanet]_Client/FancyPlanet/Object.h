@@ -161,6 +161,10 @@ public:
 
 	ID3D12Resource *ComputeCreateTexture(ID3D12Device *pd3dDevice, UINT nWidth, UINT nHeight, DXGI_FORMAT dxgiFormat, D3D12_RESOURCE_FLAGS d3dResourceFlags, D3D12_RESOURCE_STATES d3dResourceStates, D3D12_CLEAR_VALUE *pd3dClearValue, UINT nIndex);
 	ID3D12Resource *CreateTexture(ID3D12Device *pd3dDevice, UINT nWidth, UINT nHeight, DXGI_FORMAT dxgiFormat, D3D12_RESOURCE_FLAGS d3dResourceFlags, D3D12_RESOURCE_STATES d3dResourceStates, D3D12_CLEAR_VALUE *pd3dClearValue, UINT nIndex);
+	SRVROOTARGUMENTINFO& GetArgumentInfos(UINT nIndex)
+	{
+		return m_pRootArgumentInfos[nIndex];
+	}
 
 	void UpdateShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList);
 	void UpdateShaderVariable(ID3D12GraphicsCommandList *pd3dCommandList, int nIndex);

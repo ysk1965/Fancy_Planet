@@ -16,10 +16,11 @@ cbuffer UI_INFO : register(b0)
 	float2 xmf2Arrow;
 	float4 xmf4TimeNumber[3];
 	float4 xmf4HpNumber[3];
+	float2 xmf2Point;
 	float  fGravity;
 };
 
-VS_UI_OUTPUT UIVS(uint nVertexID : SV_VertexID)
+VS_UI_OUTPUT MINIMAP_VS(uint nVertexID : SV_VertexID)
 {
 	VS_UI_OUTPUT output;
 
@@ -78,7 +79,7 @@ VS_UI_OUTPUT ARROW_VS(uint nVertexID : SV_VertexID)
 	{
 		pos[i] = mul(pos[i], Rotation);
 		pos[i].x += xmf2Arrow.x;
-		pos[i].y += xmf2Arrow.y + 0.05f;
+		pos[i].y += xmf2Arrow.y;
 	}
 
 	if (nVertexID == 0)
@@ -260,7 +261,7 @@ VS_UI_OUTPUT GRAVITYPOINTER_VS(uint nVertexID : SV_VertexID)
 
 	for (int i = 0; i < 4; i++)
 	{
-		pos[i].y += xmf2Arrow.y;
+		pos[i].y += xmf2Point.y;
 	}
 
 	if (nVertexID == 0)

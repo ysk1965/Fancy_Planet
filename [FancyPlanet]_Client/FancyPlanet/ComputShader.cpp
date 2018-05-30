@@ -149,10 +149,11 @@ void CComputShader::CreateComputeRootSignature(ID3D12Device *pd3dDevice)
 	pd3dDescriptorRanges[1].RegisterSpace = 0;
 	pd3dDescriptorRanges[1].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 
-	CD3DX12_ROOT_PARAMETER pd3dRootParameters[2];
+	CD3DX12_ROOT_PARAMETER pd3dRootParameters[3];
 
 	pd3dRootParameters[0].InitAsDescriptorTable(1, &pd3dDescriptorRanges[0]);
 	pd3dRootParameters[1].InitAsDescriptorTable(1, &pd3dDescriptorRanges[1]);
+	pd3dRootParameters[2].InitAsConstants(1,0);
 	
 	D3D12_ROOT_SIGNATURE_FLAGS d3dRootSignatureFlags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
 
@@ -225,6 +226,7 @@ void CComputShader::Compute(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList 
 
 	pd3dCommandList->SetComputeRootDescriptorTable(0, m_d3dSrvGPUDescriptorStartHandle[A]);
 	pd3dCommandList->SetComputeRootDescriptorTable(1, m_d3dUavGPUDescriptorStartHandle[B]);
+	pd3dCommandList->SetComputeRoot32BitConstants(2, 1, &m_fValue, 0);
 	
 	// How many groups do we need to dispatch to cover a row of pixels, where each
 	// group covers 256 pixels (the 256 is defined in the ComputeShader).

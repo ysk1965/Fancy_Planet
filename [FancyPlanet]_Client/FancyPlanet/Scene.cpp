@@ -274,22 +274,12 @@ UIScene::~UIScene()
 }
 void UIScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList)
 {
-	m_pGravityBarShader = new GravityBarShader();
-	m_pGravityBarShader->CreateGraphicsRootSignature(pd3dDevice);
-	m_pGravityBarShader->CreateShader(pd3dDevice, m_pGravityBarShader->GetGraphicsRootSignature(), 4);
-	m_pGravityBarShader->BuildObjects(pd3dDevice, pd3dCommandList);
 }
 void UIScene::ReleaseObjects()
 {
-	if (m_pGravityBarShader)
-		m_pGravityBarShader->ReleaseObjects();
-
-	if (m_pGravityBarShader)
-		delete m_pGravityBarShader;
 }
 void UIScene::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera)
 {
-	m_pGravityBarShader->Render(pd3dCommandList, pCamera);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

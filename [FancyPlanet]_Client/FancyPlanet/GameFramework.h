@@ -79,14 +79,7 @@ private:
 
 	CTextureToFullScreenShader *m_pScreenShader = NULL;
 
-	MiniUIShader* m_pMiniUIShader = NULL;
-	MiniMapShader* m_pMiniMapShader = NULL;
-	ArrowShader* m_pArrowShader = NULL;
-	CrossShader* m_pCrossShader = NULL;
-	ScoreBoardShader* m_pScoreboardShader = NULL;
-	TimeNumberShader* m_pTimeNumberShader = NULL;
-	GravityPointerShader* m_pGravityPointerShader = NULL;
-	HPNumberShader* m_pHPNumberShader = NULL;
+	UIShader* m_pUIShader = NULL;
 
 	ID3D12CommandAllocator      *m_pd3dScreenCommandAllocator;
 

@@ -322,45 +322,10 @@ void CGameFramework::CreateRenderTargetViews()
 
 void CGameFramework::CreateUIShader()
 {
-	m_pMiniUIShader = new MiniUIShader();
-	m_pMiniUIShader->CreateGraphicsRootSignature(m_pd3dDevice);
-	m_pMiniUIShader->CreateShader(m_pd3dDevice, m_pMiniUIShader->GetGraphicsRootSignature(), 4);
-	m_pMiniUIShader->BuildObjects(m_pd3dDevice, m_pd3dScreenCommandList);
-
-	m_pMiniMapShader = new MiniMapShader(m_pPlayer);
-	m_pMiniMapShader->CreateGraphicsRootSignature(m_pd3dDevice);
-	m_pMiniMapShader->CreateShader(m_pd3dDevice, m_pMiniMapShader->GetGraphicsRootSignature(), 4);
-	m_pMiniMapShader->BuildObjects(m_pd3dDevice, m_pd3dScreenCommandList);
-
-	m_pArrowShader = new ArrowShader(m_pPlayer);
-	m_pArrowShader->CreateGraphicsRootSignature(m_pd3dDevice);
-	m_pArrowShader->CreateShader(m_pd3dDevice, m_pArrowShader->GetGraphicsRootSignature(), 4);
-	m_pArrowShader->BuildObjects(m_pd3dDevice, m_pd3dScreenCommandList);
-
-	m_pCrossShader = new CrossShader();
-	m_pCrossShader->CreateGraphicsRootSignature(m_pd3dDevice);
-	m_pCrossShader->CreateShader(m_pd3dDevice, m_pCrossShader->GetGraphicsRootSignature(), 4);
-	m_pCrossShader->BuildObjects(m_pd3dDevice, m_pd3dScreenCommandList);
-
-	m_pScoreboardShader = new ScoreBoardShader();
-	m_pScoreboardShader->CreateGraphicsRootSignature(m_pd3dDevice);
-	m_pScoreboardShader->CreateShader(m_pd3dDevice, m_pScoreboardShader->GetGraphicsRootSignature(), 4);
-	m_pScoreboardShader->BuildObjects(m_pd3dDevice, m_pd3dScreenCommandList);
-
-	m_pTimeNumberShader = new TimeNumberShader();
-	m_pTimeNumberShader->CreateGraphicsRootSignature(m_pd3dDevice);
-	m_pTimeNumberShader->CreateShader(m_pd3dDevice, m_pTimeNumberShader->GetGraphicsRootSignature(), 4);
-	m_pTimeNumberShader->BuildObjects(m_pd3dDevice, m_pd3dScreenCommandList);
-
-	m_pGravityPointerShader = new GravityPointerShader(m_pPxScene);
-	m_pGravityPointerShader->CreateGraphicsRootSignature(m_pd3dDevice);
-	m_pGravityPointerShader->CreateShader(m_pd3dDevice, m_pGravityPointerShader->GetGraphicsRootSignature(), 4);
-	m_pGravityPointerShader->BuildObjects(m_pd3dDevice, m_pd3dScreenCommandList);
-
-	m_pHPNumberShader = new HPNumberShader();
-	m_pHPNumberShader->CreateGraphicsRootSignature(m_pd3dDevice);
-	m_pHPNumberShader->CreateShader(m_pd3dDevice, m_pTimeNumberShader->GetGraphicsRootSignature(), 4);
-	m_pHPNumberShader->BuildObjects(m_pd3dDevice, m_pd3dScreenCommandList);
+	m_pUIShader = new UIShader(m_pPlayer);
+	m_pUIShader->CreateGraphicsRootSignature(m_pd3dDevice);
+	m_pUIShader->CreateShader(m_pd3dDevice, 4);
+	m_pUIShader->BuildObjects(m_pd3dDevice, m_pd3dScreenCommandList);
 }
 
 void CGameFramework::CreateSwapChainRenderTargetViews()
@@ -860,53 +825,12 @@ void CGameFramework::ReleaseObjects()
 	if (m_pScreenShader)
 		delete m_pScreenShader;
 
-	if (m_pMiniUIShader)
-		m_pMiniUIShader->ReleaseObjects();
+	if (m_pUIShader)
+		m_pUIShader->ReleaseObjects();
 
-	if (m_pMiniUIShader)
-		delete m_pMiniUIShader;
+	if (m_pUIShader)
+		delete m_pUIShader;
 
-	if (m_pMiniMapShader)
-		m_pMiniMapShader->ReleaseObjects();
-
-	if (m_pMiniMapShader)
-		delete m_pMiniMapShader;
-
-	if (m_pArrowShader)
-		m_pArrowShader->ReleaseObjects();
-
-	if (m_pArrowShader)
-		delete m_pArrowShader;
-
-	if (m_pCrossShader)
-		m_pCrossShader->ReleaseObjects();
-
-	if (m_pCrossShader)
-		delete m_pCrossShader;
-
-	if (m_pScoreboardShader)
-		m_pScoreboardShader->ReleaseObjects();
-
-	if (m_pScoreboardShader)
-		delete m_pScoreboardShader;
-
-	if (m_pTimeNumberShader)
-		m_pTimeNumberShader->ReleaseObjects();
-
-	if (m_pTimeNumberShader)
-		delete m_pTimeNumberShader;
-
-	if (m_pGravityPointerShader)
-		m_pGravityPointerShader->ReleaseObjects();
-
-	if (m_pGravityPointerShader)
-		delete m_pGravityPointerShader;
-
-	if (m_pHPNumberShader)
-		m_pHPNumberShader->ReleaseObjects();
-
-	if (m_pHPNumberShader)
-		delete m_pHPNumberShader;
 }
 void CGameFramework::CollisionCheckByBullet()
 {
@@ -1129,7 +1053,7 @@ void CGameFramework::ProcessInput()
 			}
 			float cxDelta = 0.0f, cyDelta = 0.0f;
 			POINT ptCursorPos;
-			if (GetCapture() == m_hWnd) // GetCapture() == m_hWnd [카메라 고정]
+			if (true) // GetCapture() == m_hWnd [카메라 고정]
 			{
 				GetCursorPos(&ptCursorPos);
 				if (GetCapture() == m_hWnd 
@@ -1348,14 +1272,7 @@ void CGameFramework::PrepareFrame()
 
 void CGameFramework::RenderUI()
 {
-	m_pMiniUIShader->Render(m_pd3dScreenCommandList, m_pCamera);
-	m_pArrowShader->Render(m_pd3dScreenCommandList, m_pCamera);
-	m_pMiniMapShader->Render(m_pd3dScreenCommandList, m_pCamera);
-	m_pCrossShader->Render(m_pd3dScreenCommandList, m_pCamera);
-	m_pTimeNumberShader->Render(m_pd3dScreenCommandList, m_pCamera);
-	m_pScoreboardShader->Render(m_pd3dScreenCommandList, m_pCamera);
-	m_pGravityPointerShader->Render(m_pd3dScreenCommandList, m_pCamera);
-	m_pHPNumberShader->Render(m_pd3dScreenCommandList, m_pCamera);
+	m_pUIShader->Render(m_pd3dScreenCommandList, m_pCamera);
 }
 
 void CGameFramework::FrameAdvance()
@@ -1384,8 +1301,9 @@ void CGameFramework::FrameAdvance()
 			m_pPlayer->GetCamera()->GetPosition().z + m_pPlayer->GetCamera()->GetLookVector().z
 		));
 
-	m_pTimeNumberShader->SetAndCalculateScoreLocation(60 - g_fgametime);
-	m_pHPNumberShader->SetAndCalculateHPLocation(g_my_info.hp);
+	m_pUIShader->SetAndCalculateScoreLocation(60 - g_fgametime);
+	m_pUIShader->SetAndCalculateHPLocation(g_my_info.hp);
+
 	m_ppScenes[CHARACTER]->ModelsSetPosition(g_player_info, g_myid);
 	CollisionCheckByBullet();//총알충돌체크
 
@@ -1440,6 +1358,7 @@ void CGameFramework::FrameAdvance()
 		m_pd3dScreenCommandList->RSSetViewports(1, m_pCamera->GetViewport());
 		m_pd3dScreenCommandList->RSSetScissorRects(1, m_pCamera->GetScissorRect());
 
+		m_pComputeShader->SetValue(m_pPlayer->GetFallVelocity()/5.0f);
 		m_pComputeShader->Compute(m_pd3dDevice, m_pd3dScreenCommandList, m_ppd3dSwapChainBackBuffers[m_nSwapChainBufferIndex]);
 
 		hResult = m_pd3dScreenCommandList->Close();
