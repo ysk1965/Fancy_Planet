@@ -1320,6 +1320,30 @@ void CAnimationObject::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamer
 	if (m_pChild)
 		m_pChild->Render(pd3dCommandList, pCamera, nInstances);
 }
+void CAnimationObject::ShadowRender(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera, UINT nInstances)
+{
+	if (m_pMaterial)
+	{
+		if (m_pMaterial->m_pShader)
+		{
+			m_pMaterial->m_pShader->ShadowRender(pd3dCommandList);
+		}
+	}
+	if (m_ppMeshes)
+	{
+		for (int i = 0; i < m_nMeshes; i++)
+		{
+			if (m_ppMeshes[i])
+				m_ppMeshes[i]->Render(pd3dCommandList, nInstances);
+		}
+	}
+
+	if (m_pSibling)
+		m_pSibling->ShadowRender(pd3dCommandList, pCamera, nInstances);
+
+	if (m_pChild)
+		m_pChild->ShadowRender(pd3dCommandList, pCamera, nInstances);
+}
 TCHAR* CAnimationObject::CharToTCHAR(char * asc)
 {
 	TCHAR* ptszUni = NULL;

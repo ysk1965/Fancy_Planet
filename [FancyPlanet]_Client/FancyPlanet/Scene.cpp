@@ -591,7 +591,15 @@ void CharacterScene::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera 
 }
 void CharacterScene::ShadowRender(ID3D12GraphicsCommandList *pd3dCommandList, CCamera* pCamera, SHADOW_INFO* pCameraInfo)
 {
-	//pCamera->ShadowUpdateShaderVariables(pd3dCommandList, pCameraInfo);
+	pd3dCommandList->SetGraphicsRootSignature(m_pd3dGraphicsRootSignature);
+
+	pCamera->ShadowUpdateShaderVariables(pd3dCommandList, pCameraInfo);
+
+	for (int k = 0; k < MESH_NUM; k++)
+	{
+		UpdateShaderVariables(pd3dCommandList);
+		m_ppSampleAnimationObjects[k]->ShadowRender(pd3dCommandList, pCamera, m_nObjects);
+	}
 }
 void CharacterScene::ReleaseShaderVariables()
 {
