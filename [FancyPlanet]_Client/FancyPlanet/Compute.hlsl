@@ -12,13 +12,14 @@ void CS(int3 groupThreadID : SV_GroupThreadID, int3 dispatchThreadID : SV_Dispat
 {
 	float4 fResult;
 
-	fResult = gInput[int2(dispatchThreadID.x, dispatchThreadID.y)] + gInput[int2(dispatchThreadID.x - (int)value, dispatchThreadID.y - (int)value)] +
-		gInput[int2(dispatchThreadID.x, dispatchThreadID.y - (int)value)] + gInput[int2(dispatchThreadID.x + (int)value, dispatchThreadID.y - (int)value)] +
-			gInput[int2(dispatchThreadID.x + (int)value, dispatchThreadID.y)] + gInput[int2(dispatchThreadID.x + (int)value, dispatchThreadID.y + (int)value)]+
-				gInput[int2(dispatchThreadID.x, dispatchThreadID.y + (int)value)] + gInput[int2(dispatchThreadID.x - (int)value, dispatchThreadID.y + (int)value)]+
-					gInput[int2(dispatchThreadID.x - (int)value, dispatchThreadID.y)];
+	//fResult = gInput[int2(dispatchThreadID.x, dispatchThreadID.y)] + gInput[int2(dispatchThreadID.x - (int)value, dispatchThreadID.y - (int)value)] +
+	//	gInput[int2(dispatchThreadID.x, dispatchThreadID.y - (int)value)] + gInput[int2(dispatchThreadID.x + (int)value, dispatchThreadID.y - (int)value)] +
+	//		gInput[int2(dispatchThreadID.x + (int)value, dispatchThreadID.y)] + gInput[int2(dispatchThreadID.x + (int)value, dispatchThreadID.y + (int)value)]+
+	//			gInput[int2(dispatchThreadID.x, dispatchThreadID.y + (int)value)] + gInput[int2(dispatchThreadID.x - (int)value, dispatchThreadID.y + (int)value)]+
+	//				gInput[int2(dispatchThreadID.x - (int)value, dispatchThreadID.y)];
+	//
+	//fResult /= 9.0f;
 
-	fResult /= 9.0f;
-
+	fResult = max(0, gInput[dispatchThreadID.xy] - 0.004f);
 	gOutput[dispatchThreadID.xy] = fResult;
 }

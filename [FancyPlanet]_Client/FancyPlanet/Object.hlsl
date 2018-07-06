@@ -1,8 +1,13 @@
 cbuffer cbCameraInfo : register(b1)
 {
-	matrix		gmtxView : packoffset(c0);
-	matrix		gmtxProjection : packoffset(c4);
-	float3		gvCameraPosition : packoffset(c8);
+	matrix		gmtxView;
+	matrix		gmtxProjection;
+	matrix		gmtxLightView;
+	matrix		gmtxLightProjection;
+	matrix		gmtxShadowTransform;
+	float3		    gvCameraPosition;
+	float			gfPad1;
+	float3			gvLightPosition;
 };
 
 struct INSTANCEDGAMEOBJECTINFO
@@ -19,12 +24,12 @@ struct PS_TEXTURED_DEFFERREDLIGHTING_OUTPUT
 	float4 diffuse : SV_TARGET0;
 	float4 normal : SV_TARGET1;
 	float4 depth : SV_TARGET2;
-	float4 specular : SV_TARGET3;
+	float4 shadow : SV_TARGET3;
 };
 
 Texture2D gtxtObject_Diffuse : register(t0);
 Texture2D gtxtObject_Normal : register(t1);
-Texture2D gtxtObject_Specular : register(t2);
+Texture2D gtxtObject_Shadow : register(t2);
 
 StructuredBuffer<INSTANCEDGAMEOBJECTINFO> gObjectInfos : register(t3);
 
@@ -43,13 +48,12 @@ struct VS_OUTPUT
 	float3 positionW : POSITION;
 	float3 tangentW : TANGENT;
 	float3 bitangentW : BITANGENT;
+	float4 ShadowPosH : SHADOW;
 };
 
 VS_OUTPUT Object_VS(VS_INPUT input, uint nInstanceID : SV_InstanceID)
 {
 	VS_OUTPUT output;
-
-	matrix qwe = matrix(10, 0, 0, 0, 0, 10, 0, 0, 0, 0, 10, 0, 100, 500, 100, 1);
 
 	output.positionW = (float3)mul(float4(input.position, 1.0f), gObjectInfos[nInstanceID].gmtxWorld);
 	output.position = mul(mul(float4(output.positionW, 1.0f), gmtxView), gmtxProjection);
@@ -57,10 +61,18 @@ VS_OUTPUT Object_VS(VS_INPUT input, uint nInstanceID : SV_InstanceID)
 	output.tangentW = normalize(mul(input.tangent, (float3x3)gObjectInfos[nInstanceID].gmtxWorld));
 	output.bitangentW = normalize(cross(output.normalW, output.tangentW));
 	output.uv = input.uv;
-
+	output.ShadowPosH = mul(output.positionW, gmtxShadowTransform);
 	return(output);
 }
+VS_OUTPUT Shadow_Object_VS(VS_INPUT input, uint nInstanceID : SV_InstanceID)
+{
+	VS_OUTPUT output = (VS_OUTPUT)0.0f;
 
+	output.positionW = (float3)mul(float4(input.position, 1.0f), gObjectInfos[nInstanceID].gmtxWorld);
+	output.position = mul(mul(float4(output.positionW, 1.0f), gmtxLightView), gmtxLightProjection);
+	output.uv = input.uv;
+	return(output);
+}
 [earlydepthstencil]
 PS_TEXTURED_DEFFERREDLIGHTING_OUTPUT Object_PS(VS_OUTPUT input) : SV_TARGET
 {
@@ -68,7 +80,7 @@ PS_TEXTURED_DEFFERREDLIGHTING_OUTPUT Object_PS(VS_OUTPUT input) : SV_TARGET
 	float2 uv1;
 	uv1.x = input.uv.x;
 	uv1.y = 1.0f - input.uv.y;
-	
+
 	float3 diffuse = gtxtObject_Diffuse.Sample(gWrapSamplerState, uv1).rgb;
 	
 	output.diffuse = float4(diffuse, 1.0f);
@@ -85,8 +97,8 @@ PS_TEXTURED_DEFFERREDLIGHTING_OUTPUT Object_PS(VS_OUTPUT input) : SV_TARGET
 	output.normal = float4(normalW, 1.0f);
 	
 	output.depth = float4(input.positionW, 1.0f);
-	
-	output.specular = float4(0.1f, 0.1f, 0.1f, 64.0f / 255.0f);
+
+	output.shadow = input.ShadowPosH;
 	
 	return output;
 }

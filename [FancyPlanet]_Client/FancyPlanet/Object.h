@@ -283,6 +283,8 @@ public:
 	virtual void Animate(float fTimeElapsed); 
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, int iRootParameterIndex, CCamera *pCamera = NULL);
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, int iRootParameterIndex, CCamera *pCamera, UINT nInstances, CPhysXObject** ppObjects);
+	void ShadowRender(ID3D12GraphicsCommandList *pd3dCommandList, int iRootParameterIndex, UINT nInstances, CPhysXObject** ppObjects);
+	void ShadowRender(ID3D12GraphicsCommandList *pd3dCommandList, int iRootParameterIndex);
 	virtual void BuildMaterials(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList) { }
 	virtual void ReleaseUploadBuffers();
 	virtual void ChangeAnimation(int newState) {};

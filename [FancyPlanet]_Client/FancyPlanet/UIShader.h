@@ -1,11 +1,6 @@
 #pragma once
 #include "Shader.h"
 
-#define MAP_SIZE 2056.0f
-#define PLAYER_MAP_RANGE 200.0f
-#define MINI_MAP_SIZE 0.25f;
-#define ARROW_CENTER -0.75f
-
 enum
 {
 	MINIMAP_UI = 0,

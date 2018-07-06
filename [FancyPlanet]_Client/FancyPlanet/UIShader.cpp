@@ -9,8 +9,17 @@ UIShader::UIShader(CPlayer * pPlayer)
 }
 UIShader::~UIShader()
 {
-}
+	if (m_ppd3dPipelineStates)
+	{
+		for (int i = 0; i < m_nPipelineStates; i++)
+			if (m_ppd3dPipelineStates[i])
+				m_ppd3dPipelineStates[i]->Release();
+		delete[] m_ppd3dPipelineStates;
+	}
 
+	if (m_pd3dGraphicsRootSignature)
+		m_pd3dGraphicsRootSignature->Release();
+}
 D3D12_SHADER_BYTECODE UIShader::CompileShaderFromFile(WCHAR *pszFileName, LPCSTR pszShaderName, LPCSTR pszShaderProfile, ID3DBlob **ppd3dShaderBlob)
 {
 	UINT nCompileFlags = 0;

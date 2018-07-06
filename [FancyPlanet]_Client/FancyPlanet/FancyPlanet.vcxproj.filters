@@ -140,12 +140,12 @@
     </Image>
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="Shaders.hlsl" />
     <FxCompile Include="Light.hlsl" />
     <FxCompile Include="UI.hlsl" />
     <FxCompile Include="Animation.hlsl" />
     <FxCompile Include="Object.hlsl" />
     <FxCompile Include="Compute.hlsl" />
+    <FxCompile Include="Shaders.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Assets\Image\Terrain\HeightMap.raw">

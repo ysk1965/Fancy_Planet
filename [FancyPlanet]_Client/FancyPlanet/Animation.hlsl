@@ -5,9 +5,14 @@ cbuffer cbPlayerInfo : register(b0)
 
 cbuffer cbCameraInfo : register(b1)
 {
-	matrix		gmtxView : packoffset(c0);
-	matrix		gmtxProjection : packoffset(c4);
-	float3		gvCameraPosition : packoffset(c8);
+	matrix		gmtxView;
+	matrix		gmtxProjection;
+	matrix		gmtxLightView;
+	matrix		gmtxLightProjection;
+	matrix		gmtxShadowTransform;
+	float3		    gvCameraPosition;
+	float			gfPad1;
+	float3			gvLightPosition;
 };
 
 cbuffer cbGameObjectInfo : register(b2)
@@ -36,7 +41,7 @@ struct INSTANCEDGAMEOBJECTINFO3
 Texture2D<float4> gtxtDiffuse : register(t0);
 Texture2D<float4> gtxtNormal : register(t1);
 Texture2D<float4> gtxtDepth : register(t2);
-Texture2D<float4> gtxtSpecular : register(t3);
+Texture2D<float4> gtxtShadow : register(t3);
 
 Texture2D gtxtModel_Diffuse : register(t10);
 Texture2D gtxtModel_Normal : register(t11);
@@ -55,7 +60,7 @@ struct PS_TEXTURED_DEFFERREDLIGHTING_OUTPUT
 	float4 diffuse : SV_TARGET0;
 	float4 normal : SV_TARGET1;
 	float4 depth : SV_TARGET2;
-	float4 specular : SV_TARGET3;
+	float4 shadow : SV_TARGET3;
 };
 
 struct VS_ANIMATION_INPUT
@@ -70,6 +75,7 @@ struct VS_TEXTURED_OUTPUT
 	float4 position : SV_POSITION;
 	float3 positionW : POSITION;
 	float2 uv : TEXCOORD;
+	float4 ShadowPosH : SHADOW;
 };
 
 VS_TEXTURED_OUTPUT VSTexturedAnimation(VS_ANIMATION_INPUT input, uint nInstanceID : SV_InstanceID)
@@ -105,6 +111,42 @@ VS_TEXTURED_OUTPUT VSTexturedAnimation(VS_ANIMATION_INPUT input, uint nInstanceI
 	matrix mtxWorldViewProjection = mul(gAnimationObjectInfos[nInstanceID].gmtxWorld, gmtxView);
 	mtxWorldViewProjection = mul(mtxWorldViewProjection, gmtxProjection);
 	output.position = mul(float4(position, 1.0f), mtxWorldViewProjection);
+	output.ShadowPosH = mul(output.positionW, gmtxShadowTransform);
+	return output;
+}
+VS_TEXTURED_OUTPUT VSShadowTexturedAnimation(VS_ANIMATION_INPUT input, uint nInstanceID : SV_InstanceID)
+{
+	VS_TEXTURED_OUTPUT output;
+
+	float4 fWeight = { 0.0f, 0.0f, 0.0f, 0.0f };
+	fWeight[0] = input.boneWeights.x;
+	fWeight[1] = input.boneWeights.y;
+	fWeight[2] = input.boneWeights.z;
+	fWeight[3] = 1.0f - fWeight[0] - fWeight[1] - fWeight[2];
+
+	float3 position = float3(0.0f, 0.0f, 0.0f);
+
+	for (int i = 0; i < 4; i++)
+	{
+		if (input.boneIndices[i] < 31)
+		{
+			position += fWeight[i] * mul(float4(input.position, 1.0f), gAnimationObjectInfos[nInstanceID].gmtxBoneTransforms[input.boneIndices[i]]).xyz;
+		}
+		else if (input.boneIndices[i] >= 31 && input.boneIndices[i] < 63)
+		{
+			position += fWeight[i] * mul(float4(input.position, 1.0f), gAnimationObjectInfos2[nInstanceID].gmtxBoneTransforms[input.boneIndices[i] - 31]).xyz;
+		}
+		else
+		{
+			position += fWeight[i] * mul(float4(input.position, 1.0f), gAnimationObjectInfos3[nInstanceID].gmtxBoneTransforms[input.boneIndices[i] - 63]).xyz;
+		}
+	}
+
+	output.uv = input.uv;
+	output.positionW = mul(float4(position, 1.0f), gAnimationObjectInfos[nInstanceID].gmtxWorld).xyz;
+	matrix mtxWorldViewProjection = mul(gAnimationObjectInfos[nInstanceID].gmtxWorld, gmtxLightView);
+	mtxWorldViewProjection = mul(mtxWorldViewProjection, gmtxLightProjection);
+	output.position = mul(float4(position, 1.0f), mtxWorldViewProjection);
 
 	return output;
 }
@@ -121,7 +163,7 @@ PS_TEXTURED_DEFFERREDLIGHTING_OUTPUT PSTextured(VS_TEXTURED_OUTPUT input) : SV_T
 	output.depth = float4(input.positionW, 1.0f);
 	output.diffuse = float4(diffuse, 1.0f);
 	output.normal = float4(0.0f, 0.0f, 0.0f, 0.0f);
-	output.specular = float4(0.0f, 0.0f, 0.0f, 0.0f);
+	output.shadow = input.ShadowPosH;
 	
 	return output;
 }
@@ -143,6 +185,7 @@ struct A_VS_OUTPUT
 	float3 normalW : NORMAL;
 	float2 uv : TEXCOORD;
 	float3 tangentW : TANGENT;
+	float4 ShadowPosH : SHADOW;
 };
 A_VS_OUTPUT ANIMATION_VS(A_VS_INPUT input, uint nInstanceID : SV_InstanceID)
 {
@@ -187,6 +230,43 @@ A_VS_OUTPUT ANIMATION_VS(A_VS_INPUT input, uint nInstanceID : SV_InstanceID)
 	matrix mtxWorldViewProjection = mul(gAnimationObjectInfos[nInstanceID].gmtxWorld, gmtxView);
 	mtxWorldViewProjection = mul(mtxWorldViewProjection, gmtxProjection);
 	output.position = mul(float4(position, 1.0f), mtxWorldViewProjection);
+	output.ShadowPosH = mul(output.positionW, gmtxShadowTransform);
+	return output;
+}
+A_VS_OUTPUT SHADOW_ANIMATION_VS(A_VS_INPUT input, uint nInstanceID : SV_InstanceID)
+{
+	A_VS_OUTPUT output = (A_VS_OUTPUT)0.0f;
+
+	float4 fWeight = { 0.0f, 0.0f, 0.0f, 0.0f };
+	fWeight[0] = input.boneWeights.x;
+	fWeight[1] = input.boneWeights.y;
+	fWeight[2] = input.boneWeights.z;
+	fWeight[3] = 1.0f - fWeight[0] - fWeight[1] - fWeight[2];
+
+	float3 position = float3(0.0f, 0.0f, 0.0f);
+	float3 normal = float3(0.0f, 0.0f, 0.0f);
+	float3 tangent = float3(0.0f, 0.0f, 0.0f);
+
+	for (int i = 0; i < 4; i++)
+	{
+		if (input.boneIndices[i] < 31)
+		{
+			position += fWeight[i] * mul(float4(input.position, 1.0f), gAnimationObjectInfos[nInstanceID].gmtxBoneTransforms[input.boneIndices[i]]).xyz;
+		}
+		else if (input.boneIndices[i] >= 31 && input.boneIndices[i] < 63)
+		{
+			position += fWeight[i] * mul(float4(input.position, 1.0f), gAnimationObjectInfos2[nInstanceID].gmtxBoneTransforms[input.boneIndices[i] - 31]).xyz;
+		}
+		else
+		{
+			position += fWeight[i] * mul(float4(input.position, 1.0f), gAnimationObjectInfos3[nInstanceID].gmtxBoneTransforms[input.boneIndices[i] - 63]).xyz;
+		}
+	}
+
+	output.positionW = mul(float4(position, 1.0f), gAnimationObjectInfos[nInstanceID].gmtxWorld).xyz;
+	matrix mtxWorldViewProjection = mul(gAnimationObjectInfos[nInstanceID].gmtxWorld, gmtxLightView);
+	mtxWorldViewProjection = mul(mtxWorldViewProjection, gmtxLightProjection);
+	output.position = mul(float4(position, 1.0f), mtxWorldViewProjection);
 
 	return output;
 }
@@ -216,7 +296,7 @@ PS_TEXTURED_DEFFERREDLIGHTING_OUTPUT PS_TDL(A_VS_OUTPUT input) : SV_TARGET
 	
 	output.depth = float4(input.positionW, 1.0f);
 	
-	output.specular = float4((float)gnMaterial, (float)gnMaterial, (float)gnMaterial, 15.0f / 255.0f);
+	output.shadow = input.ShadowPosH;
 	
 	return output;
 }
@@ -245,7 +325,7 @@ PS_TEXTURED_DEFFERREDLIGHTING_OUTPUT PS_Specular_TDL(A_VS_OUTPUT input) : SV_TAR
 	
 	output.depth = float4(input.positionW, 1.0f);
 	
-	output.specular = gtxtModel_Specular.Sample(gWrapSamplerState, uv1).rgba;
+	output.shadow = gtxtModel_Specular.Sample(gWrapSamplerState, uv1).rgba;
 	
 	return output;
 }
@@ -265,6 +345,7 @@ struct VS_OUTPUT
 	float3 positionW : POSITION;
 	float3 tangentW : TANGENT;
 	float3 bitangentW : BITANGENT;
+	float4 ShadowPosH : SHADOW;
 };
 
 VS_OUTPUT RendererMesh_VS(VS_INPUT input, uint nInstanceID : SV_InstanceID)
@@ -277,6 +358,16 @@ VS_OUTPUT RendererMesh_VS(VS_INPUT input, uint nInstanceID : SV_InstanceID)
 	output.tangentW = normalize(mul(input.tangent, (float3x3)gAnimationObjectInfos3[nInstanceID].gmtxRendererMeshWorld[input.index]));
 	output.bitangentW = normalize(cross(output.normalW, output.tangentW));
 	output.uv = input.uv;
+	output.ShadowPosH = mul(output.positionW, gmtxShadowTransform);
+
+	return(output);
+}
+VS_OUTPUT Shadow_RendererMesh_VS(VS_INPUT input, uint nInstanceID : SV_InstanceID)
+{
+	VS_OUTPUT output = (VS_OUTPUT)0.0f;
+
+	output.positionW = (float3)mul(float4(input.position, 1.0f), gAnimationObjectInfos3[nInstanceID].gmtxRendererMeshWorld[input.index]);
+	output.position = mul(mul(float4(output.positionW, 1.0f), gmtxLightView), gmtxLightProjection);
 
 	return(output);
 }
@@ -305,8 +396,8 @@ PS_TEXTURED_DEFFERREDLIGHTING_OUTPUT RendererMesh_PS(VS_OUTPUT input) : SV_TARGE
 	output.normal = float4(normalW, 1.0f);
 	
 	output.depth = float4(input.positionW, 1.0f);
-	
-	output.specular = float4(0.1f, 0.1f, 0.1f, 64.0f / 255.0f);
+
+	output.shadow = input.ShadowPosH;
 	
 	return output;
 }
@@ -336,7 +427,7 @@ PS_TEXTURED_DEFFERREDLIGHTING_OUTPUT RendererMesh_Specular_PS(VS_OUTPUT input) :
 	
 	output.depth = float4(input.positionW, 1.0f);
 	
-	output.specular = gtxtModel_Specular.Sample(gWrapSamplerState, uv1).rgba;
+	output.shadow = gtxtModel_Specular.Sample(gWrapSamplerState, uv1).rgba;
 	
 	return output;
 }

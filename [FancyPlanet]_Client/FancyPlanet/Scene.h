@@ -36,12 +36,12 @@ public:
 	bool ProcessInput(UCHAR *pKeysBuffer);
 	virtual void AnimateObjects(float fTimeElapsed, CCamera *pCamera) {};
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera = NULL) = 0;
+	virtual void ShadowRender(ID3D12GraphicsCommandList *pd3dCommandList, CCamera* pCamera, SHADOW_INFO* pCameraInfo) = 0;
 	virtual void SkyBoxRender(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera) {}
 	virtual void ModelsSetPosition(const array <PLAYER_INFO, MAX_USER>& PlayerArray, int myid) {};
 	virtual void ReleaseUploadBuffers();
 	virtual void ReleaseShaderVariables() {};
 	virtual void SetVectorProjectile(XMFLOAT3 xmf3Position, XMFLOAT3 xmf3Direction) {
-
 	};
 	virtual int SetProjectile(XMFLOAT3& xmf3Direction)
 	{
@@ -50,7 +50,6 @@ public:
 	virtual void ChangeAnimation(int newState) {};
 	virtual CHeightMapTerrain * GetTerrain() { return NULL; };
 	void FrustumCulling(CCamera *pCamera);
-
 	CPlayer					*m_pPlayer;
 protected:
 
@@ -77,6 +76,7 @@ public:
 	virtual ID3D12RootSignature *CreateGraphicsRootSignature(ID3D12Device *pd3dDevice);
 	virtual void AnimateObjects(float fTimeElapsed, CCamera *pCamera);
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera = NULL);
+	virtual void ShadowRender(ID3D12GraphicsCommandList *pd3dCommandList, CCamera* pCamera, SHADOW_INFO* pCameraInfo);
 	virtual void ReleaseUploadBuffers();
 	virtual void ReleaseShaderVariables() {};
 	virtual CHeightMapTerrain * GetTerrain()
@@ -85,6 +85,7 @@ public:
 	};
 	TerrainAndSkyBoxScene(PxPhysics* pPxPhysicsSDK, PxScene* pPxScene, PxControllerManager* pPxControllerManager, PxCooking* pCooking);
 	~TerrainAndSkyBoxScene();
+
 protected:
 	//Physx SDK Member Variables =========================
 	PxPhysics*						m_pPxPhysicsSDK;
@@ -106,6 +107,7 @@ public:
 	virtual void ReleaseObjects();
 
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera = NULL);
+	virtual void ShadowRender(ID3D12GraphicsCommandList *pd3dCommandList, CCamera* pCamera, SHADOW_INFO* pCameraInfo);
 
 	UIScene();
 	~UIScene();
@@ -121,6 +123,7 @@ public:
 	virtual ID3D12RootSignature *CreateGraphicsRootSignature(ID3D12Device *pd3dDevice);
 	virtual void AnimateObjects(float fTimeElapsed, CCamera *pCamera);
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera = NULL);
+	virtual void ShadowRender(ID3D12GraphicsCommandList *pd3dCommandList, CCamera* pCamera, SHADOW_INFO* pCameraInfo);
 	virtual void ReleaseUploadBuffers();
 	virtual void ReleaseShaderVariables();
 	virtual void ChangeAnimation(int newState);
@@ -167,6 +170,7 @@ public:
 	virtual void ReleaseShaderVariables();
 	virtual ID3D12RootSignature *CreateGraphicsRootSignature(ID3D12Device *pd3dDevice);
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera = NULL);
+	virtual void ShadowRender(ID3D12GraphicsCommandList *pd3dCommandList, CCamera* pCamera, SHADOW_INFO* pCameraInfo);
 	virtual void ReleaseUploadBuffers();
 
 	ObjectScene(PxPhysics* pPxPhysicsSDK, PxScene* pPxScene, PxControllerManager* pPxControllerManager, PxCooking* pCooking);

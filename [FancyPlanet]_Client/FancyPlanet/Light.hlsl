@@ -46,7 +46,7 @@ cbuffer cbLights : register(b8)
 	float4				gcGlobalAmbientLight;
 };
 
-float4 DirectionalLight(int nIndex, float3 vNormal, float3 vToCamera, float vMaterial, float vPower)
+float4 DirectionalLight(int nIndex, float3 vNormal, float3 vToCamera, float vMaterial, float vPower, float shadowFactor)
 {
 	float3 vToLight = -gLights[nIndex].m_vDirection;
 	float fDiffuseFactor = dot(vToLight, vNormal);
@@ -69,7 +69,7 @@ float4 DirectionalLight(int nIndex, float3 vNormal, float3 vToCamera, float vMat
 		}
 	}
 
-	return((gLights[nIndex].m_cAmbient * gMaterials[vMaterial].m_cAmbient) + (gLights[nIndex].m_cDiffuse * fDiffuseFactor * gMaterials[vMaterial].m_cDiffuse) + (gLights[nIndex].m_cSpecular * fSpecularFactor * gMaterials[vMaterial].m_cSpecular));
+	return((gLights[nIndex].m_cAmbient * gMaterials[vMaterial].m_cAmbient) + (gLights[nIndex].m_cDiffuse * fDiffuseFactor * gMaterials[vMaterial].m_cDiffuse)*shadowFactor + (gLights[nIndex].m_cSpecular * fSpecularFactor * gMaterials[vMaterial].m_cSpecular) * shadowFactor);
 }
 
 float4 PointLight(int nIndex, float3 vPosition, float3 vNormal, float3 vToCamera, float vMaterial, float vPower)
@@ -144,7 +144,7 @@ float4 SpotLight(int nIndex, float3 vPosition, float3 vNormal, float3 vToCamera,
 	return(float4(0.0f, 0.0f, 0.0f, 0.0f));
 }
 //Lighting(position, normal, diffuse, specular.x, specular.w*255.0f);
-float4 Lighting(float3 vPosition, float3 vNormal, float3 vDiffuse, float vMaterial, float vPower)
+float4 Lighting(float3 vPosition, float3 vNormal, float3 vDiffuse, float vMaterial, float vPower, float shadowFactor)
 {
 	float3 vCameraPosition = float3(gvCameraPosition.x, gvCameraPosition.y, gvCameraPosition.z);
 	float3 vToCamera = normalize(vCameraPosition - vPosition);
@@ -156,7 +156,7 @@ float4 Lighting(float3 vPosition, float3 vNormal, float3 vDiffuse, float vMateri
 		{
 			if (gLights[i].m_nType == DIRECTIONAL_LIGHT)
 			{
-				cColor += DirectionalLight(i, vNormal, vToCamera, vMaterial, vPower);
+				cColor += DirectionalLight(i, vNormal, vToCamera, vMaterial, vPower, shadowFactor);
 			}
 			else if (gLights[i].m_nType == POINT_LIGHT)
 			{
@@ -173,4 +173,3 @@ float4 Lighting(float3 vPosition, float3 vNormal, float3 vDiffuse, float vMateri
 
 	return(lerp(float4(vDiffuse, 1.0f), cColor, 0.5f));
 }
-

@@ -39,7 +39,6 @@ public:
 	void CreateRenderTargetViews();
 	void CreateDepthStencilView();
 	void CreateCommandQueueAndList();
-	void CreateUIShader();
 
 	void OnResizeBackBuffers();
 
@@ -56,7 +55,6 @@ public:
 
 	void SpaceDivision();
 	void RenderSubset(int iIndex);
-	void RenderUI();
 	void NotifyIdleState();
 	void CollisionCheckByBullet();
 	void SendBulletPacket(UINT nShell);
@@ -71,9 +69,12 @@ public:
 	{
 		return m_pPlayer->GetPlayerWorldTransform();
 	};
-	void PrepareFrame();
+	void PrepareFrame(); 
 private:
 	ID3D12GraphicsCommandList * m_pd3dScreenCommandList;
+	ID3D12CommandAllocator      *m_pd3dScreenCommandAllocator;
+	ID3D12GraphicsCommandList * m_pd3dPreShadowCommandList;
+	ID3D12CommandAllocator      *m_pd3dPreShadowCommandAllocator;
 
 	CComputShader* m_pComputeShader = NULL;
 
@@ -81,7 +82,8 @@ private:
 
 	UIShader* m_pUIShader = NULL;
 
-	ID3D12CommandAllocator      *m_pd3dScreenCommandAllocator;
+	CShadowShader* m_pShadowShader = NULL;
+
 
 	HINSTANCE               m_hInstance;
 	HWND                  m_hWnd;
@@ -113,11 +115,14 @@ private:
 	UINT                  m_nRtvDescriptorIncrementSize;
 
 	ID3D12Resource            *m_pd3dDepthStencilBuffer = NULL;
+	ID3D12Resource            *m_pd3dShadowDepthStencilBuffer = NULL;
 	ID3D12DescriptorHeap      *m_pd3dDsvDescriptorHeap = NULL;
 	UINT                  m_nDsvDescriptorIncrementSize;
 
 	ID3D12CommandAllocator      **m_ppd3dCommandAllocators;
 	ID3D12GraphicsCommandList   **m_ppd3dCommandLists;
+	ID3D12CommandAllocator      **m_ppd3dShadowCommandAllocators;
+	ID3D12GraphicsCommandList   **m_ppd3dShadowCommandLists;
 	ID3D12CommandQueue         *m_pd3dCommandQueue = NULL;
 
 	ID3D12Fence               *m_pd3dFence = NULL;
@@ -154,6 +159,7 @@ private:
 
 	HANDLE m_workerBeginRenderFrame[NUM_SUBSETS];
 	HANDLE m_workerFinishedRenderFrame[NUM_SUBSETS];
+	HANDLE m_workerFinishShadowPass[NUM_SUBSETS];
 	HANDLE m_threadHandles[NUM_SUBSETS];
 
 	static CGameFramework* m_pGFforMultiThreads;

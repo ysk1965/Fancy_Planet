@@ -97,7 +97,7 @@ void TerrainAndSkyBoxScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12Graphic
 	m_pTerrain = new CHeightMapTerrain(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature,
 		_T("../Assets/Image/Terrain/HeightMap2.raw"), 257, 257, 257, 257, xmf3Scale, xmf4Color,
 		m_pPxPhysicsSDK, m_pPxScene, m_pPxControllerManager, m_pCooking);
-
+	//m_pTerrain->SetPosition(-);
 	m_pSkyBox = new CSkyBox(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
 }
 void TerrainAndSkyBoxScene::ReleaseObjects()
@@ -126,16 +126,36 @@ void TerrainAndSkyBoxScene::AnimateObjects(float fTimeElapsed, CCamera *pCamera)
 void TerrainAndSkyBoxScene::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera)
 {
 	pd3dCommandList->SetGraphicsRootSignature(m_pd3dGraphicsRootSignature);
+	
 
 	pCamera->SetViewportsAndScissorRects(pd3dCommandList);
 	pCamera->UpdateShaderVariables(pd3dCommandList);
-	if (m_pSkyBox)
-		m_pSkyBox->Render(pd3dCommandList, pCamera);
 
+	if (m_pSkyBox)
+	{
+		if (m_pSkyBox->m_pMaterial)
+			m_pSkyBox->m_pMaterial->m_pShader->SetDescriptorHeaps(pd3dCommandList);
+		if (m_pSkyBox->m_pMaterial)
+			m_pSkyBox->m_pMaterial->m_pShader->SetPipelineState(pd3dCommandList);
+	
+		m_pSkyBox->Render(pd3dCommandList, pCamera);
+	}
 	if (m_pTerrain)
 	{
+		if (m_pTerrain->m_pMaterial)
+			m_pTerrain->m_pMaterial->m_pShader->SetDescriptorHeaps(pd3dCommandList);
+		if (m_pTerrain->m_pMaterial)
+			m_pTerrain->m_pMaterial->m_pShader->SetPipelineState(pd3dCommandList);
 		m_pTerrain->Render(pd3dCommandList, 2, pCamera);
 	}
+}
+void TerrainAndSkyBoxScene::ShadowRender(ID3D12GraphicsCommandList *pd3dCommandList, CCamera* pCamera, SHADOW_INFO* pCameraInfo)
+{
+	pd3dCommandList->SetGraphicsRootSignature(m_pd3dGraphicsRootSignature);
+
+	m_pTerrain->m_pMaterial->m_pShader->ShadowRender(pd3dCommandList);
+	pCamera->ShadowUpdateShaderVariables(pd3dCommandList, pCameraInfo);
+	m_pTerrain->ShadowRender(pd3dCommandList, 2);
 }
 ID3D12RootSignature *TerrainAndSkyBoxScene::CreateGraphicsRootSignature(ID3D12Device *pd3dDevice)
 {
@@ -281,7 +301,9 @@ void UIScene::ReleaseObjects()
 void UIScene::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera)
 {
 }
-
+void UIScene::ShadowRender(ID3D12GraphicsCommandList *pd3dCommandList, CCamera* pCamera, SHADOW_INFO* pCameraInfo)
+{
+}
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -330,8 +352,7 @@ void CharacterScene::ModelsSetPosition(const array <PLAYER_INFO, MAX_USER>& Play
 	{
 		if (PlayerArray[i].m_isconnected)
 		{
-			if (i != myid)
-				m_ppSoldierObjects[i]->m_xmf4x4ToParentTransform = PlayerArray[i].pos;
+			m_ppSoldierObjects[i]->m_xmf4x4ToParentTransform = PlayerArray[i].pos;
 			m_ppSoldierObjects[i]->ChangeAnimation(PlayerArray[i].anim_state);
 
 		}
@@ -455,8 +476,7 @@ void CharacterScene::CreateShaderVariables(ID3D12Device *pd3dDevice, ID3D12Graph
 		, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
 
 	m_pd3dcbGameObjects->Map(0, NULL, (void **)&m_pcbMappedGameObjects);
-
-
+	
 	UINT ncbElementBytes2 = ((sizeof(BONE_TRANSFORMS2) + 255) & ~255); //256ÀÇ ¹è¼ö
 	m_pd3dcbGameObjects2 = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes2 * m_nObjects
 		, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
@@ -536,32 +556,42 @@ void CharacterScene::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera 
 {
 	pd3dCommandList->SetGraphicsRootSignature(m_pd3dGraphicsRootSignature);
 
-	pCamera->SetViewportsAndScissorRects(pd3dCommandList);
-	pCamera->UpdateShaderVariables(pd3dCommandList);
-
-	FrustumCulling(pCamera);
-
-	m_pPlayer->OnPrepareRender();
-
-	for (int i = 0; i < m_nObjects; i++)
+	for (int k = 0; k < MESH_NUM; k++)
 	{
-		m_ppSoldierObjects[i]->m_pAnimationController->SetBindPoses(m_ppSampleAnimationObjects[0]->GetBindPoses());
-		m_ppSoldierObjects[i]->m_pAnimationController->SetObject(m_ppSoldierObjects[i]);
-		m_ppSoldierObjects[i]->m_pAnimationController->AdvanceAnimation(pd3dCommandList);
+		if (m_ppSampleAnimationObjects[k]->m_pMaterial)
+			m_ppSampleAnimationObjects[k]->m_pMaterial->m_pShader->SetDescriptorHeaps(pd3dCommandList);
+		
+		pCamera->SetViewportsAndScissorRects(pd3dCommandList);
+		pCamera->UpdateShaderVariables(pd3dCommandList);
 
-		if (i == m_nObjects - 1)
+		FrustumCulling(pCamera);
+
+		m_pPlayer->OnPrepareRender();
+
+		for (int i = 0; i < m_nObjects; i++)
 		{
-			m_ppSoldierObjects[m_nObjects - 1]->m_xmf4x4ToParentTransform = m_pPlayer->m_xmf4x4World;
-			XMFLOAT4X4 Scale = Matrix4x4::Identity();
-			Scale._11 = Scale._22 = Scale._33 = m_ppSoldierObjects[m_nObjects - 1]->GetPlayerScale();
-			m_ppSoldierObjects[m_nObjects - 1]->m_xmf4x4ToParentTransform = Matrix4x4::Multiply(Scale, m_ppSoldierObjects[m_nObjects - 1]->m_xmf4x4ToParentTransform);
+			m_ppSoldierObjects[i]->m_pAnimationController->SetBindPoses(m_ppSampleAnimationObjects[k]->GetBindPoses());
+			m_ppSoldierObjects[i]->m_pAnimationController->SetObject(m_ppSoldierObjects[i]);
+			m_ppSoldierObjects[i]->m_pAnimationController->AdvanceAnimation(pd3dCommandList);
+
+			if (i == m_nObjects - 1)
+			{
+				m_ppSoldierObjects[m_nObjects - 1]->m_xmf4x4ToParentTransform = m_pPlayer->m_xmf4x4World;
+				XMFLOAT4X4 Scale = Matrix4x4::Identity();
+				Scale._11 = Scale._22 = Scale._33 = m_ppSoldierObjects[m_nObjects - 1]->GetPlayerScale();
+				m_ppSoldierObjects[m_nObjects - 1]->m_xmf4x4ToParentTransform = Matrix4x4::Multiply(Scale, m_ppSoldierObjects[m_nObjects - 1]->m_xmf4x4ToParentTransform);
+			}
+			m_ppSoldierObjects[i]->UpdateTransform(NULL);
 		}
-		m_ppSoldierObjects[i]->UpdateTransform(NULL);
+
+		UpdateShaderVariables(pd3dCommandList);
+
+		m_ppSampleAnimationObjects[k]->Render(pd3dCommandList, pCamera, m_nObjects);
 	}
-
-	UpdateShaderVariables(pd3dCommandList);
-
-	m_ppSoldierObjects[m_nObjects - 1]->Render(pd3dCommandList, pCamera, m_nObjects);
+}
+void CharacterScene::ShadowRender(ID3D12GraphicsCommandList *pd3dCommandList, CCamera* pCamera, SHADOW_INFO* pCameraInfo)
+{
+	//pCamera->ShadowUpdateShaderVariables(pd3dCommandList, pCameraInfo);
 }
 void CharacterScene::ReleaseShaderVariables()
 {
@@ -800,7 +830,7 @@ int ObjectScene::SetProjectile(XMFLOAT3& xmf3Direction)
 }
 void ObjectScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList)
 {
-	m_nObjects = 40;
+	m_nObjects = 8;
 
 	m_pd3dGraphicsRootSignature = CreateGraphicsRootSignature(pd3dDevice);
 
@@ -822,8 +852,7 @@ void ObjectScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 	m_ppSampleObjects[4]->BuildObject(m_pPxPhysicsSDK, m_pPxScene, m_pPxMaterial, XMFLOAT3(1, 1, 1), m_pCooking, "Astroid3");
 	m_ppSampleObjects[5] = new CPhysXObject(0, pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, L"../Assets/Asteroid4.bss", m_nObjects);
 	m_ppSampleObjects[5]->BuildObject(m_pPxPhysicsSDK, m_pPxScene, m_pPxMaterial, XMFLOAT3(1, 1, 1), m_pCooking, "Astroid4");
-
-
+	
 	m_ppShell = new CPhysXObject*[m_nObjects];
 	m_ppAsteroid0 = new CPhysXObject*[m_nObjects];
 	m_ppAsteroid1 = new CPhysXObject*[m_nObjects];
@@ -1044,17 +1073,61 @@ void ObjectScene::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pC
 {
 	pd3dCommandList->SetGraphicsRootSignature(m_pd3dGraphicsRootSignature);
 
+	if (m_ppShell[m_nObjects - 1]->m_pMaterial)
+		m_ppShell[m_nObjects - 1]->m_pMaterial->m_pShader->SetPipelineState(pd3dCommandList);
+
 	pCamera->SetViewportsAndScissorRects(pd3dCommandList);
 	pCamera->UpdateShaderVariables(pd3dCommandList);
 
 	FrustumCulling(pCamera);
-	
+
+	if (m_ppShell[m_nObjects - 1]->m_pMaterial)
+		m_ppShell[m_nObjects - 1]->m_pMaterial->m_pShader->SetDescriptorHeaps(pd3dCommandList);
 	m_ppShell[m_nObjects - 1]->Render(pd3dCommandList, 5, pCamera, m_nObjects * 4, m_ppShell);
+
+	if (m_ppAsteroid0[m_nObjects - 1]->m_pMaterial)
+		m_ppAsteroid0[m_nObjects - 1]->m_pMaterial->m_pShader->SetDescriptorHeaps(pd3dCommandList);
 	m_ppAsteroid0[m_nObjects - 1]->Render(pd3dCommandList, 5, pCamera, m_nObjects * 4, m_ppAsteroid0);
+
+	if (m_ppAsteroid1[m_nObjects - 1]->m_pMaterial)
+		m_ppAsteroid1[m_nObjects - 1]->m_pMaterial->m_pShader->SetDescriptorHeaps(pd3dCommandList);
 	m_ppAsteroid1[m_nObjects - 1]->Render(pd3dCommandList, 5, pCamera, m_nObjects * 4, m_ppAsteroid1);
+
+	if (m_ppAsteroid2[m_nObjects - 1]->m_pMaterial)
+		m_ppAsteroid2[m_nObjects - 1]->m_pMaterial->m_pShader->SetDescriptorHeaps(pd3dCommandList);
 	m_ppAsteroid2[m_nObjects - 1]->Render(pd3dCommandList, 5, pCamera, m_nObjects * 4, m_ppAsteroid2);
+
+	if (m_ppAsteroid3[m_nObjects - 1]->m_pMaterial)
+		m_ppAsteroid3[m_nObjects - 1]->m_pMaterial->m_pShader->SetDescriptorHeaps(pd3dCommandList);
 	m_ppAsteroid3[m_nObjects - 1]->Render(pd3dCommandList, 5, pCamera, m_nObjects * 4, m_ppAsteroid3);
+
+	if (m_ppAsteroid4[m_nObjects - 1]->m_pMaterial)
+		m_ppAsteroid4[m_nObjects - 1]->m_pMaterial->m_pShader->SetDescriptorHeaps(pd3dCommandList);
 	m_ppAsteroid4[m_nObjects - 1]->Render(pd3dCommandList, 5, pCamera, m_nObjects * 4, m_ppAsteroid4);
+}
+void ObjectScene::ShadowRender(ID3D12GraphicsCommandList *pd3dCommandList, CCamera* pCamera, SHADOW_INFO* pCameraInfo)
+{
+	pd3dCommandList->SetGraphicsRootSignature(m_pd3dGraphicsRootSignature);
+
+	pCamera->ShadowUpdateShaderVariables(pd3dCommandList, pCameraInfo);
+
+	m_ppShell[m_nObjects - 1]->m_pMaterial->m_pShader->ShadowRender(pd3dCommandList);
+	m_ppShell[m_nObjects - 1]->ShadowRender(pd3dCommandList, 5, m_nObjects * 4, m_ppShell);
+
+	m_ppAsteroid0[m_nObjects - 1]->m_pMaterial->m_pShader->ShadowRender(pd3dCommandList);
+	m_ppAsteroid0[m_nObjects - 1]->ShadowRender(pd3dCommandList, 5, m_nObjects * 4, m_ppAsteroid0);
+
+	m_ppAsteroid1[m_nObjects - 1]->m_pMaterial->m_pShader->ShadowRender(pd3dCommandList);
+	m_ppAsteroid1[m_nObjects - 1]->ShadowRender(pd3dCommandList, 5, m_nObjects * 4, m_ppAsteroid1);
+
+	m_ppAsteroid2[m_nObjects - 1]->m_pMaterial->m_pShader->ShadowRender(pd3dCommandList);
+	m_ppAsteroid2[m_nObjects - 1]->ShadowRender(pd3dCommandList, 5, m_nObjects * 4, m_ppAsteroid2);
+
+	m_ppAsteroid3[m_nObjects - 1]->m_pMaterial->m_pShader->ShadowRender(pd3dCommandList);
+	m_ppAsteroid3[m_nObjects - 1]->ShadowRender(pd3dCommandList, 5, m_nObjects * 4, m_ppAsteroid3);
+
+	m_ppAsteroid4[m_nObjects - 1]->m_pMaterial->m_pShader->ShadowRender(pd3dCommandList);
+	m_ppAsteroid4[m_nObjects - 1]->ShadowRender(pd3dCommandList, 5, m_nObjects * 4, m_ppAsteroid4);
 }
 ID3D12RootSignature *ObjectScene::CreateGraphicsRootSignature(ID3D12Device *pd3dDevice)
 {

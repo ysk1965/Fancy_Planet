@@ -310,7 +310,8 @@ CCamera *CPlayer::OnChangeCamera(DWORD nNewCameraMode, DWORD nCurrentCameraMode)
 		m_fPitch = 0.0f;
 		m_fRoll = 0.0f;
 		m_fYaw = Vector3::Angle(XMFLOAT3(0.0f, 0.0f, 1.0f), m_xmf3Look);
-		if (m_xmf3Look.x < 0.0f) m_fYaw = -m_fYaw;
+		if (m_xmf3Look.x < 0.0f) 
+			m_fYaw = -m_fYaw;
 	}
 	else if ((nNewCameraMode == SPACESHIP_CAMERA) && m_pCamera)
 	{

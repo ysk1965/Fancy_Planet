@@ -6,13 +6,16 @@
 #define SPACESHIP_CAMERA			0x02
 #define THIRD_PERSON_CAMERA			0x03
 
-struct VS_CB_CAMERA_INFO
+struct SHADOW_INFO
 {
 	XMFLOAT4X4						m_xmf4x4View;
 	XMFLOAT4X4						m_xmf4x4Projection;
-	XMFLOAT3						m_xmf3Position;
+	XMFLOAT4X4						m_xmf4x4ShadowView;
+	XMFLOAT4X4						m_xmf4x4ShadowProjection;
+	XMFLOAT4X4						m_xmf4x4ShadowTransform;
+	XMFLOAT3						    m_xmf3CameraPosition;
+	XMFLOAT3						    m_xmf3LightPosition;
 };
-
 class CPlayer;
 
 class CCamera
@@ -42,7 +45,7 @@ protected:
 	CPlayer							*m_pPlayer;
 
 	ID3D12Resource					*m_pd3dcbCamera = NULL;
-	VS_CB_CAMERA_INFO				*m_pcbMappedCamera = NULL;
+	SHADOW_INFO				*m_pcbMappedCamera = NULL;
 
 public:
 	CCamera();
@@ -52,6 +55,7 @@ public:
 	virtual void CreateShaderVariables(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList);
 	virtual void ReleaseShaderVariables();
 	virtual void UpdateShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList);
+	void ShadowUpdateShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList, SHADOW_INFO* pCameraInfo);
 
 	virtual void SetViewportsAndScissorRects(ID3D12GraphicsCommandList *pd3dCommandList);
 

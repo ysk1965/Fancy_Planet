@@ -880,10 +880,6 @@ void CGameObject::Render(ID3D12GraphicsCommandList *pd3dCommandList, int iRootPa
 
 	if (m_pMaterial)
 	{
-		if (m_pMaterial->m_pShader)
-		{
-			m_pMaterial->m_pShader->Render(pd3dCommandList, pCamera);
-		}
 		if (m_pMaterial->m_pTexture)
 		{
 			m_pMaterial->m_pTexture->UpdateShaderVariables(pd3dCommandList);
@@ -898,6 +894,39 @@ void CGameObject::Render(ID3D12GraphicsCommandList *pd3dCommandList, int iRootPa
 		{
 			if (m_ppMeshes[i])
 				m_ppMeshes[i]->Render(pd3dCommandList, nInstances);
+		}
+	}
+}
+
+void CGameObject::ShadowRender(ID3D12GraphicsCommandList *pd3dCommandList, int iRootParameterIndex, UINT nInstances, CPhysXObject** ppObjects)
+{
+	UpdateShaderVariables(pd3dCommandList, iRootParameterIndex, ppObjects);
+
+	if (m_ppMeshes)
+	{
+		for (int i = 0; i < m_nMeshes; i++)
+		{
+			if (m_ppMeshes[i])
+				m_ppMeshes[i]->Render(pd3dCommandList, nInstances);
+		}
+	}
+}
+
+void CGameObject::ShadowRender(ID3D12GraphicsCommandList *pd3dCommandList, int iRootParameterIndex)
+{
+	if (!m_bActive)
+		return;
+
+	UpdateShaderVariables(pd3dCommandList, -1, NULL);
+
+	if (m_nMeshes > 0)
+	{
+		SetRootParameter(pd3dCommandList, iRootParameterIndex);
+
+		for (int i = 0; i < m_nMeshes; i++)
+		{
+			if (m_ppMeshes[i])
+				m_ppMeshes[i]->Render(pd3dCommandList);
 		}
 	}
 }
@@ -1142,7 +1171,6 @@ void CSkyBox::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamer
 	{
 		if (m_pMaterial->m_pShader)
 		{
-			m_pMaterial->m_pShader->Render(pd3dCommandList, pCamera);
 			m_pMaterial->m_pShader->UpdateShaderVariables(pd3dCommandList);
 
 			UpdateShaderVariables(pd3dCommandList, -1, NULL);
@@ -1268,7 +1296,8 @@ void CAnimationObject::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamer
 	{
 		if (m_pMaterial->m_pShader)
 		{
-			m_pMaterial->m_pShader->Render(pd3dCommandList, pCamera);
+			m_pMaterial->m_pShader->SetDescriptorHeaps(pd3dCommandList);
+			m_pMaterial->m_pShader->SetPipelineState(pd3dCommandList);
 		}
 		if (m_pMaterial->m_pTexture)
 		{
