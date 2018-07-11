@@ -2,7 +2,7 @@
 #include "Mesh.h"
 #include "Camera.h"
 #include <chrono>
-
+#include <stack>
 enum 
 {
 	NOT_ALL = 0, // 중간에 애니메이션 가능 (구현)
@@ -50,7 +50,8 @@ enum
 
 class CShader;
 class CAnimationObject;
-class AnimationFactors; 
+class AnimationResourceFactors;
+class AnimationTimeFactor;
 class CPhysXObject;
 
 struct CB_GAMEOBJECT_INFO
@@ -105,6 +106,7 @@ private:
 	UINT m_nAnimation = 0;
 
 	CAnimationObject* m_pRootObject = NULL;
+	CAnimationObject* m_pFactorObject = NULL;
 	CAnimationObject **m_ppBoneObject = NULL;
 
 public:
@@ -120,14 +122,14 @@ public:
 	AnimationController(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, UINT nAnimation);
 	~AnimationController();
 	void GetCurrentFrame(bool bStop);
-	SRT Interpolate(int iBoneNum, float fRendererScale);
-	SRT Interpolate(int iBoneNum, float fTime, float fRendererScale);
+	void Interpolate(int iBoneNum, float fRendererScale, SRT& result);
+	void Interpolate(int iBoneNum, float fTime, float fRendererScale, SRT& result);
 	void SetToParentTransforms();
 	//해당하는 본인덱스의 오브젝트를 리턴한다.
 	void SetToRootTransforms();
-	void AdvanceAnimation(ID3D12GraphicsCommandList* pd3dCommandList);
+	void AdvanceAnimation(ID3D12GraphicsCommandList* pd3dCommandList, bool bOnce);
 	void ChangeAnimation(int iNewState);
-	void SetObject(CAnimationObject* pObject);
+	void SetObject(CAnimationObject* pRootObject, CAnimationObject* pAnimationFactorObject);
 	void SetBindPoses(XMFLOAT4X4* pBindPoses);
 
 	ANIMATION *m_pAnimation;
@@ -291,7 +293,7 @@ public:
 	virtual void UpdateTransform(XMFLOAT4X4 *pxmf4x4Parent = NULL){};
 
 	virtual void LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList,
-		ID3D12RootSignature *pd3dGraphicsRootSignature, ifstream& InFile, UINT nType, UINT nSub);
+		ID3D12RootSignature *pd3dGraphicsRootSignature, ifstream& InFile, UINT nType, UINT nSub, UINT nObject);
 
 	XMFLOAT3 GetPosition();
 	XMFLOAT3 GetLook();
@@ -327,9 +329,18 @@ private:
 	CPlayer * m_pPlayer = NULL;
 	UINT m_nScale = 1;
 	XMFLOAT4X4* m_pBindPoses = NULL;
-	UINT m_nRendererMesh = 0;
-	float m_RndererScale = 1;
+	UINT m_nRendererMesh = 0; // 몇개의 랜더러매쉬를 가지는지
+	float m_RndererScale = 1; // 랜더러 오브젝트의 스케일
+	int m_nSkinnedMeshRenderer = -1; // 몇번째 스킨랜더러 매쉬인지
 public:
+	int GetSkinnedMeshRendererNum()
+	{
+		return m_nSkinnedMeshRenderer;
+	}
+	void SetSkinnedMeshRendererNum(int nSkinnedMeshRenderer)
+	{
+		m_nSkinnedMeshRenderer = nSkinnedMeshRenderer;
+	}
 	CPlayer * GetPlayer()
 	{
 		return m_pPlayer;
@@ -376,7 +387,7 @@ public:
 	}
 
 	CAnimationObject(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature,
-		UINT nMeshes, TCHAR *pstrFileName, AnimationController* pAnimationController);
+		UINT nMeshes, TCHAR *pstrFileName, AnimationController* pAnimationController, UINT nObjects, UINT& nAnimationFactor);
 	CAnimationObject(int nMeshes) : CGameObject(nMeshes, 0)
 	{
 		m_xmf4x4ToRootTransform = Matrix4x4::Identity();
@@ -385,19 +396,24 @@ public:
 	virtual ~CAnimationObject();
 	void ReleaseUploadBuffers();
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, int iRootParameterIndex, CCamera *pCamera = NULL);
-	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera, UINT nInstances);
+	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera, UINT nInstances, CAnimationObject** ppObject, UINT nIndex, CPlayer* pPlayer);
 	virtual void ShadowRender(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera, UINT nInstances);
 	void LoadAnimation(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ifstream& InFile, AnimationController* pAnimationController);
-	virtual void LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList,
-		ID3D12RootSignature *pd3dGraphicsRootSignature, ifstream& InFile, UINT nType, UINT nSub, CMesh* pCMesh);
+	virtual int LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList,
+		ID3D12RootSignature *pd3dGraphicsRootSignature, ifstream& InFile, UINT nType, UINT nSub, CMesh* pCMesh, UINT nObjects, UINT nAnimationFactor);
 	void LoadGeometryFromFile(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature
-		, TCHAR *pstrFileName, AnimationController* pAnimationController);
+		, TCHAR *pstrFileName, AnimationController* pAnimationController, UINT nObjects, UINT& nAnimationFactor);
 	virtual void UpdateTransform(XMFLOAT4X4 *pxmf4x4Parent = NULL);
+	CAnimationObject* FindAnimationFactorObject(CAnimationObject* pRootObject, int nIndex);
 	CAnimationObject* GetRootObject();
 	XMFLOAT4X4* GetBindPoses()
 	{
 		return m_pBindPoses;
 	};
+	void SetBindPoses(XMFLOAT4X4* pBindPoses)
+	{
+		m_pBindPoses = pBindPoses;
+	}
 	TCHAR* CharToTCHAR(char * asc);
 	void SetChild(CAnimationObject *pChild);
 	virtual void ChangeAnimation(int newState);
@@ -410,6 +426,7 @@ public:
 	virtual void Rotate(XMFLOAT3 *pxmf3Axis, float fAngle);
 	virtual void Rotate(XMFLOAT4 *pxmf4Quaternion);
 
+	CAnimationObject					**m_ppAnimationFactorObjects;
 	CAnimationObject 					*m_pParent = NULL;
 	CAnimationObject 					*m_pChild = NULL;
 	CAnimationObject 					*m_pSibling = NULL;
@@ -418,17 +435,13 @@ public:
 	// 현재 노드에서 월드좌표계로 변환하는 행렬
 	XMFLOAT4X4						m_xmf4x4ToParentTransform;
 
-	BONE_TRANSFORMS			*m_BoneTransforms;
-	BONE_TRANSFORMS2			*m_BoneTransforms2;
-	BONE_TRANSFORMS2			*m_BoneTransforms3;
-
 	TCHAR							m_strFrameName[256] = { '\0' };
 	bool							m_bRoot = false;
 	int								m_iBoneIndex = -1;
 	// 
 	AnimationController				*m_pAnimationController = NULL;
-	AnimationFactors				*m_pAnimationFactors = NULL;
-
+	AnimationResourceFactors				*m_pAnimationFactors = NULL;
+	AnimationTimeFactor						*m_pAnimationTime = NULL;
 	CAnimationObject& operator=(CAnimationObject& other)
 	{
 		if (this == &other)
@@ -440,24 +453,180 @@ public:
 		SetRendererMesh(other.IsRendererMesh());
 		SetRendererMeshNum(other.GetRendererMeshNum());
 		SetRndererScale(other.GetRndererScale());
+		SetSkinnedMeshRendererNum(other.GetSkinnedMeshRendererNum());
+		if (other.GetBindPoses() != NULL)
+			SetBindPoses(other.GetBindPoses());
 		if (other.m_pAnimationController)
 			m_pAnimationController = other.m_pAnimationController;
 
 		return *this;
 	}
 };
-
-class AnimationFactors
+class AnimationTimeFactor
 {
 public:
-	AnimationFactors(UINT nBindpos)
+	AnimationTimeFactor()
 	{
-		m_nBindpos = nBindpos;
-		m_chronoStart = chrono::system_clock::now();
-		m_ppBoneObject = new CAnimationObject*[m_nBindpos];
-		m_iState = 0;
 		m_iNewState = 0;
 		m_iSaveState = 0;
+
+		m_fCurrentFrame = 0;
+		m_fSaveLastFrame = 0;
+		m_iState = 0;
+
+		m_chronoStart = chrono::system_clock::now();
+	}
+
+	int m_iNewState;
+	int m_iSaveState;
+
+	float m_fCurrentFrame;
+	float m_fSaveLastFrame;
+	int m_iState;
+
+	std::chrono::system_clock::time_point m_chronoStart;
+	std::chrono::milliseconds ms;
+};
+class AnimationResourceFactors
+{
+public:
+	void CreateShaderVariables(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, UINT nObjects)
+	{
+		UINT ncbElementBytes = ((sizeof(BONE_TRANSFORMS) + 255) & ~255); //256의 배수
+		m_ppResource[0] = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes * nObjects
+			, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
+
+		m_ppResource[0]->Map(0, NULL, (void **)&m_pcbMappedGameObjects);
+
+		if (nResource > 1)
+		{
+			UINT ncbElementBytes = ((sizeof(BONE_TRANSFORMS2) + 255) & ~255); //256의 배수
+			m_ppResource[1] = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes * nObjects
+				, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
+
+			m_ppResource[1]->Map(0, NULL, (void **)&m_pcbMappedGameObjects2);
+		}
+		if (nResource > 2)
+		{
+			UINT ncbElementBytes = ((sizeof(BONE_TRANSFORMS3) + 255) & ~255); //256의 배수
+			m_ppResource[2] = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes * nObjects
+				, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
+
+			m_ppResource[2]->Map(0, NULL, (void **)&m_pcbMappedGameObjects3);
+		}
+	}
+
+	CAnimationObject* FindMeshRendererObject(CAnimationObject* pRootObject, UINT nRendererMesh)
+	{
+		stack<CAnimationObject*> FrameStack;
+
+		FrameStack.push(pRootObject);
+
+		while (!FrameStack.empty())
+		{
+			CAnimationObject* pFindObject = FrameStack.top();
+			FrameStack.pop();
+
+			if (pFindObject->IsRendererMesh() && nRendererMesh == pFindObject->GetRendererMeshNum())
+				return pFindObject;
+
+			if (pFindObject->m_pChild)
+				FrameStack.push(pFindObject->m_pChild);
+			if (pFindObject->m_pSibling)
+				FrameStack.push(pFindObject->m_pSibling);
+		}
+		return NULL;
+	}
+	void UpdateShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList, UINT nObjects, CAnimationObject** ppObject, UINT Index)
+	{
+		UINT ncbElementBytes = ((sizeof(BONE_TRANSFORMS) + 255) & ~255);
+		UINT ncbElementBytes2 = ((sizeof(BONE_TRANSFORMS2) + 255) & ~255);
+		UINT ncbElementBytes3 = ((sizeof(BONE_TRANSFORMS3) + 255) & ~255);
+		
+		pd3dCommandList->SetGraphicsRootShaderResourceView(8, m_ppResource[0]->GetGPUVirtualAddress());
+		if (nResource > 1)
+		{
+			pd3dCommandList->SetGraphicsRootShaderResourceView(9, m_ppResource[1]->GetGPUVirtualAddress());
+		}
+		if (nResource > 2)
+		{
+			pd3dCommandList->SetGraphicsRootShaderResourceView(10, m_ppResource[2]->GetGPUVirtualAddress());
+		}
+		for (int i = 0; i < nObjects; i++)
+		{
+			BONE_TRANSFORMS *pbMappedcbGameObject = (BONE_TRANSFORMS *)((UINT8 *)m_pcbMappedGameObjects + (i * ncbElementBytes));
+			XMStoreFloat4x4(&pbMappedcbGameObject->m_xmf4x4World, XMMatrixTranspose(XMLoadFloat4x4(&ppObject[i]->m_xmf4x4World)));
+			::memcpy(pbMappedcbGameObject->m_xmf4x4BoneTransform, &ppObject[i]->m_ppAnimationFactorObjects[Index]->m_pAnimationFactors->m_BoneTransforms->m_xmf4x4BoneTransform, sizeof(XMFLOAT4X4) * BONE_TRANSFORM_NUM);
+
+			if (nResource > 1)
+			{
+				BONE_TRANSFORMS2*pbMappedcbGameObject2 = (BONE_TRANSFORMS2 *)((UINT8 *)m_pcbMappedGameObjects2 + (i * ncbElementBytes2));
+				::memcpy(pbMappedcbGameObject2->m_xmf4x4BoneTransform, &ppObject[i]->m_ppAnimationFactorObjects[Index]->m_pAnimationFactors->m_BoneTransforms2->m_xmf4x4BoneTransform, sizeof(XMFLOAT4X4) * BONE_TRANSFORM_NUM2);
+			}
+			if (nResource > 2)
+			{
+				BONE_TRANSFORMS3*pbMappedcbGameObject3 = (BONE_TRANSFORMS3 *)((UINT8 *)m_pcbMappedGameObjects3 + (i * ncbElementBytes3));
+				::memcpy(pbMappedcbGameObject3->m_xmf4x4BoneTransform, &ppObject[i]->m_ppAnimationFactorObjects[Index]->m_pAnimationFactors->m_BoneTransforms3->m_xmf4x4BoneTransform, sizeof(XMFLOAT4X4) * BONE_TRANSFORM_NUM3);
+
+				for (int k = 0; k < RENDERER_MESH_WORLD_TRANSFORM; k++)
+				{
+					CAnimationObject* RendererMeshObject = FindMeshRendererObject(ppObject[i], k);
+					if (RendererMeshObject)
+					{
+						XMFLOAT4X4 result = Matrix4x4::Multiply(RendererMeshObject->m_xmf4x4ToRootTransform, ppObject[i]->m_xmf4x4World);
+
+						XMStoreFloat4x4(&pbMappedcbGameObject3->m_xmf4x4RedererMeshWorld[k], XMMatrixTranspose(XMLoadFloat4x4(&result)));
+					}
+				}
+			}
+		}
+	}
+	AnimationResourceFactors(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, UINT nBindpos, UINT nObjects)
+	{
+		m_nBindpos = nBindpos;
+
+		if (m_nBindpos <= BONE_TRANSFORM_NUM)
+			nResource = 1;
+		else if (m_nBindpos > BONE_TRANSFORM_NUM && m_nBindpos < (BONE_TRANSFORM_NUM2 + BONE_TRANSFORM_NUM))
+			nResource = 2;
+		else
+			nResource = 3;
+
+		if (nObjects != 0)
+		{
+			m_ppResource = new ID3D12Resource*[nResource];
+
+			CreateShaderVariables(pd3dDevice, pd3dCommandList, nObjects);
+		}
+		m_BoneTransforms = new BONE_TRANSFORMS();
+		ZeroMemory(m_BoneTransforms, sizeof(BONE_TRANSFORMS));
+		if (nResource > 1)
+		{
+			m_BoneTransforms2 = new BONE_TRANSFORMS2();
+			ZeroMemory(m_BoneTransforms2, sizeof(BONE_TRANSFORMS2));
+		}
+		if (nResource > 2)
+		{
+			m_BoneTransforms3 = new BONE_TRANSFORMS3();
+			ZeroMemory(m_BoneTransforms3, sizeof(BONE_TRANSFORMS3));
+		}
+
+		m_pBoneIndexList = new UINT[nBindpos];
+		m_ppBoneObject = new CAnimationObject*[m_nBindpos];
+	}
+	~AnimationResourceFactors()
+	{
+		if (m_BoneTransforms)
+			delete m_BoneTransforms;
+
+		if (m_BoneTransforms2)
+			delete m_BoneTransforms2;
+
+		if (m_BoneTransforms3)
+			delete m_BoneTransforms3;
+
+		if (m_ppBoneObject)
+			delete[] m_ppBoneObject;
 	}
 	CAnimationObject* GetFindObject(CAnimationObject* pFindObject, UINT nBoneIndex)
 	{
@@ -476,21 +645,25 @@ public:
 	{
 		for (int i = 0; i < m_nBindpos; i++) 
 		{
-			m_ppBoneObject[i] = GetFindObject(pRoot, i);
+			m_ppBoneObject[i] = GetFindObject(pRoot, m_pBoneIndexList[i]);
 		}
 	}
-	std::chrono::system_clock::time_point m_chronoStart;
-	std::chrono::milliseconds ms;
 
 	CAnimationObject **m_ppBoneObject = NULL;
-	int m_iState = 0;
-	int m_iNewState = 0;
-	int m_iSaveState = 0;
 
-	float m_fCurrentFrame = 0;
-	float m_fSaveLastFrame = 0;
-
+	UINT *m_pBoneIndexList = NULL;
 	UINT m_nBindpos = 0;
+
+	BONE_TRANSFORMS			*m_BoneTransforms;
+	BONE_TRANSFORMS2			*m_BoneTransforms2;
+	BONE_TRANSFORMS3			*m_BoneTransforms3;
+
+	BONE_TRANSFORMS				*m_pcbMappedGameObjects = NULL;
+	BONE_TRANSFORMS2			*m_pcbMappedGameObjects2 = NULL;
+	BONE_TRANSFORMS3				*m_pcbMappedGameObjects3 = NULL;
+
+	ID3D12Resource** m_ppResource;
+	UINT nResource;
 };
 class CHeightMapTerrain : public CGameObject
 {

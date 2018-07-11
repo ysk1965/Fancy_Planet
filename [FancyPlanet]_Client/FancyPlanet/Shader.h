@@ -304,6 +304,7 @@ public:
 	void ClearDepthStencilView(ID3D12GraphicsCommandList *pd3dCommandList);
 	virtual void OnPrepareRender(ID3D12GraphicsCommandList *pd3dCommandList);
 	void SwapResource(ID3D12GraphicsCommandList *pd3dCommandList, bool bType);
+	void SetPlayer(CPlayer* pPlayer);
 	SHADOW_INFO* GetShadowInfo();
 	ID3D12Resource* GetShadowMap()
 	{
@@ -320,6 +321,12 @@ private:
 
 	SHADOW_INFO m_ShdowInfo;
 
+	CPlayer* m_pPlayer = NULL;
+
 	D3D12_VIEWPORT m_d3dViewport;
 	D3D12_RECT m_d3dScissorRect;
+
+	XMFLOAT3 m_xmf3Lightdir = XMFLOAT3(0.57735f, -0.57735f, 0.57735f);
+
+	float m_fLightRotationAngle = 0.0f;
 };

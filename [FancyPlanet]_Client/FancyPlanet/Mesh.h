@@ -295,7 +295,10 @@ public:
 		if (--m_nReferences <= 0) 
 			delete this; 
 	}
-
+	UINT GetnIndices()
+	{
+		return m_nIndices;
+	}
 	void ReleaseUploadBuffers();
 
 protected:
@@ -314,6 +317,7 @@ protected:
 	UINT							m_nOffset = 0;
 
 	UINT							m_nIndices = 0;
+	UINT							m_nSubIndices = 0;
 	UINT							m_nStartIndex = 0;
 	int								m_nBaseVertex = 0;
 
@@ -324,7 +328,7 @@ protected:
 public:
 	UINT							m_nVertices = 0;
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList);
-	void Render(ID3D12GraphicsCommandList *pd3dCommandList, UINT nInstances);
+	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, UINT nInstances);
 	ID3D12Resource* GetVertexBuffer()
 	{
 		return m_pd3dVertexBuffer;
@@ -337,7 +341,7 @@ public:
 class EmptyMesh : public CMesh
 {
 public:
-	EmptyMesh(ID3D12Resource* pd3dVertexBuffer, ID3D12Resource* pd3dIndexBuffer, UINT nStride, UINT nVertices, UINT nStartIndex, UINT nIndices)
+	EmptyMesh(ID3D12Resource* pd3dVertexBuffer, ID3D12Resource* pd3dIndexBuffer, UINT nStride, UINT nVertices, UINT nStartIndex, UINT nIndices, UINT nSubIndices)
 	{
 		m_pd3dVertexBuffer = pd3dVertexBuffer;
 		m_pd3dIndexBuffer = pd3dIndexBuffer;
@@ -348,12 +352,14 @@ public:
 		m_d3dVertexBufferView.StrideInBytes = nStride;
 		m_d3dVertexBufferView.SizeInBytes = nStride * nVertices;
 
-		m_nStartIndex = nStartIndex;
 		m_nIndices = nIndices;
-		m_d3dIndexBufferView.BufferLocation = m_pd3dIndexBuffer->GetGPUVirtualAddress() + m_nStartIndex;
+		m_nStartIndex = nStartIndex;
+		m_nSubIndices = nSubIndices;
+		m_d3dIndexBufferView.BufferLocation = m_pd3dIndexBuffer->GetGPUVirtualAddress();
 		m_d3dIndexBufferView.Format = DXGI_FORMAT_R32_UINT;
 		m_d3dIndexBufferView.SizeInBytes = sizeof(UINT) * m_nIndices;
 	}
+	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, UINT nInstances);
 };
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -373,7 +379,7 @@ class CMeshAnimationTextured : public CMesh
 public:
 	CMeshAnimationTextured(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList);
 	CMeshAnimationTextured(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList
-		, UINT nVertices, XMFLOAT3 *pxmf3Positions, XMFLOAT2 *pxmf2UVs, XMFLOAT3 *xmf3BoneWeights, XMINT4 *xmi4BoneIndices, UINT nIndices, UINT *pnIndices);
+		, UINT nVertices, XMFLOAT3 *pxmf3Positions, XMFLOAT2 *pxmf2UVs, XMFLOAT3 *xmf3BoneWeights, XMINT4 *xmi4BoneIndices, UINT nIndices, UINT nSubIndices, UINT *pnIndices);
 	virtual ~CMeshAnimationTextured();
 };
 
@@ -418,7 +424,7 @@ class CRendererMesh : public CMeshIlluminatedTexturedTBN
 {
 public:
 	CRendererMesh(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList);
-	CRendererMesh(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, UINT nVertices, XMFLOAT3 *pxmf3Positions, XMFLOAT3 *pxmf3Tangents, XMFLOAT3 *pxmf3Normals, XMFLOAT2 *pxmf2UVs, UINT nIndex, UINT nIndices, UINT *pnIndices);
+	CRendererMesh(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, UINT nVertices, XMFLOAT3 *pxmf3Positions, XMFLOAT3 *pxmf3Tangents, XMFLOAT3 *pxmf3Normals, XMFLOAT2 *pxmf2UVs, UINT nIndex, UINT nSubIndices, UINT nIndices, UINT *pnIndices);
 	virtual ~CRendererMesh();
 };
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -428,7 +434,7 @@ public:
 	CAnimationMesh(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList);
 	CAnimationMesh(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, UINT nVertices, 
 		XMFLOAT3 *pxmf3Positions, XMFLOAT3 *pxmf3Tangents, XMFLOAT3 *pxmf3Normals, XMFLOAT2 *pxmf2UVs, 
-		XMFLOAT3 *pxmf3BoneWeights, XMINT4 *pxmi4BoneIndices, UINT nIndices, UINT *pnIndices);
+		XMFLOAT3 *pxmf3BoneWeights, XMINT4 *pxmi4BoneIndices, UINT nIndices, UINT nSubIndices, UINT *pnIndices);
 	virtual ~CAnimationMesh();
 };
 

@@ -195,12 +195,12 @@ float4 PSTextureToFullScreen(float4 position : SV_POSITION) : SV_Target
 	int3 uvm = int3(position.xy, 0);
 
 	float3 normal = gtxtNormal.Load(uvm).xyz;
-	float4 pos = gtxtDepth.Load(uvm);
+	float3 pos = gtxtDepth.Load(uvm).xyz;
 	float3 diffuse = gtxtDiffuse.Load(uvm).xyz;
 	float4 shadow = gtxtShadow.Load(uvm);
 	
 	float shadowFactor = CalcShadowFactor(shadow);
-	float4 cllumination = Lighting(pos.xyz, normal, diffuse, 0, 30, shadowFactor);
+	float4 cllumination = Lighting(pos, normal, diffuse, 0, 30, shadowFactor);
 
 	return cllumination;
 }

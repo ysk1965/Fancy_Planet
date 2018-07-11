@@ -313,39 +313,75 @@ CharacterScene::CharacterScene(PxPhysics* pPxPhysicsSDK, PxScene* pPxScene, PxCo
 {
 	m_ppAnimationController = new AnimationController*[MESH_NUM];
 	m_ppSampleAnimationObjects = new CAnimationObject*[MESH_NUM];
+	m_pnAnimationFactor = new UINT[MESH_NUM];
 }
 CharacterScene::~CharacterScene()
 {
 	ReleaseObjects();
 	ReleaseShaderVariables();
 }
+CAnimationObject* CharacterScene::FindAnimationFactorObject(CAnimationObject* pRootObject, int nIndex)
+{
+	stack<CAnimationObject*> FrameStack;
+
+	FrameStack.push(pRootObject);
+
+	while (!FrameStack.empty())
+	{
+		CAnimationObject* pFindObject = FrameStack.top();
+		FrameStack.pop();
+
+		if (pFindObject->m_pAnimationFactors != NULL && pFindObject->GetSkinnedMeshRendererNum() == nIndex)
+			return pFindObject;
+
+		if (pFindObject->m_pChild)
+			FrameStack.push(pFindObject->m_pChild);
+		if (pFindObject->m_pSibling)
+			FrameStack.push(pFindObject->m_pSibling);
+	}
+	return NULL;
+}
 void CharacterScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList)
 {
 	m_pd3dGraphicsRootSignature = CreateGraphicsRootSignature(pd3dDevice);
 
-	m_nObjects = 3;
+	m_nObjects = 5;
 
-	CreateShaderVariables(pd3dDevice, pd3dCommandList);
-
-	m_ppSampleAnimationObjects[0] = new CAnimationObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, 0, L"../Assets/NewAstronaut.bss", m_ppAnimationController[0]);
+	m_ppSampleAnimationObjects[0] = new CAnimationObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, 0, L"../Assets/SpaceSoldier.bss", m_ppAnimationController[0], m_nObjects, m_pnAnimationFactor[0]);
+	m_ppSampleAnimationObjects[1] = new CAnimationObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, 0, L"../Assets/SpaceDrone.bss", m_ppAnimationController[1], m_nObjects, m_pnAnimationFactor[1]);
 
 	m_ppSoldierObjects = new CAnimationObject*[m_nObjects];
+	m_ppDroneObjects = new CAnimationObject*[m_nObjects];
 
-	CopyObject(m_ppSampleAnimationObjects[0], m_ppSoldierObjects, m_nObjects - 1);
+	CopyObject(pd3dDevice, pd3dCommandList, m_ppSampleAnimationObjects[0], m_ppSoldierObjects, m_nObjects - 1, 0);
+	CopyObject(pd3dDevice, pd3dCommandList, m_ppSampleAnimationObjects[1], m_ppDroneObjects, m_nObjects - 1, 1);
+
 	m_ppSoldierObjects[m_nObjects - 1] = m_ppSampleAnimationObjects[0];
+	m_ppDroneObjects[m_nObjects - 1] = m_ppSampleAnimationObjects[1];
 	m_ppSoldierObjects[m_nObjects - 1]->SetPlayer(m_pPlayer);
+
 	m_pPlayer->SetRenderObject(m_ppSoldierObjects[m_nObjects - 1]);
 	
 	for (int i = 0; i < m_nObjects; i++)
 	{
-		m_ppSoldierObjects[i]->m_pAnimationFactors->SetBoneObject(m_ppSoldierObjects[i]);
-		m_ppSoldierObjects[i]->SetPosition(10, 200, 10);
-		if (i != m_nObjects - 1)
-			m_ppSoldierObjects[i]->SetScale(50.0f, 50.0f, 50.0f);
-		else
-			m_ppSoldierObjects[m_nObjects - 1]->SetPlayerScale(10);
+		for (int j = 0; j < m_pnAnimationFactor[0]; j++)
+		{
+			m_ppSoldierObjects[i]->m_ppAnimationFactorObjects[j]->m_pAnimationFactors->SetBoneObject(m_ppSoldierObjects[i]);
+		}
+		for (int j = 0; j < m_pnAnimationFactor[1]; j++)
+		{
+			m_ppDroneObjects[i]->m_ppAnimationFactorObjects[j]->m_pAnimationFactors->SetBoneObject(m_ppDroneObjects[i]);
+		}
+
+		m_ppSoldierObjects[i]->SetPosition(10 * i + 100, 230, 10 * i + 100);
+		m_ppDroneObjects[i]->SetPosition(10 *i + 200, 250, 10 * i + 200);
+		
+		m_ppSoldierObjects[i]->SetScale(10.0f, 10.0f, 10.0f);
+		m_ppDroneObjects[i]->SetScale(10.0f, 10.0f, 10.0f);
 	}
+	m_ppSoldierObjects[m_nObjects - 1]->SetPlayerScale(10);
 }
+
 void CharacterScene::ModelsSetPosition(const array <PLAYER_INFO, MAX_USER>& PlayerArray, int myid)
 {
 	for (int i = 0; i < MAX_USER; i++)
@@ -358,11 +394,11 @@ void CharacterScene::ModelsSetPosition(const array <PLAYER_INFO, MAX_USER>& Play
 		}
 	}
 }
-void CharacterScene::CopyObject(CAnimationObject* pSample, CAnimationObject** ppObjects, UINT nSize)
+void CharacterScene::CopyObject(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, CAnimationObject* pSample, CAnimationObject** ppObjects, UINT nSize, UINT nAnimationFactorIndex)
 {
 	if (nSize <= 0)
 		return;
-
+	UINT nAnimationFactorObject = -1;
 	stack<CAnimationObject*> FrameStack;
 	stack<CAnimationObject*> ObjectsStack;
 
@@ -377,10 +413,6 @@ void CharacterScene::CopyObject(CAnimationObject* pSample, CAnimationObject** pp
 	{
 		ppObjects[i] = new CAnimationObject(0);
 		ppEmptyObjects[i] = ppObjects[i];
-
-		ppEmptyObjects[i]->m_BoneTransforms = new BONE_TRANSFORMS();
-		ppEmptyObjects[i]->m_BoneTransforms2 = new BONE_TRANSFORMS2();
-		ppEmptyObjects[i]->m_BoneTransforms3 = new BONE_TRANSFORMS2();
 	}
 	for (int i = 0; i < nSize; i++)
 	{
@@ -402,15 +434,37 @@ void CharacterScene::CopyObject(CAnimationObject* pSample, CAnimationObject** pp
 		for (int i = 0; i < nSize; i++)
 		{
 			*ppEmptyObjects[i] = *TargetFrame;
+			if (TargetFrame->m_ppAnimationFactorObjects != NULL)
+				ppEmptyObjects[i]->m_ppAnimationFactorObjects = new CAnimationObject*[m_pnAnimationFactor[nAnimationFactorIndex]];
+			
+			if (TargetFrame->m_pAnimationFactors)
+			{
+				if (nAnimationFactorObject == -1)
+				{
+					for (int k = 0; k < 4; k++)
+					{
+						if (pSample->m_ppAnimationFactorObjects[k]->m_iBoneIndex == TargetFrame->m_iBoneIndex)
+						{
+							nAnimationFactorObject = k;
+							break;
+						}
+					}
+				}
+				ppEmptyObjects[i]->m_pAnimationFactors = new AnimationResourceFactors(pd3dDevice, pd3dCommandList, TargetFrame->m_pAnimationFactors->m_nBindpos, 0);
+				memcpy(ppEmptyObjects[i]->m_pAnimationFactors->m_pBoneIndexList, TargetFrame->m_pAnimationFactors->m_pBoneIndexList, sizeof(UINT) * ppEmptyObjects[i]->m_pAnimationFactors->m_nBindpos);
+				ppObjects[i]->m_ppAnimationFactorObjects[nAnimationFactorObject] = ppEmptyObjects[i];
+			}
+			if (TargetFrame->m_pAnimationTime)
+			{
+				ppEmptyObjects[i]->m_pAnimationTime = new AnimationTimeFactor();
+			}
 		}
+		nAnimationFactorObject = -1;
 		if (TargetFrame->m_pChild)
 		{
 			for (int i = 0; i < nSize; i++)
 			{
-				if (TargetFrame->m_pAnimationFactors)
-				{
-					ppEmptyObjects[i]->m_pAnimationFactors = new AnimationFactors(TargetFrame->m_pAnimationFactors->m_nBindpos);
-				}
+				
 				ppChildObjects[i] = new CAnimationObject(0);
 				ppEmptyObjects[i]->m_pChild = ppChildObjects[i];
 				ppChildObjects[i]->m_pParent = ppEmptyObjects[i];
@@ -420,10 +474,6 @@ void CharacterScene::CopyObject(CAnimationObject* pSample, CAnimationObject** pp
 		{
 			for (int i = 0; i < nSize; i++)
 			{
-				if (TargetFrame->m_pAnimationFactors)
-				{
-					ppEmptyObjects[i]->m_pAnimationFactors = new AnimationFactors(TargetFrame->m_pAnimationFactors->m_nBindpos);
-				}
 				ppChildObjects[i] = new CAnimationObject(0);
 				ppEmptyObjects[i]->m_pSibling = ppChildObjects[i];
 				ppChildObjects[i]->m_pParent = ppEmptyObjects[i]->m_pParent;
@@ -471,122 +521,48 @@ void CharacterScene::ReleaseUploadBuffers()
 }
 void CharacterScene::CreateShaderVariables(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList)
 {
-	UINT ncbElementBytes = ((sizeof(BONE_TRANSFORMS) + 255) & ~255); //256의 배수
-	m_pd3dcbGameObjects = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes * m_nObjects
-		, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
-
-	m_pd3dcbGameObjects->Map(0, NULL, (void **)&m_pcbMappedGameObjects);
-	
-	UINT ncbElementBytes2 = ((sizeof(BONE_TRANSFORMS2) + 255) & ~255); //256의 배수
-	m_pd3dcbGameObjects2 = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes2 * m_nObjects
-		, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
-
-	m_pd3dcbGameObjects2->Map(0, NULL, (void **)&m_pcbMappedGameObjects2);
-
-	m_pd3dcbGameObjects3 = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes2 * m_nObjects
-		, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
-
-	m_pd3dcbGameObjects3->Map(0, NULL, (void **)&m_pcbMappedGameObjects3);
 }
 void CharacterScene::UpdateShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList)
 {
-	UINT ncbElementBytes = ((sizeof(BONE_TRANSFORMS) + 255) & ~255);
-	UINT ncbElementBytes2 = ((sizeof(BONE_TRANSFORMS2) + 255) & ~255);
-	UINT ncbElementBytes3 = ((sizeof(BONE_TRANSFORMS3) + 255) & ~255);
-
-	pd3dCommandList->SetGraphicsRootShaderResourceView(8, m_pd3dcbGameObjects->GetGPUVirtualAddress());
-	pd3dCommandList->SetGraphicsRootShaderResourceView(9, m_pd3dcbGameObjects2->GetGPUVirtualAddress());
-	pd3dCommandList->SetGraphicsRootShaderResourceView(10, m_pd3dcbGameObjects3->GetGPUVirtualAddress());
-
-	for (int i = 0; i < m_nObjects; i++)
-	{
-		BONE_TRANSFORMS *pbMappedcbGameObject = (BONE_TRANSFORMS *)((UINT8 *)m_pcbMappedGameObjects + (i * ncbElementBytes));
-		XMStoreFloat4x4(&pbMappedcbGameObject->m_xmf4x4World, XMMatrixTranspose(XMLoadFloat4x4(&m_ppSoldierObjects[i]->m_xmf4x4World)));
-		::memcpy(pbMappedcbGameObject->m_xmf4x4BoneTransform, &m_ppSoldierObjects[i]->m_BoneTransforms->m_xmf4x4BoneTransform, sizeof(XMFLOAT4X4) * BONE_TRANSFORM_NUM);
-
-		BONE_TRANSFORMS2*pbMappedcbGameObject2 = (BONE_TRANSFORMS2 *)((UINT8 *)m_pcbMappedGameObjects2 + (i * ncbElementBytes2));
-		::memcpy(pbMappedcbGameObject2->m_xmf4x4BoneTransform, &m_ppSoldierObjects[i]->m_BoneTransforms2->m_xmf4x4BoneTransform, sizeof(XMFLOAT4X4) * BONE_TRANSFORM_NUM2);
-
-		BONE_TRANSFORMS3*pbMappedcbGameObject3 = (BONE_TRANSFORMS3 *)((UINT8 *)m_pcbMappedGameObjects3 + (i * ncbElementBytes3));
-		::memcpy(pbMappedcbGameObject3->m_xmf4x4BoneTransform, &m_ppSoldierObjects[i]->m_BoneTransforms3->m_xmf4x4BoneTransform, sizeof(XMFLOAT4X4) * BONE_TRANSFORM_NUM3);
-		
-		for (int k = 0; k < RENDERER_MESH_WORLD_TRANSFORM; k++)
-		{
-			CAnimationObject* RendererMeshObject = FindMeshRendererObject(m_ppSoldierObjects[i], k);
-			if (RendererMeshObject)
-			{
-				XMFLOAT4X4 result = Matrix4x4::Multiply(RendererMeshObject->m_xmf4x4ToRootTransform, m_ppSoldierObjects[i]->m_xmf4x4World);
-				
-				XMStoreFloat4x4(&pbMappedcbGameObject3->m_xmf4x4RedererMeshWorld[k], XMMatrixTranspose(XMLoadFloat4x4(&result)));
-			}
-		}
-	}
 }
 
-CAnimationObject* CharacterScene::FindMeshRendererObject(CAnimationObject* pRootObject, UINT nRendererMesh)
-{
-	stack<CAnimationObject*> FrameStack;
-
-	FrameStack.push(pRootObject);
-
-	while (!FrameStack.empty())
-	{
-		CAnimationObject* pFindObject = FrameStack.top();
-		FrameStack.pop();
-
-		if (pFindObject->IsRendererMesh() && nRendererMesh == pFindObject->GetRendererMeshNum())
-			return pFindObject;
-
-		if (pFindObject->m_pChild)
-			FrameStack.push(pFindObject->m_pChild);
-		if (pFindObject->m_pSibling)
-			FrameStack.push(pFindObject->m_pSibling);
-	}
-	return NULL;
-}
 void CharacterScene::AnimateObjects(float fTimeElapsed, CCamera *pCamera)
 {
 }
 void CharacterScene::ChangeAnimation(int newState)
 {
-	m_ppSoldierObjects[m_nObjects - 1]->m_pAnimationController->SetObject(m_ppSoldierObjects[m_nObjects - 1]);
+	m_ppSoldierObjects[m_nObjects - 1]->m_pAnimationController->SetObject(m_ppSoldierObjects[m_nObjects - 1], NULL);
 	m_ppSoldierObjects[m_nObjects - 1]->ChangeAnimation(newState);
 }
 void CharacterScene::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera)
 {
 	pd3dCommandList->SetGraphicsRootSignature(m_pd3dGraphicsRootSignature);
+		
+	pCamera->SetViewportsAndScissorRects(pd3dCommandList);
+	pCamera->UpdateShaderVariables(pd3dCommandList);
 
-	for (int k = 0; k < MESH_NUM; k++)
+	m_pPlayer->OnPrepareRender();
+
+	for (int i = 0; i < m_nObjects; i++)
+	{
+		m_ppSoldierObjects[i]->m_pAnimationController->SetObject(m_ppSoldierObjects[i], NULL);
+		m_ppSoldierObjects[i]->m_pAnimationController->AdvanceAnimation(pd3dCommandList, true);
+		m_ppDroneObjects[i]->m_pAnimationController->SetObject(m_ppDroneObjects[i], NULL);
+		m_ppDroneObjects[i]->m_pAnimationController->AdvanceAnimation(pd3dCommandList, true);
+
+		m_ppSoldierObjects[i]->UpdateTransform(NULL);
+		m_ppDroneObjects[i]->UpdateTransform(NULL);
+	}
+
+	for (int k = 0; k < 2; k++)
 	{
 		if (m_ppSampleAnimationObjects[k]->m_pMaterial)
 			m_ppSampleAnimationObjects[k]->m_pMaterial->m_pShader->SetDescriptorHeaps(pd3dCommandList);
 		
-		pCamera->SetViewportsAndScissorRects(pd3dCommandList);
-		pCamera->UpdateShaderVariables(pd3dCommandList);
-
-		FrustumCulling(pCamera);
-
-		m_pPlayer->OnPrepareRender();
-
-		for (int i = 0; i < m_nObjects; i++)
-		{
-			m_ppSoldierObjects[i]->m_pAnimationController->SetBindPoses(m_ppSampleAnimationObjects[k]->GetBindPoses());
-			m_ppSoldierObjects[i]->m_pAnimationController->SetObject(m_ppSoldierObjects[i]);
-			m_ppSoldierObjects[i]->m_pAnimationController->AdvanceAnimation(pd3dCommandList);
-
-			if (i == m_nObjects - 1)
-			{
-				m_ppSoldierObjects[m_nObjects - 1]->m_xmf4x4ToParentTransform = m_pPlayer->m_xmf4x4World;
-				XMFLOAT4X4 Scale = Matrix4x4::Identity();
-				Scale._11 = Scale._22 = Scale._33 = m_ppSoldierObjects[m_nObjects - 1]->GetPlayerScale();
-				m_ppSoldierObjects[m_nObjects - 1]->m_xmf4x4ToParentTransform = Matrix4x4::Multiply(Scale, m_ppSoldierObjects[m_nObjects - 1]->m_xmf4x4ToParentTransform);
-			}
-			m_ppSoldierObjects[i]->UpdateTransform(NULL);
-		}
-
-		UpdateShaderVariables(pd3dCommandList);
-
-		m_ppSampleAnimationObjects[k]->Render(pd3dCommandList, pCamera, m_nObjects);
+		if(k == 0)
+ 			m_ppSampleAnimationObjects[k]->Render(pd3dCommandList, pCamera, m_nObjects, m_ppSoldierObjects, m_pnAnimationFactor[k], m_pPlayer);
+		else if(k == 1)
+			m_ppSampleAnimationObjects[k]->Render(pd3dCommandList, pCamera, m_nObjects, m_ppDroneObjects, m_pnAnimationFactor[k], m_pPlayer);
 	}
 }
 void CharacterScene::ShadowRender(ID3D12GraphicsCommandList *pd3dCommandList, CCamera* pCamera, SHADOW_INFO* pCameraInfo)
@@ -595,22 +571,14 @@ void CharacterScene::ShadowRender(ID3D12GraphicsCommandList *pd3dCommandList, CC
 
 	pCamera->ShadowUpdateShaderVariables(pd3dCommandList, pCameraInfo);
 
-	for (int k = 0; k < MESH_NUM; k++)
-	{
-		UpdateShaderVariables(pd3dCommandList);
-		m_ppSampleAnimationObjects[k]->ShadowRender(pd3dCommandList, pCamera, m_nObjects);
-	}
+	//for (int k = 0; k < MESH_NUM; k++)
+	//{
+	//	UpdateShaderVariables(pd3dCommandList);
+	//	m_ppSampleAnimationObjects[k]->ShadowRender(pd3dCommandList, pCamera, m_nObjects);
+	//}
 }
 void CharacterScene::ReleaseShaderVariables()
 {
-	m_pd3dcbGameObjects->Unmap(0, NULL);
-	m_pd3dcbGameObjects->Release();
-
-	m_pd3dcbGameObjects2->Unmap(0, NULL);
-	m_pd3dcbGameObjects2->Release();
-
-	m_pd3dcbGameObjects3->Unmap(0, NULL);
-	m_pd3dcbGameObjects3->Release();
 }
 ID3D12RootSignature *CharacterScene::CreateGraphicsRootSignature(ID3D12Device *pd3dDevice)
 {
@@ -1091,27 +1059,27 @@ void ObjectScene::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pC
 
 	if (m_ppShell[m_nObjects - 1]->m_pMaterial)
 		m_ppShell[m_nObjects - 1]->m_pMaterial->m_pShader->SetDescriptorHeaps(pd3dCommandList);
-	m_ppShell[m_nObjects - 1]->Render(pd3dCommandList, 5, pCamera, m_nObjects * 4, m_ppShell);
+	m_ppShell[m_nObjects - 1]->Render(pd3dCommandList, 5, pCamera, m_nObjects, m_ppShell);
 
 	if (m_ppAsteroid0[m_nObjects - 1]->m_pMaterial)
 		m_ppAsteroid0[m_nObjects - 1]->m_pMaterial->m_pShader->SetDescriptorHeaps(pd3dCommandList);
-	m_ppAsteroid0[m_nObjects - 1]->Render(pd3dCommandList, 5, pCamera, m_nObjects * 4, m_ppAsteroid0);
+	m_ppAsteroid0[m_nObjects - 1]->Render(pd3dCommandList, 5, pCamera, m_nObjects, m_ppAsteroid0);
 
 	if (m_ppAsteroid1[m_nObjects - 1]->m_pMaterial)
 		m_ppAsteroid1[m_nObjects - 1]->m_pMaterial->m_pShader->SetDescriptorHeaps(pd3dCommandList);
-	m_ppAsteroid1[m_nObjects - 1]->Render(pd3dCommandList, 5, pCamera, m_nObjects * 4, m_ppAsteroid1);
+	m_ppAsteroid1[m_nObjects - 1]->Render(pd3dCommandList, 5, pCamera, m_nObjects, m_ppAsteroid1);
 
 	if (m_ppAsteroid2[m_nObjects - 1]->m_pMaterial)
 		m_ppAsteroid2[m_nObjects - 1]->m_pMaterial->m_pShader->SetDescriptorHeaps(pd3dCommandList);
-	m_ppAsteroid2[m_nObjects - 1]->Render(pd3dCommandList, 5, pCamera, m_nObjects * 4, m_ppAsteroid2);
+	m_ppAsteroid2[m_nObjects - 1]->Render(pd3dCommandList, 5, pCamera, m_nObjects, m_ppAsteroid2);
 
 	if (m_ppAsteroid3[m_nObjects - 1]->m_pMaterial)
 		m_ppAsteroid3[m_nObjects - 1]->m_pMaterial->m_pShader->SetDescriptorHeaps(pd3dCommandList);
-	m_ppAsteroid3[m_nObjects - 1]->Render(pd3dCommandList, 5, pCamera, m_nObjects * 4, m_ppAsteroid3);
+	m_ppAsteroid3[m_nObjects - 1]->Render(pd3dCommandList, 5, pCamera, m_nObjects, m_ppAsteroid3);
 
 	if (m_ppAsteroid4[m_nObjects - 1]->m_pMaterial)
 		m_ppAsteroid4[m_nObjects - 1]->m_pMaterial->m_pShader->SetDescriptorHeaps(pd3dCommandList);
-	m_ppAsteroid4[m_nObjects - 1]->Render(pd3dCommandList, 5, pCamera, m_nObjects * 4, m_ppAsteroid4);
+	m_ppAsteroid4[m_nObjects - 1]->Render(pd3dCommandList, 5, pCamera, m_nObjects, m_ppAsteroid4);
 }
 void ObjectScene::ShadowRender(ID3D12GraphicsCommandList *pd3dCommandList, CCamera* pCamera, SHADOW_INFO* pCameraInfo)
 {

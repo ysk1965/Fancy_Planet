@@ -3,7 +3,7 @@
 #include "Camera.h"
 #include "protocol.h"
 
-#define MESH_NUM 1
+#define MESH_NUM 2
 #define MESH_NUM2 6
 
 class CMesh;
@@ -129,28 +129,21 @@ public:
 	virtual void ChangeAnimation(int newState);
 	void CreateShaderVariables(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList);
 	void UpdateShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList);
-	void CopyObject(CAnimationObject* pSample, CAnimationObject** ppObjects, UINT nSize);
-	CAnimationObject* FindMeshRendererObject(CAnimationObject* pRootObject, UINT nRendererMesh);
+	void CopyObject(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, CAnimationObject* pSample, CAnimationObject** ppObjects, UINT nSize, UINT nAnimationFactor);
 	virtual void ModelsSetPosition(const array <PLAYER_INFO, MAX_USER>& PlayerArray, int myid);
+	CAnimationObject* FindAnimationFactorObject(CAnimationObject* pRootObject, int nIndex);
 
 	CharacterScene(PxPhysics* pPxPhysicsSDK, PxScene* pPxScene, PxControllerManager* pPxControllerManager, PxCooking* pCooking);
 	~CharacterScene();
 
 private:
-	ID3D12Resource * m_pd3dcbGameObjects = NULL;
-	BONE_TRANSFORMS				*m_pcbMappedGameObjects = NULL;
-
-	ID3D12Resource					*m_pd3dcbGameObjects2 = NULL;
-	BONE_TRANSFORMS2			*m_pcbMappedGameObjects2 = NULL;
-
-	ID3D12Resource					*m_pd3dcbGameObjects3 = NULL;
-	BONE_TRANSFORMS3				*m_pcbMappedGameObjects3 = NULL;
-
 	CPhysXObject		**m_ppPxObjects = NULL;
 	CAnimationObject **m_ppSampleAnimationObjects = NULL;
 
 	CAnimationObject	 **m_ppSoldierObjects = NULL;
+	CAnimationObject	 **m_ppDroneObjects = NULL;
 
+	UINT*						m_pnAnimationFactor = NULL;
 
 	int							m_nObjects = 0;
 	AnimationController **m_ppAnimationController = NULL;

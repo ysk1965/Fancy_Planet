@@ -140,7 +140,7 @@ CMeshAnimationTextured::CMeshAnimationTextured(ID3D12Device *pd3dDevice, ID3D12G
 
 }
 CMeshAnimationTextured::CMeshAnimationTextured(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList
-	, UINT nVertices, XMFLOAT3 *pxmf3Positions, XMFLOAT2 *pxmf2UVs, XMFLOAT3 *xmf3BoneWeights, XMINT4 *xmi4BoneIndices, UINT nIndices, UINT *pnIndices) : CMesh(pd3dDevice, pd3dCommandList)
+	, UINT nVertices, XMFLOAT3 *pxmf3Positions, XMFLOAT2 *pxmf2UVs, XMFLOAT3 *xmf3BoneWeights, XMINT4 *xmi4BoneIndices, UINT nIndices, UINT nSubIndices, UINT *pnIndices) : CMesh(pd3dDevice, pd3dCommandList)
 {
 	m_nStride = sizeof(CAnimation2TexturedVertex);
 	m_nVertices = nVertices;
@@ -158,12 +158,13 @@ CMeshAnimationTextured::CMeshAnimationTextured(ID3D12Device *pd3dDevice, ID3D12G
 	if (nIndices > 0)
 	{
 		m_nIndices = nIndices;
+		m_nSubIndices = nSubIndices;
 
 		m_pd3dIndexBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, pnIndices, sizeof(UINT) * m_nIndices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_INDEX_BUFFER, &m_pd3dIndexUploadBuffer);
 
 		m_d3dIndexBufferView.BufferLocation = m_pd3dIndexBuffer->GetGPUVirtualAddress();
 		m_d3dIndexBufferView.Format = DXGI_FORMAT_R32_UINT;
-		m_d3dIndexBufferView.SizeInBytes = sizeof(UINT) * m_nIndices;
+		m_d3dIndexBufferView.SizeInBytes = sizeof(UINT) * m_nSubIndices;
 	}
 }
 CMeshAnimationTextured::~CMeshAnimationTextured()
@@ -377,7 +378,7 @@ CRendererMesh::CRendererMesh(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList
 
 }
 CRendererMesh::CRendererMesh(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList,
-	UINT nVertices, XMFLOAT3 *pxmf3Positions, XMFLOAT3 *pxmf3Tangents, XMFLOAT3 *pxmf3Normals, XMFLOAT2 *pxmf2UVs, UINT nIndex, UINT nIndices, UINT *pnIndices) : CMeshIlluminatedTexturedTBN(pd3dDevice, pd3dCommandList)
+	UINT nVertices, XMFLOAT3 *pxmf3Positions, XMFLOAT3 *pxmf3Tangents, XMFLOAT3 *pxmf3Normals, XMFLOAT2 *pxmf2UVs, UINT nIndex, UINT nIndices, UINT nSubIndices, UINT *pnIndices) : CMeshIlluminatedTexturedTBN(pd3dDevice, pd3dCommandList)
 {
 	m_nStride = sizeof(CRendererMeshVertex);
 	m_nVertices = nVertices;
@@ -397,12 +398,13 @@ CRendererMesh::CRendererMesh(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList
 	if (nIndices > 0)
 	{
 		m_nIndices = nIndices;
+		m_nSubIndices = nSubIndices;
 
 		m_pd3dIndexBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, pnIndices, sizeof(UINT) * m_nIndices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_INDEX_BUFFER, &m_pd3dIndexUploadBuffer);
 
 		m_d3dIndexBufferView.BufferLocation = m_pd3dIndexBuffer->GetGPUVirtualAddress();
 		m_d3dIndexBufferView.Format = DXGI_FORMAT_R32_UINT;
-		m_d3dIndexBufferView.SizeInBytes = sizeof(UINT) * m_nIndices;
+		m_d3dIndexBufferView.SizeInBytes = sizeof(UINT) * m_nSubIndices;
 	}
 }
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -413,7 +415,7 @@ CAnimationMesh::CAnimationMesh(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 }
 CAnimationMesh::CAnimationMesh(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, UINT nVertices,
 	XMFLOAT3 *pxmf3Positions, XMFLOAT3 *pxmf3Tangents, XMFLOAT3 *pxmf3Normals, XMFLOAT2 *pxmf2UVs,
-	XMFLOAT3 *pxmf3BoneWeights, XMINT4 *pxmi4BoneIndices, UINT nIndices, UINT *pnIndices) : CMeshIlluminatedTexturedTBN(pd3dDevice, pd3dCommandList)
+	XMFLOAT3 *pxmf3BoneWeights, XMINT4 *pxmi4BoneIndices, UINT nIndices, UINT nSubIndices, UINT *pnIndices) : CMeshIlluminatedTexturedTBN(pd3dDevice, pd3dCommandList)
 {
 	m_nStride = sizeof(CAnimation2Vertex);
 	m_nVertices = nVertices;
@@ -432,13 +434,13 @@ CAnimationMesh::CAnimationMesh(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 	if (nIndices > 0)
 	{
 		m_nIndices = nIndices;
-
+		m_nSubIndices = nSubIndices;
 		m_pd3dIndexBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, pnIndices, sizeof(UINT) * m_nIndices
 			, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_INDEX_BUFFER, &m_pd3dIndexUploadBuffer);
 
 		m_d3dIndexBufferView.BufferLocation = m_pd3dIndexBuffer->GetGPUVirtualAddress();
 		m_d3dIndexBufferView.Format = DXGI_FORMAT_R32_UINT;
-		m_d3dIndexBufferView.SizeInBytes = sizeof(UINT) * m_nIndices;
+		m_d3dIndexBufferView.SizeInBytes = sizeof(UINT) * m_nSubIndices;
 	}
 }
 CAnimationMesh::~CAnimationMesh()
@@ -1060,4 +1062,20 @@ CSkyBoxRectMesh::CSkyBoxRectMesh(ID3D12Device *pd3dDevice, ID3D12GraphicsCommand
 
 CSkyBoxRectMesh::~CSkyBoxRectMesh()
 {
+}
+
+
+void EmptyMesh::Render(ID3D12GraphicsCommandList *pd3dCommandList, UINT nInstances)
+{
+	pd3dCommandList->IASetVertexBuffers(m_nSlot, 1, &m_d3dVertexBufferView);
+	pd3dCommandList->IASetPrimitiveTopology(m_d3dPrimitiveTopology);
+
+	if (m_pd3dIndexBuffer) {
+		pd3dCommandList->IASetIndexBuffer(&m_d3dIndexBufferView);
+		pd3dCommandList->DrawIndexedInstanced(m_nIndices, nInstances, m_nStartIndex, 0, 0);
+	}
+	else
+	{
+		pd3dCommandList->DrawInstanced(m_nVertices, nInstances, m_nOffset, 0);
+	}
 }

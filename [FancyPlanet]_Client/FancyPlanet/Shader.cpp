@@ -1116,7 +1116,10 @@ CShadowShader::CShadowShader(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList
 	CreateResource(pd3dDevice, nWndClientWidth, nWndClientHeight);
 	CreateDepthStencilView(pd3dDevice);
 }
-
+void CShadowShader::SetPlayer(CPlayer* pPlayer)
+{
+	m_pPlayer = pPlayer;
+}
 CShadowShader::~CShadowShader()
 {
 	if(m_pd3dDepthStencilBuffer)
@@ -1184,11 +1187,20 @@ void CShadowShader::CreateResource(ID3D12Device *pd3dDevice, UINT nWndClientWidt
 }
 void CShadowShader::UpdateTransform()
 {
-	XMFLOAT3 Lightdir = XMFLOAT3(0.57735f, -0.57735f, 0.57735f);
+	//m_fLightRotationAngle += 0.000001f;
 
-	Lightdir = Vector3::Normalize(Lightdir);
+	//XMFLOAT3 xmf3PlayerPosition = m_pPlayer->GetPosition();
+	//
+	//mSceneBounds.Center = XMFLOAT3(xmf3PlayerPosition.x, xmf3PlayerPosition.y, xmf3PlayerPosition.z);
+	//mSceneBounds.Radius = sqrtf((100) * (100) + (100) * (100));
+	
+	XMMATRIX R = XMMatrixRotationY(m_fLightRotationAngle);
 
-	XMVECTOR lightDir = XMLoadFloat3(&Lightdir);
+	XMVECTOR RotationlightDir = XMLoadFloat3(&m_xmf3Lightdir);;
+	RotationlightDir = XMVector3TransformNormal(RotationlightDir, R);
+	XMStoreFloat3(&m_xmf3Lightdir, RotationlightDir);
+
+	XMVECTOR lightDir = XMLoadFloat3(&m_xmf3Lightdir);
 	XMVECTOR lightPos = -2.0f * mSceneBounds.Radius * lightDir;
 	XMVECTOR targetPos = XMLoadFloat3(&mSceneBounds.Center);
 	XMVECTOR lightUp = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);

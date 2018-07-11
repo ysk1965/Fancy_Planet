@@ -332,6 +332,7 @@ void CGameFramework::CreateRenderTargetViews()
 		d3dRtvCPUDescriptorHandle.ptr += m_nRtvDescriptorIncrementSize;
 	}
 	m_pShadowShader = new CShadowShader(m_pd3dDevice, m_pd3dPreShadowCommandList, m_nWndClientWidth, m_nWndClientHeight);
+	m_pShadowShader->SetPlayer(m_pPlayer);
 
 	m_pScreenShader = new CTextureToFullScreenShader(m_pShadowShader->GetShadowMap());
 	m_pScreenShader->CreateGraphicsRootSignature(m_pd3dDevice);
@@ -798,6 +799,7 @@ void CGameFramework::BuildObjects()
 	m_pPlayer->BuildObject(m_pPxPhysicsSDK, m_pPxScene, m_pPxMaterial, m_pPxControllerManager, m_ppScenes[TERRAIN]->GetTerrain());
 	m_pPlayer->ChangeCamera(FIRST_PERSON_CAMERA, 0.0f);
 
+
 	for (int j = PHYSX; j < NUM_SUBSETS; j++)
 	{
 		m_ppScenes[j]->m_pPlayer = m_pPlayer;
@@ -969,7 +971,7 @@ void CGameFramework::ProcessInput()
 			case LAUNCH:
 			{
 				if ((GetTickCount() - m_pPlayer->GetStartTime(LAUNCH)) > (DWORD)580 &&
-					m_pPlayer->GetRenderObject()->m_pAnimationFactors->m_iState == 4)
+					m_pPlayer->GetRenderObject()->m_pAnimationTime->m_iState == 4)
 				{
 					POINT ptCursorPos;
  					GetCursorPos(&ptCursorPos);
@@ -1001,7 +1003,7 @@ void CGameFramework::ProcessInput()
 		if (!bProcessedByScene)
 		{
 			DWORD dwDirection = 0;
-			if (m_pPlayer->GetRenderObject()->m_pAnimationFactors->m_iState != 4)
+			if (m_pPlayer->GetRenderObject()->m_pAnimationTime->m_iState != 4)
 			{
 				if (pKeysBuffer[87] & 0xF0)
 				{
@@ -1086,7 +1088,7 @@ void CGameFramework::ProcessInput()
 			{
 				GetCursorPos(&ptCursorPos);
 				if (GetCapture() == m_hWnd 
-					&& (m_pPlayer->GetRenderObject()->m_pAnimationFactors->m_iState != 4))
+					&& (m_pPlayer->GetRenderObject()->m_pAnimationTime->m_iState != 4))
 				{
 					m_ppScenes[CHARACTER]->ChangeAnimation(4);
 					g_player_info[g_myid].anim_state = 4;
