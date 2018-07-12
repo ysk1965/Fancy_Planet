@@ -321,10 +321,6 @@ protected:
 	UINT							m_nStartIndex = 0;
 	int								m_nBaseVertex = 0;
 
-	//[PhysX]
-	PxVec3*			m_pPxVtx;
-	PxU32*			m_pPxIndex;
-
 public:
 	UINT							m_nVertices = 0;
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList);
@@ -480,7 +476,7 @@ protected:
 	XMFLOAT3					m_xmf3Scale;
 
 public:
-	CHeightMapGridMesh(PxPhysics* pPxPhysicsSDK, PxScene* pPxScene, PxControllerManager* pPxControllerManager, PxCooking* pCooking, PxRigidActor* PhysXRigidActor, PxTriangleMesh* PhysXTriangleMesh, PxMaterial* PhysXMeterial, ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, int xStart, int zStart, int nWidth, int nLength, XMFLOAT3 xmf3Scale = XMFLOAT3(1.0f, 1.0f, 1.0f), XMFLOAT4 xmf4Color = XMFLOAT4(1.0f, 1.0f, 0.0f, 0.0f), void *pContext = NULL);
+	CHeightMapGridMesh(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, int xStart, int zStart, int nWidth, int nLength, XMFLOAT3 xmf3Scale = XMFLOAT3(1.0f, 1.0f, 1.0f), XMFLOAT4 xmf4Color = XMFLOAT4(1.0f, 1.0f, 0.0f, 0.0f), void *pContext = NULL);
 	virtual ~CHeightMapGridMesh();
 
 	XMFLOAT3 GetScale() { return(m_xmf3Scale); }

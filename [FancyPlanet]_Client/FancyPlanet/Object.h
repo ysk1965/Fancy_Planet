@@ -100,6 +100,22 @@ typedef struct SRT
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
+template <typename T>
+class Animation_Stack
+{
+public:
+	Animation_Stack(UINT BoneNum);
+	~Animation_Stack();
+	void push(T* Tvalue);
+	T* top();
+	bool empty();
+private:
+	T * *m_ppTarr;
+	UINT m_nLastIndex;
+	UINT m_nCapacity;
+};
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
 class AnimationController
 {
 private:
@@ -109,6 +125,7 @@ private:
 	CAnimationObject* m_pFactorObject = NULL;
 	CAnimationObject **m_ppBoneObject = NULL;
 
+	Animation_Stack<CAnimationObject> *m_Animation_Stack;
 public:
 	UINT m_nBone = 0;
 
@@ -119,7 +136,7 @@ public:
 		return m_nAnimation;
 	}
 
-	AnimationController(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, UINT nAnimation);
+	AnimationController(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, UINT nAnimation, UINT nBone);
 	~AnimationController();
 	void GetCurrentFrame(bool bStop);
 	void Interpolate(int iBoneNum, float fRendererScale, SRT& result);
@@ -277,15 +294,15 @@ public:
 
 	virtual void CreateShaderVariables(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList);
 	virtual void ReleaseShaderVariables();
-	virtual void UpdateShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList, UINT RootParameterIndex, CPhysXObject** ppObjects);
+	virtual void UpdateShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList, UINT RootParameterIndex, CGameObject** ppObjects);
 	virtual void UpdateAnimationVariables(ID3D12GraphicsCommandList *pd3dCommandList);
 	virtual void OnPrepareRender();
 	virtual void SetRootParameter(ID3D12GraphicsCommandList *pd3dCommandList, int iRootParameterIndex);
 	
 	virtual void Animate(float fTimeElapsed); 
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, int iRootParameterIndex, CCamera *pCamera = NULL);
-	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, int iRootParameterIndex, CCamera *pCamera, UINT nInstances, CPhysXObject** ppObjects);
-	void ShadowRender(ID3D12GraphicsCommandList *pd3dCommandList, int iRootParameterIndex, UINT nInstances, CPhysXObject** ppObjects);
+	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, int iRootParameterIndex, CCamera *pCamera, UINT nInstances, CGameObject** ppObjects);
+	void ShadowRender(ID3D12GraphicsCommandList *pd3dCommandList, int iRootParameterIndex, UINT nInstances, CGameObject** ppObjects);
 	void ShadowRender(ID3D12GraphicsCommandList *pd3dCommandList, int iRootParameterIndex);
 	virtual void BuildMaterials(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList) { }
 	virtual void ReleaseUploadBuffers();
@@ -668,8 +685,7 @@ public:
 class CHeightMapTerrain : public CGameObject
 {
 public:
-	CHeightMapTerrain(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature, LPCTSTR pFileName, int nWidth, int nLength, int nBlockWidth, int nBlockLength, XMFLOAT3 xmf3Scale, XMFLOAT4 xmf4Color,
-		PxPhysics* pPxPhysicsSDK, PxScene* pPxScene, PxControllerManager* pPxControllerManager, PxCooking* pCooking);
+	CHeightMapTerrain(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature, LPCTSTR pFileName, int nWidth, int nLength, int nBlockWidth, int nBlockLength, XMFLOAT3 xmf3Scale, XMFLOAT4 xmf4Color);
 	virtual ~CHeightMapTerrain();
 
 private:
@@ -706,33 +722,3 @@ public:
 
 };
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-class CPhysXObject : public CGameObject
-{
-protected:
-	PxRigidDynamic * m_pPxActor; // ´ÙÀÌ³ª¹Í °´Ã¼
-	CMesh *m_pMesh = NULL;
-	CShader *m_pShader = NULL;
-public:
-	CPhysXObject(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature, UINT nObjects);
-	CPhysXObject(int nMeshes, ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList,
-		ID3D12RootSignature *pd3dGraphicsRootSignature, TCHAR *pstrFileName, UINT nObjects);
-	CPhysXObject(int nMeshes);
-
-	virtual ~CPhysXObject();
-
-	virtual void SetPosition(XMFLOAT3& xmf3Position);
-	void UpdateDirectPos(const XMFLOAT3& xmf3Position, const XMFLOAT3& DirShooting);
-	virtual void SetRotation(XMFLOAT4& pxmf4Quaternion);
-
-	void shooting(float fpower);
-	void GetPhysXPos();
-	void AddForceAtLocalPos(PxRigidBody & body, const PxVec3 & force, const PxVec3 & pos, PxForceMode::Enum mode, bool wakeup);
-	void AddForceAtPosInternal(PxRigidBody & body, const PxVec3 & force, const PxVec3 & pos, PxForceMode::Enum mode, bool wakeup);
-
-
-	// Px
-	virtual void	BuildObject(PxPhysics* pPxPhysics, PxScene* pPxScene, PxMaterial *pPxMaterial, XMFLOAT3 vScale, PxCooking* pCooking, const char* name);
-	void			PhysXUpdate(const float& fTimeDelta);
-	virtual int		Update(const float& fTimeDelta);
-};

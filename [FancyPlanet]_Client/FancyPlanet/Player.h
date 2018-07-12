@@ -21,10 +21,7 @@ struct CB_PLAYER_INFO
 	XMFLOAT4X4					m_xmf4x4World;
 };
 
-class CPlayer
-	: public CGameObject,
-	public PxUserControllerHitReport,
-	public PxControllerBehaviorCallback
+class CPlayer : public CGameObject
 {
 protected:
 	XMFLOAT3					m_xmf3Position = XMFLOAT3(0.0f, 0.0f, 0.0f);
@@ -32,17 +29,10 @@ protected:
 	XMFLOAT3					m_xmf3Up = XMFLOAT3(0.0f, 1.0f, 0.0f);
 	XMFLOAT3					m_xmf3Look = XMFLOAT3(0.0f, 0.0f, 1.0f);
 
-	XMFLOAT3					m_xmf3Velocity = XMFLOAT3(0.0f, 0.0f, 0.0f);
-	XMFLOAT3     				m_xmf3Gravity = XMFLOAT3(0.0f, 0.0f, 0.0f);
-
 	float           			m_fPitch = 0.0f;
 	float           			m_fYaw = 0.0f;
 	float           			m_fRoll = 0.0f;
-
-	float           			m_fMaxVelocityXZ = 0.0f;
-	float           			m_fMaxVelocityY = 0.0f;
-	float           			m_fFriction = 0.0f;
-
+	
 	LPVOID						m_pPlayerUpdatedContext = NULL;
 	LPVOID						m_pCameraUpdatedContext = NULL;
 
@@ -52,19 +42,12 @@ protected:
 	float						m_fTimeDelta = 0.0f;
 
 	bool						m_bJumpState = false;
-	//////////////////////////
-	//		   PhysX		//
-	//////////////////////////
-	PxScene*					m_pScene;
 private:
 	XMFLOAT2				m_xmf2MousPos;
 	bool						m_bFalgs[FLAGE_NUM];
 	DWORD                m_dwStart[FLAGE_NUM];
-	PxController * m_pPxCharacterController;
 
 	CGameObject* pSphereMesh; // 충돌박스 입히기
-	FLOAT m_fFallvelocity;
-	FLOAT m_fFallAcceleration;
 	CAnimationObject* m_pRenderObject;
 	bool m_bAttackedState = false;
 	bool m_bKeySwitch = true;
@@ -130,42 +113,18 @@ public:
 	{
 		m_bAttackedState = false;
 	}
-	void SetWorldPosition(const XMFLOAT3& xmf3Pos)
+	void SetWorldPosition(const XMFLOAT4X4& xmf3Pos)
 	{
-		m_xmf4x4World._41 = xmf3Pos.x;
-		m_xmf4x4World._42 = xmf3Pos.y;
-		m_xmf4x4World._43 = xmf3Pos.z;
+		m_xmf4x4World = xmf3Pos;
+		m_xmf3Position.x= xmf3Pos._41;
+		m_xmf3Position.y= xmf3Pos._42;
+		m_xmf3Position.z= xmf3Pos._43;
 	}
-	void AddForceAtLocalPos(PxRigidBody& body, const PxVec3& force, const PxVec3& pos, PxForceMode::Enum mode, bool wakeup = true);
-	void AddForceAtPosInternal(PxRigidBody& body, const PxVec3& force, const PxVec3& pos, PxForceMode::Enum mode, bool wakeup);
-
-	void onShapeHit(const PxControllerShapeHit & hit);
-	virtual void onControllerHit(const PxControllersHit& hit) {}
-	virtual void onObstacleHit(const PxControllerObstacleHit& hit) {}
-
-	void	BuildObject(PxPhysics* pPxPhysics, PxScene* pPxScene, PxMaterial *pPxMaterial, PxControllerManager *pPxControllerManager, void* pContext);
-
-	// Implements PxControllerBehaviorCallback
-	virtual PxControllerBehaviorFlags		getBehaviorFlags(const PxShape& shape, const PxActor& actor);
-	virtual PxControllerBehaviorFlags		getBehaviorFlags(const PxController& controller);
-	virtual PxControllerBehaviorFlags		getBehaviorFlags(const PxObstacle& obstacle);
-
-	bool IsOnGround(void);
-
-	void PxMove(float speed, float fTimeElapsed);
-
-	//enum STATE_PLAYER { IDLE, MOVE, LYING, JUMP, DEAD };
-	//DWORD			m_dwState;
-
-	//void setDwState(DWORD dwstate) { m_dwState = dwstate; }
-	//DWORD getDwState() { return m_dwState; }
-
-
 public:
 	CPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature
 		, void *pContext = NULL, int nMeshes = 1);
 	virtual ~CPlayer();
-
+	void	BuildObject(void* pContext);
 	XMFLOAT3 GetPosition()
 	{
 		return(m_xmf3Position);
@@ -182,23 +141,11 @@ public:
 	{
 		return(m_xmf3Right);
 	}
-
-	float GetFallVelocity()
-	{
-		return(m_fFallvelocity);
-	}
-	void SetFallVelocity(float fVelocity) { m_fFallvelocity = fVelocity; }
-	void SetFriction(float fFriction) { m_fFriction = fFriction; }
-	void SetGravity(const XMFLOAT3& xmf3Gravity) { m_xmf3Gravity = xmf3Gravity; }
-	void SetMaxVelocityXZ(float fMaxVelocity) { m_fMaxVelocityXZ = fMaxVelocity; }
-	void SetMaxVelocityY(float fMaxVelocity) { m_fMaxVelocityY = fMaxVelocity; }
-	void SetVelocity(const XMFLOAT3& xmf3Velocity) { m_xmf3Velocity = xmf3Velocity; }
 	void SetPosition(const XMFLOAT3& xmf3Position) 
 	{
 		Move(XMFLOAT3(xmf3Position.x - m_xmf3Position.x, xmf3Position.y - m_xmf3Position.y, xmf3Position.z - m_xmf3Position.z), false); 
 	}
 
-	const XMFLOAT3& GetVelocity() const { return(m_xmf3Velocity); }
 	float GetYaw() const { return(m_fYaw); }
 	float GetPitch() const { return(m_fPitch); }
 	float GetRoll() const { return(m_fRoll); }

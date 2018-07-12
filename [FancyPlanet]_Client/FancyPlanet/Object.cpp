@@ -7,10 +7,55 @@
 #include <float.h> 
 
 using namespace std;
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+template <typename T>
+Animation_Stack<T>::Animation_Stack(UINT BoneNum) : m_nCapacity(BoneNum)
+{
+	m_nLastIndex = 0;
+	m_ppTarr = new T*[BoneNum];
+	for (int i = 0; i < BoneNum; i++)
+	{
+		m_ppTarr[i] = NULL;
+	}
+}
+template <typename T>
+Animation_Stack<T>::~Animation_Stack()
+{
+	delete m_ppTarr;
+}
 
-AnimationController::AnimationController(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, UINT nAnimation) : m_nAnimation(nAnimation)
+template <typename T>
+void Animation_Stack<T>::push(T* Tvalue)
+{
+	m_ppTarr[m_nLastIndex] = Tvalue;
+	m_nLastIndex++;
+}
+template <typename T>
+T* Animation_Stack<T>::top()
+{
+	assert(!empty());
+
+	T* TopValue = m_ppTarr[m_nLastIndex - 1];
+	m_ppTarr[m_nLastIndex - 1] = NULL;
+	m_nLastIndex--;
+	
+	return TopValue;
+}
+template <typename T>
+bool Animation_Stack<T>::empty()
+{
+	if (m_nLastIndex == 0)
+		return true;
+	else
+		return false;
+}
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+AnimationController::AnimationController(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, UINT nAnimation, UINT nBone) : m_nAnimation(nAnimation), m_nBone(nBone)
 {
 	m_pAnimation = new ANIMATION[m_nAnimation];
+	m_Animation_Stack = new Animation_Stack<CAnimationObject>(m_nBone);
 }
 void AnimationController::SetObject(CAnimationObject* pRootObject, CAnimationObject* pAnimationFactorObject)
 {
@@ -270,16 +315,15 @@ void AnimationController::SetToParentTransforms()
 	if (m_pRootObject->m_pAnimationTime->m_iState != CHANG_INDEX)
 			GetCurrentFrame(bStop); // 현재 프레임 계산
 
-	stack<CAnimationObject*> FrameStack;
-	FrameStack.push(m_pRootObject); // 루트 노드 부터 시작
+	m_Animation_Stack->push(m_pRootObject); // 루트 노드 부터 시작
 	for (int i = 0;; i++)
 	{// 스택에 더이상 노드가 없으면 루프를 빠져 나온다.
-		if (FrameStack.empty())
+		if (m_Animation_Stack->empty())
 			break;
 		// 애니메이션 데이터를 저장할 때, 깊이우선 방식으로 저장했기
 		// 그 순서대로 노드를 돌면서 행렬을 채워 넣는다.
-		CAnimationObject* TargetFrame = FrameStack.top();
-		FrameStack.pop();
+		CAnimationObject* TargetFrame = m_Animation_Stack->top();
+		
 		if (TargetFrame != m_pRootObject)
 		{
 			SRT srt;
@@ -301,23 +345,23 @@ void AnimationController::SetToParentTransforms()
 		}
 
 		if (TargetFrame->m_pSibling)
-			FrameStack.push(TargetFrame->m_pSibling);
+			m_Animation_Stack->push(TargetFrame->m_pSibling);
 		if (TargetFrame->m_pChild)
-			FrameStack.push(TargetFrame->m_pChild);
+			m_Animation_Stack->push(TargetFrame->m_pChild);
 	}
 }
 void AnimationController::SetToRootTransforms()
 {// 깊이 우선 탐색을 실시한다.
-	stack<CAnimationObject*> FrameStack;
-	FrameStack.push(m_pRootObject->m_pChild);
+
+	m_Animation_Stack->push(m_pRootObject->m_pChild);
 
 	while (1)
 	{
-		if (FrameStack.empty())
+		if (m_Animation_Stack->empty())
 			break;
 
-		CAnimationObject* TargetFrame = FrameStack.top();
-		FrameStack.pop();
+		CAnimationObject* TargetFrame = m_Animation_Stack->top();
+		
 		// 루트의 자식 노드부터 시작해서, 위부터 아래로 ToParent행렬을 곱해서 갱신해, ToRoot행렬을 만든다.
 		if (TargetFrame->m_pParent != NULL && TargetFrame != m_pRootObject->m_pChild)
 			TargetFrame->m_xmf4x4ToRootTransform =  
@@ -326,9 +370,9 @@ void AnimationController::SetToRootTransforms()
 			TargetFrame->m_xmf4x4ToRootTransform = TargetFrame->m_xmf4x4ToParentTransform;
 		
 		if (TargetFrame->m_pSibling)
-			FrameStack.push(TargetFrame->m_pSibling);
+			m_Animation_Stack->push(TargetFrame->m_pSibling);
 		if (TargetFrame->m_pChild)
-			FrameStack.push(TargetFrame->m_pChild);
+			m_Animation_Stack->push(TargetFrame->m_pChild);
 	}
 }
 void AnimationController::AdvanceAnimation(ID3D12GraphicsCommandList* pd3dCommandList, bool bOnce)
@@ -803,7 +847,7 @@ void CGameObject::ReleaseShaderVariables()
 		m_pMaterial->ReleaseShaderVariables();
 }
 
-void CGameObject::UpdateShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList, UINT RootParameterIndex, CPhysXObject** ppObjects)
+void CGameObject::UpdateShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList, UINT RootParameterIndex, CGameObject** ppObjects)
 {
 	UINT ncbElementBytes = ((sizeof(CB_GAMEOBJECT_INFO) + 255) & ~255);
 
@@ -873,7 +917,7 @@ void CGameObject::Render(ID3D12GraphicsCommandList *pd3dCommandList, int iRootPa
 
 }
 
-void CGameObject::Render(ID3D12GraphicsCommandList *pd3dCommandList, int iRootParameterIndex, CCamera *pCamera, UINT nInstances, CPhysXObject** ppObjects)
+void CGameObject::Render(ID3D12GraphicsCommandList *pd3dCommandList, int iRootParameterIndex, CCamera *pCamera, UINT nInstances, CGameObject** ppObjects)
 {
 	OnPrepareRender();
 
@@ -897,7 +941,7 @@ void CGameObject::Render(ID3D12GraphicsCommandList *pd3dCommandList, int iRootPa
 	}
 }
 
-void CGameObject::ShadowRender(ID3D12GraphicsCommandList *pd3dCommandList, int iRootParameterIndex, UINT nInstances, CPhysXObject** ppObjects)
+void CGameObject::ShadowRender(ID3D12GraphicsCommandList *pd3dCommandList, int iRootParameterIndex, UINT nInstances, CGameObject** ppObjects)
 {
 	UpdateShaderVariables(pd3dCommandList, iRootParameterIndex, ppObjects);
 
@@ -1034,15 +1078,8 @@ void CGameObject::Rotate(XMFLOAT4 *pxmf4Quaternion)
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-CHeightMapTerrain::CHeightMapTerrain(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature, LPCTSTR pFileName, int nWidth, int nLength, int nBlockWidth, int nBlockLength, XMFLOAT3 xmf3Scale, XMFLOAT4 xmf4Color,
-	PxPhysics* pPxPhysicsSDK, PxScene* pPxScene, PxControllerManager* pPxControllerManager, PxCooking* pCooking) : CGameObject(0, 1)
+CHeightMapTerrain::CHeightMapTerrain(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature, LPCTSTR pFileName, int nWidth, int nLength, int nBlockWidth, int nBlockLength, XMFLOAT3 xmf3Scale, XMFLOAT4 xmf4Color) : CGameObject(0, 1)
 {
-	// PxHeightField : x축을 따라 x축, y축을 따라... z축을 따라... 스케일 된 PxTriangleMesh로 모양을 만든다.
-	// 먼저 만들어야 할 것들
-	PxRigidActor* myActor = NULL;
-	PxTriangleMesh* myTriMesh = NULL;
-	PxMaterial* myMaterial = NULL;
-
 	m_nWidth = nWidth;
 	m_nLength = nLength;
 
@@ -1069,8 +1106,7 @@ CHeightMapTerrain::CHeightMapTerrain(ID3D12Device *pd3dDevice, ID3D12GraphicsCom
 		{
 			xStart = x * (nBlockWidth - 1);
 			zStart = z * (nBlockLength - 1);
-			pHeightMapGridMesh = new CHeightMapGridMesh(pPxPhysicsSDK, pPxScene, pPxControllerManager, pCooking, myActor, myTriMesh, myMaterial,
-				pd3dDevice, pd3dCommandList, xStart, zStart, nBlockWidth, nBlockLength, xmf3Scale, xmf4Color, m_pHeightMapImage);
+			pHeightMapGridMesh = new CHeightMapGridMesh(pd3dDevice, pd3dCommandList, xStart, zStart, nBlockWidth, nBlockLength, xmf3Scale, xmf4Color, m_pHeightMapImage);
 			SetMesh(x + (z*cxBlocks), pHeightMapGridMesh);
 		}
 	}
@@ -1385,14 +1421,14 @@ TCHAR* CAnimationObject::CharToTCHAR(char * asc)
 void CAnimationObject::LoadAnimation(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ifstream& InFile, AnimationController* pAnimationController)
 {
 	UINT nAnimation = 0;
-
+	UINT nBone = 0;
 	CAnimationObject* pFindObjecct = GetRootObject();
 
 	if (pFindObjecct)
 	{
 		InFile.read((char*)&nAnimation, sizeof(UINT)); // 애니메이션 수
-		pAnimationController = new AnimationController(pd3dDevice, pd3dCommandList, nAnimation);
-		InFile.read((char*)&pAnimationController->m_nBone, sizeof(UINT)); // 본의 갯수
+		InFile.read((char*)&nBone, sizeof(UINT)); // 애니메이션 수
+		pAnimationController = new AnimationController(pd3dDevice, pd3dCommandList, nAnimation, nBone);
 
 		for (int i = 0; i < pAnimationController->GetAnimationCount(); i++)
 		{
@@ -1841,195 +1877,3 @@ void CAnimationObject::ChangeAnimation(int newState)
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-CPhysXObject::CPhysXObject(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature, UINT nObjects) : CGameObject(1, 0)
-{
-}
-
-CPhysXObject::CPhysXObject(int nMeshes, ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList,
-	ID3D12RootSignature *pd3dGraphicsRootSignature, TCHAR *pstrFileName, UINT nObjects)
-	: CGameObject(nMeshes, pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, pstrFileName, nObjects)
-{
-}
-
-CPhysXObject::CPhysXObject(int nMeshes) : CGameObject(nMeshes, 0)
-{
-}
-
-CPhysXObject::~CPhysXObject()
-{
-}
-void CPhysXObject::SetPosition(XMFLOAT3& xmf3Position)
-{
-	if (m_pPxActor != NULL) {
-		CGameObject::SetPosition(xmf3Position.x, xmf3Position.y, xmf3Position.z);
-
-		PxTransform PxTransform = m_pPxActor->getGlobalPose();
-
-		PxTransform.p = PxVec3(xmf3Position.x, xmf3Position.y, xmf3Position.z);
-
-		m_pPxActor->setGlobalPose(PxTransform);
-	}
-}
-
-void CPhysXObject::UpdateDirectPos(const XMFLOAT3& xmf3Position, const XMFLOAT3& DirShooting) 
-{
-	PxVec3 DxDir;
-	DxDir.x = DirShooting.x;
-	DxDir.y = DirShooting.y;
-	DxDir.z = DirShooting.z;
-
-	m_pPxActor->setLinearVelocity(DxDir * 100, true);
-	
-	XMFLOAT3 PxPos;
-
-	if (xmf3Position.x - m_pPxActor->getGlobalPose().p.x > 10.0f || xmf3Position.x - m_pPxActor->getGlobalPose().p.x < -10.0f)
-		PxPos.x = xmf3Position.x + DirShooting.x * 10;
-	else
-		PxPos.x = m_pPxActor->getGlobalPose().p.x;
-
-	if (xmf3Position.y - m_pPxActor->getGlobalPose().p.y > 10.0f || xmf3Position.y - m_pPxActor->getGlobalPose().p.y < -10.0f)
-		PxPos.y = xmf3Position.y + DirShooting.y * 10;
-	else
-		PxPos.y = m_pPxActor->getGlobalPose().p.y;
-
-	if (xmf3Position.z - m_pPxActor->getGlobalPose().p.z > 10.0f || xmf3Position.z - m_pPxActor->getGlobalPose().p.z < -10.0f)
-		PxPos.z = xmf3Position.z + DirShooting.z * 10;
-	else
-		PxPos.z = m_pPxActor->getGlobalPose().p.z;
-
-	CGameObject::SetPosition(PxPos);
-}
-
-void CPhysXObject::SetRotation(XMFLOAT4& pxmf4Quaternion)
-{
-	//if (m_pPxActor != NULL) {
-	m_xmf4x4World._11 = pxmf4Quaternion.x;
-	m_xmf4x4World._13 = pxmf4Quaternion.y;
-	m_xmf4x4World._31 = pxmf4Quaternion.z;
-	m_xmf4x4World._33 = pxmf4Quaternion.z;
-
-	PxTransform PxTransform = m_pPxActor->getGlobalPose();
-
-	PxTransform.q *= PxQuat(pxmf4Quaternion.x, PxVec3(1, 0, 0));
-	PxTransform.q *= PxQuat(pxmf4Quaternion.z, PxVec3(0, 1, 0));
-	PxTransform.q *= PxQuat(pxmf4Quaternion.y, PxVec3(0, 0, 1));
-
-	m_pPxActor->setGlobalPose(PxTransform);
-	//}
-}
-
-int CPhysXObject::Update(const float& fTimeDelta)
-{
-
-	CPhysXObject::Update(fTimeDelta);
-
-	PhysXUpdate(fTimeDelta);
-
-	return 0;
-}
-
-void CPhysXObject::PhysXUpdate(const float & fTimeDelta)
-{
-	PxTransform pT = m_pPxActor->getGlobalPose();
-	PxMat44 m = PxMat44(pT);
-	PxVec3 RotatedOffset = m.rotate(PxVec3(0.0f, 0.0f, 0.0f));
-	m.setPosition(PxVec3(m.getPosition() + RotatedOffset));
-
-}
-
-void CPhysXObject::BuildObject(PxPhysics* pPxPhysics, PxScene* pPxScene, PxMaterial *pPxMaterial, XMFLOAT3 vScale, PxCooking* pCooking, const char* name)
-{
-
-	//바운딩박스
-	XMFLOAT3 vMin = (XMFLOAT3(1, 1, 1));
-	vMin.x *= vScale.x;	 vMin.y *= vScale.y;  vMin.z *= vScale.z;
-
-	XMFLOAT3 vMax = (XMFLOAT3(1, 1, 1));
-	vMax.x *= vScale.x;	 vMax.y *= vScale.y;  vMax.z *= vScale.z;
-
-	if (name == "Bullet") {
-		XMFLOAT3 tempMultiply = (XMFLOAT3(1, 1, 1));
-		tempMultiply.x = 100;
-		tempMultiply.y = 100;
-		tempMultiply.z = 100;
-
-		CGameObject::SetScale(tempMultiply.x, tempMultiply.y, tempMultiply.z);
-	}
-
-	XMFLOAT3 _d3dxvExtents = // 피직스 범위
-		XMFLOAT3((abs(vMin.x) + abs(vMax.x)) / 2, (abs(vMin.y) + abs(vMax.y)) / 2, (abs(vMin.z) + abs(vMax.z)) / 2);
-
-	//객체의 최종행렬
-	PxTransform _PxTransform(0, 0, 0);
-	//_PxTransform.q = PxQuat(3, 3, 3, 3);
-
-	PxSphereGeometry _PxSphereGeom(15);
-
-
-	PxBoxGeometry _PxBoxGeometry(_d3dxvExtents.x, _d3dxvExtents.y, _d3dxvExtents.z);
-	m_pPxActor = PxCreateDynamic(*pPxPhysics, _PxTransform, _PxSphereGeom, *pPxMaterial, 10.0f);
-	if (m_pPxActor != NULL) {
-		m_pPxActor->setName(name);
-		pPxScene->addActor(*m_pPxActor);
-	}
-}
-
-void CPhysXObject::shooting(float fpower) {
-	PxVec3 m_PxDirection;
-	m_PxDirection.x = m_Direction.x * fpower;
-	m_PxDirection.y = m_Direction.y * fpower;
-	m_PxDirection.z = m_Direction.z * fpower;
-
-	m_pPxActor->setLinearVelocity(m_PxDirection);
-
-	//m_pPxActor->addForce(m_PxDirection, PxForceMode::eFORCE);
-
-	//PxRaycastBuffer Gunhit;
-	//PxQueryFilterData Gunfd;
-	//Gunfd.flags |= PxQueryFlag::ePOSTFILTER;
-
-	//bool m_bTwoCheck = false;
-
-	//PxVec3 StartPos = PxVec3();
-
-
-	//PxVec3 BulletDir = m_PxDirection;
-
-	//m_bTwoCheck = m_pScene->raycast(StartPos, BulletDir, 100, Gunhit, PxHitFlags(PxHitFlag::eDEFAULT), Gunfd);
-
-	//m_pPxActor->addForce(m_PxDirection, PxForceMode::eFORCE);
-	//PxRigidDynamic* actor = Gunhit.block.actor->is<PxRigidDynamic>();
-	//const PxTransform globalPose = m_pPxActor->getGlobalPose();
-	//const PxVec3 localPos = globalPose.transformInv((Gunhit.block.position));
-	/*AddForceAtLocalPos(*m_pPxActor, m_PxDirection, localPos, PxForceMode::eACCELERATION, true);*/
-}
-
-void CPhysXObject::GetPhysXPos() {
-	if (m_pPxActor != NULL) {
-		XMFLOAT3 PxPos;
-		PxPos.x = m_pPxActor->getGlobalPose().p.x; // + DirShooting.x * 1000;
-		PxPos.y = m_pPxActor->getGlobalPose().p.y; // + DirShooting.y * 1000;
-		PxPos.z = m_pPxActor->getGlobalPose().p.z; // + DirShooting.z * 1000;
-
-		CGameObject::SetPosition(PxPos);
-	}
-}
-
-void CPhysXObject::AddForceAtLocalPos(PxRigidBody & body, const PxVec3 & force, const PxVec3 & pos, PxForceMode::Enum mode, bool wakeup)
-{
-	//transform pos to world space
-	const PxVec3 globalForcePos = body.getGlobalPose().transform(pos);
-
-	AddForceAtPosInternal(body, force, globalForcePos, mode, wakeup);
-}
-
-void CPhysXObject::AddForceAtPosInternal(PxRigidBody & body, const PxVec3 & force, const PxVec3 & pos, PxForceMode::Enum mode, bool wakeup)
-{
-	const PxTransform globalPose = body.getGlobalPose();
-	const PxVec3 centerOfMass = globalPose.transform(body.getCMassLocalPose().p);
-
-	const PxVec3 torque = (pos - centerOfMass).cross(force);
-	body.addForce(force, mode, wakeup);
-	body.addTorque(torque, mode, wakeup);
-}

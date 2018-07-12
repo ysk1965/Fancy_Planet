@@ -164,21 +164,6 @@ private:
 
 	static CGameFramework* m_pGFforMultiThreads;
 
-	//Physx SDK Member Variables =========================
-	PxPhysics*                  m_pPxPhysicsSDK;
-	PxScene*                  m_pPxScene;
-	PxMaterial*                  m_pPxMaterial;
-	PxControllerManager*         m_pPxControllerManager;
-	PxFoundation*               m_pPxFoundation;
-	PxDefaultErrorCallback         m_PxDefaultErrorCallback;
-	PxDefaultAllocator            m_PxDefaultAllocatorCallback;
-	PxVisualDebuggerConnection*     m_pPVDConnection;
-	PxCooking*                  m_pCooking;
-	//====================================================
-public:
-	/////////////// Physx SDK Member Function ///////////////
-	void InitializePhysxEngine();
-	void ReleasePhysxEngine();
 
 	//서버
 private:
@@ -204,6 +189,7 @@ private:
 
 	float g_fgametime;// 게임시간.
 	float g_fgravity; //중력 세기.
+	XMFLOAT3 m_xmf3ObjectsPos[OBJECTS_NUMBER];
 public:
 	void ProcessPacket(char *ptr);
 	void ReadPacket(SOCKET sock);

@@ -11,14 +11,13 @@ class CMesh;
 class CScene
 {
 public:
-	CScene(PxPhysics* pPxPhysicsSDK, PxScene* pPxScene, PxControllerManager* pPxControllerManager, PxCooking* pCooking);
-	CScene() {};
+	CScene();
 	~CScene();
 
 	bool OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
 	bool OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
 	CAnimationObject* FindBoneTypeObject(CAnimationObject* pRootObject, UINT nBoneTypeMesh);
-
+	virtual void SetObjectsVectorFromPacket(XMFLOAT3 pos, int n_ObjectIdx) {};
 	virtual void BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList);
 	virtual void ReleaseObjects();
 
@@ -53,16 +52,8 @@ public:
 	CPlayer					*m_pPlayer;
 protected:
 
-	//Physx SDK Member Variables =========================
-	PxPhysics * m_pPxPhysicsSDK;
-	PxScene*						m_pPxScene;
-	PxControllerManager*			m_pPxControllerManager;
-	PxMaterial*						m_pPxMaterial;
-	PxCooking*						m_pCooking;
-	//=====================================================
-
 	ID3D12RootSignature			*m_pd3dGraphicsRootSignature = NULL;
-
+	XMFLOAT3 m_xmf3ObjectsPos[OBJECTS_NUMBER];
 	int									m_nDivision = 0;
 };
  
@@ -83,17 +74,10 @@ public:
 	{
 		return m_pTerrain;
 	};
-	TerrainAndSkyBoxScene(PxPhysics* pPxPhysicsSDK, PxScene* pPxScene, PxControllerManager* pPxControllerManager, PxCooking* pCooking);
+	TerrainAndSkyBoxScene();
 	~TerrainAndSkyBoxScene();
 
 protected:
-	//Physx SDK Member Variables =========================
-	PxPhysics*						m_pPxPhysicsSDK;
-	PxScene*						m_pPxScene;
-	PxControllerManager*			m_pPxControllerManager;
-	PxMaterial*						m_pPxMaterial;
-	PxCooking*						m_pCooking;
-	//=====================================================
 private:
 	CHeightMapTerrain			*m_pTerrain = NULL;
 	CSkyBox						*m_pSkyBox = NULL;
@@ -133,11 +117,10 @@ public:
 	virtual void ModelsSetPosition(const array <PLAYER_INFO, MAX_USER>& PlayerArray, int myid);
 	CAnimationObject* FindAnimationFactorObject(CAnimationObject* pRootObject, int nIndex);
 
-	CharacterScene(PxPhysics* pPxPhysicsSDK, PxScene* pPxScene, PxControllerManager* pPxControllerManager, PxCooking* pCooking);
+	CharacterScene();
 	~CharacterScene();
 
 private:
-	CPhysXObject		**m_ppPxObjects = NULL;
 	CAnimationObject **m_ppSampleAnimationObjects = NULL;
 
 	CAnimationObject	 **m_ppSoldierObjects = NULL;
@@ -165,24 +148,26 @@ public:
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera = NULL);
 	virtual void ShadowRender(ID3D12GraphicsCommandList *pd3dCommandList, CCamera* pCamera, SHADOW_INFO* pCameraInfo);
 	virtual void ReleaseUploadBuffers();
-
-	ObjectScene(PxPhysics* pPxPhysicsSDK, PxScene* pPxScene, PxControllerManager* pPxControllerManager, PxCooking* pCooking);
+	virtual void SetObjectsVectorFromPacket(XMFLOAT3 pos, int n_ObjectIdx);
+	ObjectScene();
 	~ObjectScene();
 
-	CPhysXObject **m_ppSampleObjects = NULL;
+	CGameObject **m_ppSampleObjects = NULL;
 	DWORD		m_fReloadtime = 0;
 private:
 	UINT m_nObjects = 0;
 
-	vector<CPhysXObject*> m_vBullet;
+	vector<CGameObject*> m_vBullet;
 
-	CPhysXObject** m_ppShell = NULL;
+	CGameObject** m_ppShell = NULL;
 
-	CPhysXObject** m_ppAsteroid0 = NULL;
-	CPhysXObject** m_ppAsteroid1 = NULL;
-	CPhysXObject** m_ppAsteroid2 = NULL;
-	CPhysXObject** m_ppAsteroid3 = NULL;
-	CPhysXObject** m_ppAsteroid4 = NULL;
+	CGameObject** m_ppAsteroid0 = NULL;
+	CGameObject** m_ppAsteroid1 = NULL;
+	CGameObject** m_ppAsteroid2 = NULL;
+	CGameObject** m_ppAsteroid3 = NULL;
+	CGameObject** m_ppAsteroid4 = NULL;
 
-	CPhysXObject **m_ppPxObjects = NULL;
+	CGameObject** m_ppPxObjects = NULL;
+
+	bool m_isObjectLoad = false;
 };

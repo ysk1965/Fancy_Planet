@@ -15,22 +15,8 @@ CMesh::CMesh(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandLis
 	m_nStride = sizeof(CVertex);
 	m_nVertices = nVertices;
 
-	//피직스 관련 Vertex, Index
-	m_pPxVtx = new PxVec3[nVertices];
-	ZeroMemory(m_pPxVtx, sizeof(PxVec3) * nVertices);
-
-	m_pPxIndex = new PxU32[nIndices];
-	ZeroMemory(m_pPxIndex, sizeof(PxU32) * nIndices);
-
 	CVertex *pVertices = new CVertex[m_nVertices];
-	for (UINT i = 0; i < m_nVertices; i++) {
-		pVertices[i] = CVertex(pxmf3Positions[i]);
-		m_pPxVtx->x = pxmf3Positions->x;
-		m_pPxVtx->y = pxmf3Positions->y;
-		m_pPxVtx->z = pxmf3Positions->z;
-	}
-
-
+	
 	m_pd3dVertexBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, pVertices, m_nStride * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dVertexUploadBuffer);
 
 	m_d3dVertexBufferView.BufferLocation = m_pd3dVertexBuffer->GetGPUVirtualAddress();
@@ -719,23 +705,9 @@ float CHeightMapImage::GetHeight(float fx, float fz, bool bReverseQuad)
 	return(fHeight);
 }
 
-CHeightMapGridMesh::CHeightMapGridMesh(PxPhysics* pPxPhysicsSDK, PxScene* pPxScene, PxControllerManager* pPxControllerManager, PxCooking* pCooking, PxRigidActor* PhysXRigidActor, PxTriangleMesh* PhysXTriangleMesh, PxMaterial* PhysXMeterial, ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList,
+CHeightMapGridMesh::CHeightMapGridMesh(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList,
 	int xStart, int zStart,int nWidth, int nLength, XMFLOAT3 xmf3Scale, XMFLOAT4 xmf4Color, void *pContext) : CMesh(pd3dDevice, pd3dCommandList)
 {
-	const PxReal heightScale = 0.01f;
-
-	PxU32 hfNumVerts = nWidth * nLength;
-
-	PxHeightFieldSample* samples = (PxHeightFieldSample*)malloc(sizeof(PxHeightFieldSample)*hfNumVerts);
-	memset(samples, 0, hfNumVerts * sizeof(PxHeightFieldSample));
-
-
-
-	//PhysXRigidActor = 
-	//PhysXTriangleMesh = pCooking->createTriangleMesh(meshDesc, pPxPhysicsSDK->getPhysicsInsertionCallback());
-	PhysXMeterial = pPxPhysicsSDK->createMaterial(0.5f, 0.5f, 0.2f);
-
-
 	m_nVertices = nWidth * nLength;
 	//	m_nStride = sizeof(CTexturedVertex);
 	m_nStride = sizeof(CDiffused2TexturedTBN2Vertex);
@@ -773,43 +745,8 @@ CHeightMapGridMesh::CHeightMapGridMesh(PxPhysics* pPxPhysicsSDK, PxScene* pPxSce
 				fMinHeight = fHeight;
 			if (fHeight > fMaxHeight) 
 				fMaxHeight = fHeight;
-
-			// [PhysX] Shape만들기
-			//PxMeshScale scale(PxVec3((x*m_xmf3Scale.x), fHeight, (z*m_xmf3Scale.z)), PxQuat(PxIdentity));
-			//PxTriangleMeshGeometry geom(PhysXTriangleMesh, scale);
-			//PxShape* myTriMeshShape = PhysXRigidActor->createShape(geom, *PhysXMeterial);
-			PxI32 h = fHeight * 0.5;
-			PX_ASSERT(h <= 0xffff);
-			samples[z + x * nLength].height = (PxI16)(h);
-			samples[z + x * nLength].setTessFlag();
-			samples[z + x * nLength].materialIndex0 = 1;
-			samples[z + x * nLength].materialIndex1 = 1;
-
 		}
 	}
-	PxHeightFieldDesc hfDesc;
-	hfDesc.format = PxHeightFieldFormat::eS16_TM;
-	hfDesc.nbColumns = nWidth;
-	hfDesc.nbRows = nLength;
-	hfDesc.samples.data = samples;
-	hfDesc.samples.stride = sizeof(PxHeightFieldSample);
-	
-	PxHeightField* heightField = pPxPhysicsSDK->createHeightField(hfDesc);
-
-	PxTransform pose = PxTransform(PxIdentity);
-	pose.p = PxVec3(0, 0, 0);
-	
-	PxRigidStatic* hfActor = pPxPhysicsSDK->createRigidStatic(pose);
-
-	PxHeightFieldGeometry hfGeom(heightField, PxMeshGeometryFlags(), m_xmf3Scale.y, m_xmf3Scale.x, m_xmf3Scale.z);
-	PxShape* hfShape = hfActor->createShape(hfGeom, *PhysXMeterial);
-
-	hfActor->setName("HeightField");
-	
-	pPxScene->addActor(*hfActor);
-
-
-	///////////////////////
 
 	m_pd3dVertexBuffer = CreateBufferResource(pd3dDevice, pd3dCommandList, pVertices, m_nStride * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dVertexUploadBuffer);
 

@@ -2,12 +2,7 @@
 #include "Scene.h"
 #include <stack>
 
-CScene::CScene(PxPhysics* pPxPhysicsSDK, PxScene* pPxScene, PxControllerManager* pPxControllerManager, PxCooking* pCooking)
-	: m_pPxPhysicsSDK(pPxPhysicsSDK)
-	, m_pPxScene(pPxScene)
-	, m_pPxControllerManager(pPxControllerManager)
-	, m_pPxMaterial(NULL)
-	, m_pCooking(pCooking)
+CScene::CScene()
 {
 }
 
@@ -75,13 +70,8 @@ void CScene::FrustumCulling(CCamera* pCamera)
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-TerrainAndSkyBoxScene::TerrainAndSkyBoxScene(PxPhysics* pPxPhysicsSDK, PxScene* pPxScene, PxControllerManager* pPxControllerManager, PxCooking* pCooking)
-	: CScene(pPxPhysicsSDK, pPxScene, pPxControllerManager, pCooking)
+TerrainAndSkyBoxScene::TerrainAndSkyBoxScene()
 {
-	m_pPxPhysicsSDK = pPxPhysicsSDK;
-	m_pPxScene = pPxScene;
-	m_pPxControllerManager = pPxControllerManager;
-	m_pCooking = pCooking;
 }
 TerrainAndSkyBoxScene::~TerrainAndSkyBoxScene()
 {
@@ -95,8 +85,7 @@ void TerrainAndSkyBoxScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12Graphic
 	XMFLOAT4 xmf4Color(0.0f, 0.5f, 0.0f, 0.0f);
 
 	m_pTerrain = new CHeightMapTerrain(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature,
-		_T("../Assets/Image/Terrain/HeightMap2.raw"), 257, 257, 257, 257, xmf3Scale, xmf4Color,
-		m_pPxPhysicsSDK, m_pPxScene, m_pPxControllerManager, m_pCooking);
+		_T("../Assets/Image/Terrain/HeightMap2.raw"), 257, 257, 257, 257, xmf3Scale, xmf4Color);
 	//m_pTerrain->SetPosition(-);
 	m_pSkyBox = new CSkyBox(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
 }
@@ -308,8 +297,7 @@ void UIScene::ShadowRender(ID3D12GraphicsCommandList *pd3dCommandList, CCamera* 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-CharacterScene::CharacterScene(PxPhysics* pPxPhysicsSDK, PxScene* pPxScene, PxControllerManager* pPxControllerManager, PxCooking* pCooking)
-	: CScene(pPxPhysicsSDK, pPxScene, pPxControllerManager, pCooking)
+CharacterScene::CharacterScene()
 {
 	m_ppAnimationController = new AnimationController*[MESH_NUM];
 	m_ppSampleAnimationObjects = new CAnimationObject*[MESH_NUM];
@@ -345,7 +333,7 @@ void CharacterScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsComman
 {
 	m_pd3dGraphicsRootSignature = CreateGraphicsRootSignature(pd3dDevice);
 
-	m_nObjects = 5;
+	m_nObjects = 2;
 
 	m_ppSampleAnimationObjects[0] = new CAnimationObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, 0, L"../Assets/SpaceSoldier.bss", m_ppAnimationController[0], m_nObjects, m_pnAnimationFactor[0]);
 	m_ppSampleAnimationObjects[1] = new CAnimationObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, 0, L"../Assets/SpaceDrone.bss", m_ppAnimationController[1], m_nObjects, m_pnAnimationFactor[1]);
@@ -731,10 +719,9 @@ ID3D12RootSignature *CharacterScene::CreateGraphicsRootSignature(ID3D12Device *p
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-ObjectScene::ObjectScene(PxPhysics* pPxPhysicsSDK, PxScene* pPxScene, PxControllerManager* pPxControllerManager, PxCooking* pCooking)
-	: CScene(pPxPhysicsSDK, pPxScene, pPxControllerManager, pCooking)
+ObjectScene::ObjectScene()
 {
-	m_ppSampleObjects = new CPhysXObject*[MESH_NUM2];
+	m_ppSampleObjects = new CGameObject*[MESH_NUM2];
 	m_fReloadtime = GetTickCount();
 }
 ObjectScene::~ObjectScene()
@@ -806,35 +793,23 @@ int ObjectScene::SetProjectile(XMFLOAT3& xmf3Direction)
 }
 void ObjectScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList)
 {
-	m_nObjects = 8;
+	m_nObjects = 1;
 
 	m_pd3dGraphicsRootSignature = CreateGraphicsRootSignature(pd3dDevice);
 
-	//PxMaterial : 표면 특성 집합을 나타내는 재질 클래스
-	m_pPxMaterial = m_pPxPhysicsSDK->createMaterial(0.5f, 0.5f, 0.2f); //1.정지 마찰계수 운동마찰계수, 반발계수
-																	   //Plane바닥 생성
-	PxRigidStatic* groundPlane = PxCreatePlane(*m_pPxPhysicsSDK, PxPlane(0, 1, 0, 0), *m_pPxMaterial);
-	m_pPxScene->addActor(*groundPlane);
+	m_ppSampleObjects[0] = new CGameObject(0, pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, L"../Assets/Shell.bss", m_nObjects);
+	m_ppSampleObjects[1] = new CGameObject(0, pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, L"../Assets/Asteroid5.bss", m_nObjects);
+	m_ppSampleObjects[2] = new CGameObject(0, pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, L"../Assets/Asteroid1.bss", m_nObjects);
+	m_ppSampleObjects[3] = new CGameObject(0, pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, L"../Assets/Asteroid2.bss", m_nObjects);
+	m_ppSampleObjects[4] = new CGameObject(0, pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, L"../Assets/Asteroid3.bss", m_nObjects);
+	m_ppSampleObjects[5] = new CGameObject(0, pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, L"../Assets/Asteroid4.bss", m_nObjects);
 	
-	m_ppSampleObjects[0] = new CPhysXObject(0, pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, L"../Assets/Shell.bss", m_nObjects);
-	m_ppSampleObjects[0]->BuildObject(m_pPxPhysicsSDK, m_pPxScene, m_pPxMaterial, XMFLOAT3(1, 1, 1), m_pCooking, "Bullet");
-	m_ppSampleObjects[1] = new CPhysXObject(0, pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, L"../Assets/Asteroid5.bss", m_nObjects);
-	m_ppSampleObjects[1]->BuildObject(m_pPxPhysicsSDK, m_pPxScene, m_pPxMaterial, XMFLOAT3(1, 1, 1), m_pCooking, "Astroid0");
-	m_ppSampleObjects[2] = new CPhysXObject(0, pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, L"../Assets/Asteroid1.bss", m_nObjects);
-	m_ppSampleObjects[2]->BuildObject(m_pPxPhysicsSDK, m_pPxScene, m_pPxMaterial, XMFLOAT3(1, 1, 1), m_pCooking, "Astroid1");
-	m_ppSampleObjects[3] = new CPhysXObject(0, pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, L"../Assets/Asteroid2.bss", m_nObjects);
-	m_ppSampleObjects[3]->BuildObject(m_pPxPhysicsSDK, m_pPxScene, m_pPxMaterial, XMFLOAT3(1, 1, 1), m_pCooking, "Astroid2");
-	m_ppSampleObjects[4] = new CPhysXObject(0, pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, L"../Assets/Asteroid3.bss", m_nObjects);
-	m_ppSampleObjects[4]->BuildObject(m_pPxPhysicsSDK, m_pPxScene, m_pPxMaterial, XMFLOAT3(1, 1, 1), m_pCooking, "Astroid3");
-	m_ppSampleObjects[5] = new CPhysXObject(0, pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, L"../Assets/Asteroid4.bss", m_nObjects);
-	m_ppSampleObjects[5]->BuildObject(m_pPxPhysicsSDK, m_pPxScene, m_pPxMaterial, XMFLOAT3(1, 1, 1), m_pCooking, "Astroid4");
-	
-	m_ppShell = new CPhysXObject*[m_nObjects];
-	m_ppAsteroid0 = new CPhysXObject*[m_nObjects];
-	m_ppAsteroid1 = new CPhysXObject*[m_nObjects];
-	m_ppAsteroid2 = new CPhysXObject*[m_nObjects];
-	m_ppAsteroid3 = new CPhysXObject*[m_nObjects];
-	m_ppAsteroid4 = new CPhysXObject*[m_nObjects];
+	m_ppShell = new CGameObject*[m_nObjects];
+	m_ppAsteroid0 = new CGameObject*[m_nObjects];
+	m_ppAsteroid1 = new CGameObject*[m_nObjects];
+	m_ppAsteroid2 = new CGameObject*[m_nObjects];
+	m_ppAsteroid3 = new CGameObject*[m_nObjects];
+	m_ppAsteroid4 = new CGameObject*[m_nObjects];
 
 	m_vBullet.reserve(m_nObjects);
 	m_vBullet.resize(m_nObjects);
@@ -844,38 +819,26 @@ void ObjectScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 
 	for (int i = 0; i < m_nObjects - 1; i++)
 	{
-		CPhysXObject* pShell = new CPhysXObject(0);
-		pShell->BuildObject(m_pPxPhysicsSDK, m_pPxScene, m_pPxMaterial, 
-			XMFLOAT3(10, 10, 10), m_pCooking, "Bullet");
+		CGameObject* pShell = new CGameObject(0, 0);
 		m_ppShell[i] = pShell;
 
-		CPhysXObject* pAsteroid = new CPhysXObject(0);
-		pAsteroid->BuildObject(m_pPxPhysicsSDK, m_pPxScene, m_pPxMaterial, 
-			XMFLOAT3(1, 1, 1), m_pCooking, "Astroid0");
+		CGameObject* pAsteroid = new CGameObject(0, 0);
 		pAsteroid->SetPosition(XMFLOAT3(rand() % 1700, 300, rand() % 1700));
 		m_ppAsteroid0[i] = pAsteroid;
 
-		pAsteroid = new CPhysXObject(0);
-		pAsteroid->BuildObject(m_pPxPhysicsSDK, m_pPxScene, m_pPxMaterial, 
-			XMFLOAT3(1, 1, 1), m_pCooking, "Astroid1");
+		pAsteroid = new CGameObject(0, 0);
 		pAsteroid->SetPosition(XMFLOAT3(rand() % 1700, 300, rand() % 1700));
 		m_ppAsteroid1[i] = pAsteroid;
 
-		pAsteroid = new CPhysXObject(0);
-		pAsteroid->BuildObject(m_pPxPhysicsSDK, m_pPxScene, m_pPxMaterial, 
-			XMFLOAT3(1, 1, 1), m_pCooking, "Astroid2");
+		pAsteroid = new CGameObject(0, 0);
 		pAsteroid->SetPosition(XMFLOAT3(rand() % 1700, 300, rand() % 1700));
 		m_ppAsteroid2[i] = pAsteroid;
 
-		pAsteroid = new CPhysXObject(0);
-		pAsteroid->BuildObject(m_pPxPhysicsSDK, m_pPxScene, m_pPxMaterial, 
-			XMFLOAT3(1, 1, 1), m_pCooking, "Astroid3");
+		pAsteroid = new CGameObject(0, 0);
 		pAsteroid->SetPosition(XMFLOAT3(rand() % 1700, 300, rand() % 1700));
 		m_ppAsteroid3[i] = pAsteroid;
 
-		pAsteroid = new CPhysXObject(0);
-		pAsteroid->BuildObject(m_pPxPhysicsSDK, m_pPxScene, m_pPxMaterial, 
-			XMFLOAT3(1, 1, 1), m_pCooking, "Astroid4");
+		pAsteroid = new CGameObject(0, 0);
 		pAsteroid->SetPosition(XMFLOAT3(rand() % 1700, 300, rand() % 1700));
 		m_ppAsteroid4[i] = pAsteroid;
 	}
@@ -936,6 +899,17 @@ void ObjectScene::ReleaseObjects()
 	delete[] m_ppAsteroid3;
 	delete[] m_ppAsteroid4;
 }
+int cnt = 0;
+void ObjectScene::SetObjectsVectorFromPacket(XMFLOAT3 pos, int n_ObjectIdx)
+{
+
+	m_xmf3ObjectsPos[n_ObjectIdx] = pos;
+	cnt++;
+
+
+	if (cnt == 124)
+		m_isObjectLoad = true;
+}
 void ObjectScene::AnimateObjects(float fTimeElapsed, CCamera *pCamera)
 {
 	for (int i = 0; i < m_vBullet.size(); i++)
@@ -944,7 +918,7 @@ void ObjectScene::AnimateObjects(float fTimeElapsed, CCamera *pCamera)
 		{
 			if (m_vBullet[i]->m_bShooted)
 			{
-				m_vBullet[i]->UpdateDirectPos(m_vBullet[i]->GetPosition(), m_vBullet[i]->m_Direction);
+				//m_vBullet[i]->UpdateDirectPos(m_vBullet[i]->GetPosition(), m_vBullet[i]->m_Direction);
 				if ((GetTickCount() - m_vBullet[i]->m_dAlivedtime) > 300000000)
 				{
 					m_vBullet[i]->m_bShooted = false;
@@ -953,27 +927,6 @@ void ObjectScene::AnimateObjects(float fTimeElapsed, CCamera *pCamera)
 				}
 			}
 		}
-	}
-
-	for (int i = 0; i < m_nObjects; i++)
-	{
-		m_ppAsteroid0[i]->GetPhysXPos();
-	}
-	for (int i = 0; i < m_nObjects; i++)
-	{
-		m_ppAsteroid1[i]->GetPhysXPos();
-	}
-	for (int i = 0; i < m_nObjects; i++)
-	{
-		m_ppAsteroid2[i]->GetPhysXPos();
-	}
-	for (int i = 0; i < m_nObjects; i++)
-	{
-		m_ppAsteroid3[i]->GetPhysXPos();
-	}
-	for (int i = 0; i < m_nObjects; i++)
-	{
-		m_ppAsteroid4[i]->GetPhysXPos();
 	}
 }
 pair<XMFLOAT3, XMFLOAT3> ObjectScene::GetProjectilePos(UINT nShell)
@@ -991,7 +944,6 @@ pair<XMFLOAT3, XMFLOAT3> ObjectScene::GetProjectilePos(UINT nShell)
 }
 void ObjectScene::SetVectorProjectile(XMFLOAT3 xmf3Position, XMFLOAT3 xmf3Direction)
 {
-	printf("VectorProjectile\n");
 	CAnimationObject* pFindObject = FindBoneTypeObject(m_pPlayer->GetRenderObject(), 1);
 
 	XMFLOAT4X4 WorldTransform = pFindObject->m_xmf4x4World;
@@ -1140,7 +1092,7 @@ ID3D12RootSignature *ObjectScene::CreateGraphicsRootSignature(ID3D12Device *pd3d
 	pd3dRootParameters[1].Descriptor.ShaderRegister = 1; //Camera
 	pd3dRootParameters[1].Descriptor.RegisterSpace = 0;
 	pd3dRootParameters[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
-	
+
 	pd3dRootParameters[2].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
 	pd3dRootParameters[2].DescriptorTable.NumDescriptorRanges = 1;
 	pd3dRootParameters[2].DescriptorTable.pDescriptorRanges = &pd3dDescriptorRanges[0]; //디퓨즈
