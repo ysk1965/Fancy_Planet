@@ -23,7 +23,7 @@
     <ProjectGuid>{A6ECB956-F449-4998-A04F-A04B108B2B04}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>FancyPlanet</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.16299.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.17134.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -153,7 +153,7 @@
       <IntrinsicFunctions>false</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>D:\FancyPlanet\FancyPlanet\PhysX\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\FancyPlanet\FancyPlanet\PhysX\Include;C:\Users\DELL\Desktop\임시\FancyPlanet Client%2807.14%29\FancyPlanet Client%2807.14%29\PhysX\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
@@ -162,7 +162,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <StackReserveSize>0xA00000</StackReserveSize>
-      <AdditionalLibraryDirectories>D:\FancyPlanet\FancyPlanet\x64\Debug;D:\FancyPlanet\FancyPlanet\x64\Release;D:\FancyPlanet\FancyPlanet\PhysX\vc14win64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>D:\FancyPlanet\FancyPlanet\x64\Debug;D:\FancyPlanet\FancyPlanet\x64\Release;D:\FancyPlanet\FancyPlanet\PhysX\vc14win64;C:\Users\DELL\Desktop\임시\FancyPlanet Client%2807.14%29\FancyPlanet Client%2807.14%29\PhysX\vc14win64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>dinput8.lib;d3dcompiler.lib;dxguid.lib;winmm.lib;dxgi.lib;comctl32.lib;PhysX3ExtensionsDEBUG.lib;physx3DEBUG_x64.lib;physx3commonDEBUG_x64.lib;PhysXVisualDebuggerSDKDEBUG.lib;PhysX3CharacterKinematicDEBUG_x64.lib;PxTaskDEBUG.lib;PhysXProfileSDKDEBUG.lib;PhysX3CookingDEBUG_x64.lib;LowLevelClothDEBUG.lib;LowLevelDEBUG.lib;physX3VehicleDEBUG.lib;PvdRuntimeDEBUG.lib;SceneQueryDEBUG.lib;SimulationControllerDEBUG.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
@@ -171,6 +171,7 @@
     <ClInclude Include="ComputShader.h" />
     <ClInclude Include="d3dx12.h" />
     <ClInclude Include="DDSTextureLoader12.h" />
+    <ClInclude Include="Effect.h" />
     <ClInclude Include="FancyPlanet.h" />
     <ClInclude Include="GameFramework.h" />
     <ClInclude Include="Mesh.h" />
@@ -189,6 +190,7 @@
     <ClCompile Include="Camera.cpp" />
     <ClCompile Include="ComputShader.cpp" />
     <ClCompile Include="DDSTextureLoader12.cpp" />
+    <ClCompile Include="Effect.cpp" />
     <ClCompile Include="FancyPlanet.cpp" />
     <ClCompile Include="GameFramwork.cpp" />
     <ClCompile Include="Mesh.cpp" />
@@ -240,6 +242,10 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+    </FxCompile>
+    <FxCompile Include="Effect.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
     </FxCompile>
     <FxCompile Include="Light.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Vertex</ShaderType>

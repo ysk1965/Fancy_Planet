@@ -630,9 +630,7 @@ void UIShader::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCame
 		pd3dCommandList->SetGraphicsRootDescriptorTable(0, m_pTexture->GetArgumentInfos(i).m_d3dSrvGpuDescriptorHandle);
 
 		pd3dCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-		if(i == TIME_NUMBER || i == HP_NUMBER)
-			pd3dCommandList->DrawInstanced(18, 1, 0, 0);
-		else
+		if(i != TIME_NUMBER && i != HP_NUMBER)
 			pd3dCommandList->DrawInstanced(6, 1, 0, 0);
 	}
 }

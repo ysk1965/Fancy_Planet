@@ -32,7 +32,7 @@ protected:
 	float           			m_fPitch = 0.0f;
 	float           			m_fYaw = 0.0f;
 	float           			m_fRoll = 0.0f;
-	
+
 	LPVOID						m_pPlayerUpdatedContext = NULL;
 	LPVOID						m_pCameraUpdatedContext = NULL;
 
@@ -115,6 +115,7 @@ public:
 	}
 	void SetWorldPosition(const XMFLOAT4X4& xmf3Pos)
 	{
+		m_pCamera->Move(m_xmf3Position.x - xmf3Pos._41, m_xmf3Position.y - xmf3Pos._42, m_xmf3Position.z - xmf3Pos._43);
 		m_xmf4x4World = xmf3Pos;
 		m_xmf3Position.x= xmf3Pos._41;
 		m_xmf3Position.y= xmf3Pos._42;
@@ -122,9 +123,9 @@ public:
 	}
 public:
 	CPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature
-		, void *pContext = NULL, int nMeshes = 1);
+		, int nMeshes = 1);
 	virtual ~CPlayer();
-	void	BuildObject(void* pContext);
+	void	BuildObject();
 	XMFLOAT3 GetPosition()
 	{
 		return(m_xmf3Position);
@@ -141,9 +142,9 @@ public:
 	{
 		return(m_xmf3Right);
 	}
-	void SetPosition(const XMFLOAT3& xmf3Position) 
+	void SetPosition(const XMFLOAT3& xmf3Position)
 	{
-		Move(XMFLOAT3(xmf3Position.x - m_xmf3Position.x, xmf3Position.y - m_xmf3Position.y, xmf3Position.z - m_xmf3Position.z), false); 
+		Move(XMFLOAT3(xmf3Position.x - m_xmf3Position.x, xmf3Position.y - m_xmf3Position.y, xmf3Position.z - m_xmf3Position.z), false);
 	}
 
 	float GetYaw() const { return(m_fYaw); }
@@ -158,7 +159,6 @@ public:
 	void Move(float fxOffset = 0.0f, float fyOffset = 0.0f, float fzOffset = 0.0f);
 	void Rotate(float x, float y, float z);
 
-	void UpdateJumpState();
 	void Update(float fTimeElapsed);
 
 	virtual void OnPlayerUpdateCallback(float fTimeElapsed);

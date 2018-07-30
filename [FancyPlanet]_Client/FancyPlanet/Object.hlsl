@@ -16,22 +16,49 @@ struct INSTANCEDGAMEOBJECTINFO
 };
 
 SamplerState gWrapSamplerState : register(s0);
+SamplerComparisonState gShadowSamplerState : register(s1);
 
 #include "Light.hlsl"
-
-struct PS_TEXTURED_DEFFERREDLIGHTING_OUTPUT
-{
-	float4 diffuse : SV_TARGET0;
-	float4 normal : SV_TARGET1;
-	float4 depth : SV_TARGET2;
-	float4 shadow : SV_TARGET3;
-};
 
 Texture2D gtxtObject_Diffuse : register(t0);
 Texture2D gtxtObject_Normal : register(t1);
 Texture2D gtxtObject_Shadow : register(t2);
+Texture2D ShadowMap : register(t10);
+
 
 StructuredBuffer<INSTANCEDGAMEOBJECTINFO> gObjectInfos : register(t3);
+
+
+float CalcShadowFactor(float4 shadowPosH)
+{
+	// Complete projection by doing division by w.
+	shadowPosH.xyz /= shadowPosH.w;
+
+	// Depth in NDC space.
+	float depth = shadowPosH.z;
+
+	uint width, height, numMips;
+	ShadowMap.GetDimensions(0, width, height, numMips);
+
+	// Texel size.
+	float dx = 1.0f / (float)width;
+
+	float percentLit = 0.0f;
+	const float2 offsets[9] =
+	{
+		float2(-dx,  -dx), float2(0.0f,  -dx), float2(dx,  -dx),
+		float2(-dx, 0.0f), float2(0.0f, 0.0f), float2(dx, 0.0f),
+		float2(-dx,  +dx), float2(0.0f,  +dx), float2(dx,  +dx)
+	};
+
+	for (int i = 0; i < 9; ++i)
+	{
+		percentLit += ShadowMap.SampleCmpLevelZero(gShadowSamplerState, shadowPosH.xy, depth).r;
+	}
+
+	return percentLit / 9.0f;
+}
+
 
 struct VS_INPUT
 {
@@ -73,17 +100,14 @@ VS_OUTPUT Shadow_Object_VS(VS_INPUT input, uint nInstanceID : SV_InstanceID)
 	output.uv = input.uv;
 	return(output);
 }
-[earlydepthstencil]
-PS_TEXTURED_DEFFERREDLIGHTING_OUTPUT Object_PS(VS_OUTPUT input) : SV_TARGET
+
+float4 Object_PS(VS_OUTPUT input) : SV_TARGET
 {
-	PS_TEXTURED_DEFFERREDLIGHTING_OUTPUT output;
 	float2 uv1;
 	uv1.x = input.uv.x;
 	uv1.y = 1.0f - input.uv.y;
 
 	float3 diffuse = gtxtObject_Diffuse.Sample(gWrapSamplerState, uv1).rgb;
-	
-	output.diffuse = float4(diffuse, 1.0f);
 	
 	float3 N = normalize(input.normalW);
 	float3 T = normalize(input.tangentW - dot(input.tangentW, N) * N);
@@ -94,11 +118,9 @@ PS_TEXTURED_DEFFERREDLIGHTING_OUTPUT Object_PS(VS_OUTPUT input) : SV_TARGET
 	// -1 와 1사이 값으로 변환한다.
 	normal = 2.0f * normal - 1.0f;
 	float3 normalW = mul(normal, TBN);
-	output.normal = float4(normalW, 1.0f);
-	
-	output.depth = float4(input.positionW, 1.0f);
 
-	output.shadow = input.ShadowPosH;
-	
-	return output;
+	float shadowFactor = CalcShadowFactor(input.ShadowPosH);
+	float4 cllumination = Lighting(input.positionW, normalW, diffuse, 0, 30, shadowFactor);
+
+	return cllumination;
 }

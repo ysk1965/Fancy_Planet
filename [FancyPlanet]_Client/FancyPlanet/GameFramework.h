@@ -17,7 +17,7 @@ enum
 enum
 {
 	TERRAIN,
-	PHYSX,
+	EFFECT,
 	CHARACTER,
 	OBJECT
 };
@@ -29,6 +29,7 @@ public:
 	CGameFramework();
 	~CGameFramework();
 
+	void BuildLightsAndMaterials();
 	bool OnCreate(HINSTANCE hInstance, HWND hMainWnd);
 	void OnDestroy();
 
@@ -36,7 +37,7 @@ public:
 	void CreateDirect3DDevice();
 	void CreateRtvAndDsvDescriptorHeaps();
 	void CreateSwapChainRenderTargetViews();
-	void CreateRenderTargetViews();
+	void CreateLightsAndMaterialsShaderVariables(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList);
 	void CreateDepthStencilView();
 	void CreateCommandQueueAndList();
 
@@ -56,13 +57,12 @@ public:
 	void SpaceDivision();
 	void RenderSubset(int iIndex);
 	void NotifyIdleState();
-	void CollisionCheckByBullet();
-	void SendBulletPacket(UINT nShell);
+	void SendBulletPacket();
 
 	void OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
 	void OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
 	LRESULT CALLBACK OnProcessingWindowMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
-
+	void UpdateLightsAndMaterialsShaderVariables();
 	void CalculatePickRay(const XMFLOAT2& xmf2MousePos);
 
 	XMFLOAT4X4& GetPlayerMatrix()
@@ -78,8 +78,6 @@ private:
 
 	CComputShader* m_pComputeShader = NULL;
 
-	CTextureToFullScreenShader *m_pScreenShader = NULL;
-
 	UIShader* m_pUIShader = NULL;
 
 	CShadowShader* m_pShadowShader = NULL;
@@ -90,6 +88,8 @@ private:
 
 	int                     m_nWndClientWidth;
 	int                     m_nWndClientHeight;
+
+	int						m_nCharacterType;
 
 	XMFLOAT3			xmf3PickDirection;
 
@@ -115,7 +115,6 @@ private:
 	UINT                  m_nRtvDescriptorIncrementSize;
 
 	ID3D12Resource            *m_pd3dDepthStencilBuffer = NULL;
-	ID3D12Resource            *m_pd3dShadowDepthStencilBuffer = NULL;
 	ID3D12DescriptorHeap      *m_pd3dDsvDescriptorHeap = NULL;
 	UINT                  m_nDsvDescriptorIncrementSize;
 
@@ -132,11 +131,6 @@ private:
 #if defined(_DEBUG)
 	ID3D12Debug               *m_pd3dDebugController;
 #endif
-
-	static const UINT            m_nRenderTargetBuffers = 4;
-	ID3D12Resource               *m_ppd3dRenderTargetBuffers[m_nRenderTargetBuffers];
-	D3D12_CPU_DESCRIPTOR_HANDLE      m_pd3dRtvRenderTargetBufferCPUHandles[m_nRenderTargetBuffers];
-
 	CGameTimer               m_GameTimer;
 
 	CScene                  **m_ppScenes = NULL;
@@ -179,7 +173,7 @@ private:
 	int      g_myid; // 내 아이디
 	PLAYER_INFO g_my_info;
 	array <PLAYER_INFO, MAX_USER> g_player_info;
-	std::chrono::system_clock::time_point bulletstart;
+	std::chrono::system_clock::time_point m_bulletstart;
 
 	bool keystate = false;
 	std::chrono::system_clock::time_point idlestatepoint;
@@ -190,6 +184,19 @@ private:
 	float g_fgametime;// 게임시간.
 	float g_fgravity; //중력 세기.
 	XMFLOAT3 m_xmf3ObjectsPos[OBJECTS_NUMBER];
+
+	bool m_isMoveInput = false;
+
+	ID3D12Resource				*m_pd3dcbLights = NULL;
+	LIGHTS						*m_pcbMappedLights = NULL;
+
+	ID3D12Resource				*m_pd3dcbMaterials = NULL;
+	MATERIALS					*m_pcbMappedMaterials = NULL;
+
+	LIGHTS * m_pLights = NULL;
+
+	MATERIALS					*m_pMaterials = NULL;
+	int							m_nMaterials = 0;
 public:
 	void ProcessPacket(char *ptr);
 	void ReadPacket(SOCKET sock);

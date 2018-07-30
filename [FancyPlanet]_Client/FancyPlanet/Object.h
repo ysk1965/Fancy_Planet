@@ -1,9 +1,8 @@
 #pragma once
-#include "Mesh.h"
-#include "Camera.h"
+#include "Effect.h"
 #include <chrono>
 #include <stack>
-enum 
+enum
 {
 	NOT_ALL = 0, // 중간에 애니메이션 가능 (구현)
 	ALL = 1, // 애니메이션이 끝나야 다른 얘니메이션이 가능 (구현)
@@ -56,7 +55,7 @@ class CPhysXObject;
 
 struct CB_GAMEOBJECT_INFO
 {
-	XMFLOAT4X4						m_xmf4x4World; 
+	XMFLOAT4X4						m_xmf4x4World;
 };
 struct SRVROOTARGUMENTINFO
 {
@@ -81,7 +80,7 @@ struct BONE_TRANSFORMS3
 struct FRAME
 {
 	XMFLOAT3 Translation;
-	XMFLOAT4 RotationQuat; 
+	XMFLOAT4 RotationQuat;
 };
 struct ANIMATION
 {
@@ -192,16 +191,16 @@ public:
 	void LoadTextureFromFile(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, wchar_t *pszFileName, UINT nIndex);
 
 	int GetTextureCount() { return(m_nTextures); }
-	ID3D12Resource *GetTexture(int nIndex) 
+	ID3D12Resource *GetTexture(int nIndex)
 	{
 		return(m_ppd3dTextures[nIndex]);
 	}
-	UINT GetTextureType() 
+	UINT GetTextureType()
 	{
 		return(m_nTextureType);
 	}
 
-	void ReleaseUploadBuffers();	
+	void ReleaseUploadBuffers();
 };
 
 class CMaterial
@@ -224,9 +223,9 @@ public:
 	CShader							*m_pShader = NULL;
 
 	void SetAlbedo(XMFLOAT4 xmf4Albedo) { m_xmf4Albedo = xmf4Albedo; }
-	void SetReflection(UINT nReflection) 
+	void SetReflection(UINT nReflection)
 	{
-		m_nReflection = nReflection; 
+		m_nReflection = nReflection;
 	}
 	void SetTexture(CTexture *pTexture);
 	void SetShader(CShader *pShader);
@@ -242,21 +241,21 @@ class CGameObject
 public:
 	CGameObject(int nMeshes, UINT nObjects);
 	CGameObject(int nMeshes, ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList
-		, ID3D12RootSignature *pd3dGraphicsRootSignature, TCHAR *pstrFileName, UINT nObjects);
+		, ID3D12RootSignature *pd3dGraphicsRootSignature, TCHAR *pstrFileName, UINT nObjects, ID3D12Resource* pShadowMap);
 	virtual ~CGameObject();
 
 private:
 	int								m_nReferences = 0;
 	UINT							m_nObjects = 0;
 public:
-	void AddRef() 
+	void AddRef()
 	{
-		m_nReferences++; 
+		m_nReferences++;
 	}
-	void Release() 
+	void Release()
 	{
-		if (--m_nReferences <= 0) 
-			delete this; 
+		if (--m_nReferences <= 0)
+			delete this;
 	}
 
 public:
@@ -275,7 +274,7 @@ public:
 	D3D12_GPU_DESCRIPTOR_HANDLE		m_d3dCbvGPUDescriptorHandle;
 
 protected:
-	ID3D12Resource					*m_pd3dcbGameObjects = NULL; // 샘플 오브젝트만 이값을 가지고 있다.
+	ID3D12Resource * m_pd3dcbGameObjects = NULL; // 샘플 오브젝트만 이값을 가지고 있다.
 	CB_GAMEOBJECT_INFO				*m_pcbMappedGameObjects = NULL;
 
 	bool m_bRendererMesh = false;
@@ -298,8 +297,8 @@ public:
 	virtual void UpdateAnimationVariables(ID3D12GraphicsCommandList *pd3dCommandList);
 	virtual void OnPrepareRender();
 	virtual void SetRootParameter(ID3D12GraphicsCommandList *pd3dCommandList, int iRootParameterIndex);
-	
-	virtual void Animate(float fTimeElapsed); 
+
+	virtual void Animate(float fTimeElapsed);
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, int iRootParameterIndex, CCamera *pCamera = NULL);
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, int iRootParameterIndex, CCamera *pCamera, UINT nInstances, CGameObject** ppObjects);
 	void ShadowRender(ID3D12GraphicsCommandList *pd3dCommandList, int iRootParameterIndex, UINT nInstances, CGameObject** ppObjects);
@@ -307,10 +306,10 @@ public:
 	virtual void BuildMaterials(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList) { }
 	virtual void ReleaseUploadBuffers();
 	virtual void ChangeAnimation(int newState) {};
-	virtual void UpdateTransform(XMFLOAT4X4 *pxmf4x4Parent = NULL){};
+	virtual void UpdateTransform(XMFLOAT4X4 *pxmf4x4Parent = NULL) {};
 
 	virtual void LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList,
-		ID3D12RootSignature *pd3dGraphicsRootSignature, ifstream& InFile, UINT nType, UINT nSub, UINT nObject);
+		ID3D12RootSignature *pd3dGraphicsRootSignature, ifstream& InFile, UINT nType, UINT nSub, UINT nObject, ID3D12Resource* pShadowMap);
 
 	XMFLOAT3 GetPosition();
 	XMFLOAT3 GetLook();
@@ -326,18 +325,18 @@ public:
 	virtual void SetPosition(XMFLOAT3& xmf3Position);
 	virtual void SetScale(float x, float y, float z);
 	virtual void SetRotation(XMFLOAT4& pxmf4Quaternion);
-	
+
 	virtual void MoveStrafe(float fDistance = 1.0f);
 
 
-	
+
 	void MoveUp(float fDistance = 1.0f);
 	void MoveForward(float fDistance = 1.0f);
 
 	virtual void Rotate(float fPitch = 10.0f, float fYaw = 10.0f, float fRoll = 10.0f);
 	virtual void Rotate(XMFLOAT3 *pxmf3Axis, float fAngle);
 	virtual void Rotate(XMFLOAT4 *pxmf4Quaternion);
-	
+
 };
 
 class CAnimationObject : public CGameObject
@@ -404,7 +403,7 @@ public:
 	}
 
 	CAnimationObject(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature,
-		UINT nMeshes, TCHAR *pstrFileName, AnimationController* pAnimationController, UINT nObjects, UINT& nAnimationFactor);
+		UINT nMeshes, TCHAR *pstrFileName, AnimationController* pAnimationController, UINT nObjects, UINT& nAnimationFactor, ID3D12Resource* pShadowMap);
 	CAnimationObject(int nMeshes) : CGameObject(nMeshes, 0)
 	{
 		m_xmf4x4ToRootTransform = Matrix4x4::Identity();
@@ -414,12 +413,12 @@ public:
 	void ReleaseUploadBuffers();
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, int iRootParameterIndex, CCamera *pCamera = NULL);
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera, UINT nInstances, CAnimationObject** ppObject, UINT nIndex, CPlayer* pPlayer);
-	virtual void ShadowRender(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera, UINT nInstances);
+	virtual void ShadowRender(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera, UINT nInstances, CAnimationObject** ppObject, UINT nIndex);
 	void LoadAnimation(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ifstream& InFile, AnimationController* pAnimationController);
 	virtual int LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList,
-		ID3D12RootSignature *pd3dGraphicsRootSignature, ifstream& InFile, UINT nType, UINT nSub, CMesh* pCMesh, UINT nObjects, UINT nAnimationFactor);
+		ID3D12RootSignature *pd3dGraphicsRootSignature, ifstream& InFile, UINT nType, UINT nSub, CMesh* pCMesh, UINT nObjects, UINT nAnimationFactor, ID3D12Resource* pShadowMap);
 	void LoadGeometryFromFile(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature
-		, TCHAR *pstrFileName, AnimationController* pAnimationController, UINT nObjects, UINT& nAnimationFactor);
+		, TCHAR *pstrFileName, AnimationController* pAnimationController, UINT nObjects, UINT& nAnimationFactor, ID3D12Resource* pShadowMap);
 	virtual void UpdateTransform(XMFLOAT4X4 *pxmf4x4Parent = NULL);
 	CAnimationObject* FindAnimationFactorObject(CAnimationObject* pRootObject, int nIndex);
 	CAnimationObject* GetRootObject();
@@ -434,7 +433,7 @@ public:
 	TCHAR* CharToTCHAR(char * asc);
 	void SetChild(CAnimationObject *pChild);
 	virtual void ChangeAnimation(int newState);
-	
+
 	virtual void SetPosition(float x, float y, float z);
 	virtual void SetPosition(XMFLOAT3& xmf3Position);
 	virtual void SetScale(float x, float y, float z);
@@ -559,7 +558,7 @@ public:
 		UINT ncbElementBytes = ((sizeof(BONE_TRANSFORMS) + 255) & ~255);
 		UINT ncbElementBytes2 = ((sizeof(BONE_TRANSFORMS2) + 255) & ~255);
 		UINT ncbElementBytes3 = ((sizeof(BONE_TRANSFORMS3) + 255) & ~255);
-		
+
 		pd3dCommandList->SetGraphicsRootShaderResourceView(8, m_ppResource[0]->GetGPUVirtualAddress());
 		if (nResource > 1)
 		{
@@ -571,19 +570,16 @@ public:
 		}
 		for (int i = 0; i < nObjects; i++)
 		{
-			BONE_TRANSFORMS *pbMappedcbGameObject = (BONE_TRANSFORMS *)((UINT8 *)m_pcbMappedGameObjects + (i * ncbElementBytes));
-			XMStoreFloat4x4(&pbMappedcbGameObject->m_xmf4x4World, XMMatrixTranspose(XMLoadFloat4x4(&ppObject[i]->m_xmf4x4World)));
-			::memcpy(pbMappedcbGameObject->m_xmf4x4BoneTransform, &ppObject[i]->m_ppAnimationFactorObjects[Index]->m_pAnimationFactors->m_BoneTransforms->m_xmf4x4BoneTransform, sizeof(XMFLOAT4X4) * BONE_TRANSFORM_NUM);
+			XMStoreFloat4x4(&m_pcbMappedGameObjects[i].m_xmf4x4World, XMMatrixTranspose(XMLoadFloat4x4(&ppObject[i]->m_xmf4x4World)));
+			::memcpy(m_pcbMappedGameObjects[i].m_xmf4x4BoneTransform, &ppObject[i]->m_ppAnimationFactorObjects[Index]->m_pAnimationFactors->m_BoneTransforms->m_xmf4x4BoneTransform, sizeof(XMFLOAT4X4) * BONE_TRANSFORM_NUM);
 
 			if (nResource > 1)
 			{
-				BONE_TRANSFORMS2*pbMappedcbGameObject2 = (BONE_TRANSFORMS2 *)((UINT8 *)m_pcbMappedGameObjects2 + (i * ncbElementBytes2));
-				::memcpy(pbMappedcbGameObject2->m_xmf4x4BoneTransform, &ppObject[i]->m_ppAnimationFactorObjects[Index]->m_pAnimationFactors->m_BoneTransforms2->m_xmf4x4BoneTransform, sizeof(XMFLOAT4X4) * BONE_TRANSFORM_NUM2);
+				::memcpy(m_pcbMappedGameObjects2[i].m_xmf4x4BoneTransform, &ppObject[i]->m_ppAnimationFactorObjects[Index]->m_pAnimationFactors->m_BoneTransforms2->m_xmf4x4BoneTransform, sizeof(XMFLOAT4X4) * BONE_TRANSFORM_NUM2);
 			}
 			if (nResource > 2)
 			{
-				BONE_TRANSFORMS3*pbMappedcbGameObject3 = (BONE_TRANSFORMS3 *)((UINT8 *)m_pcbMappedGameObjects3 + (i * ncbElementBytes3));
-				::memcpy(pbMappedcbGameObject3->m_xmf4x4BoneTransform, &ppObject[i]->m_ppAnimationFactorObjects[Index]->m_pAnimationFactors->m_BoneTransforms3->m_xmf4x4BoneTransform, sizeof(XMFLOAT4X4) * BONE_TRANSFORM_NUM3);
+				::memcpy(m_pcbMappedGameObjects3[i].m_xmf4x4BoneTransform, &ppObject[i]->m_ppAnimationFactorObjects[Index]->m_pAnimationFactors->m_BoneTransforms3->m_xmf4x4BoneTransform, sizeof(XMFLOAT4X4) * BONE_TRANSFORM_NUM3);
 
 				for (int k = 0; k < RENDERER_MESH_WORLD_TRANSFORM; k++)
 				{
@@ -592,7 +588,7 @@ public:
 					{
 						XMFLOAT4X4 result = Matrix4x4::Multiply(RendererMeshObject->m_xmf4x4ToRootTransform, ppObject[i]->m_xmf4x4World);
 
-						XMStoreFloat4x4(&pbMappedcbGameObject3->m_xmf4x4RedererMeshWorld[k], XMMatrixTranspose(XMLoadFloat4x4(&result)));
+						XMStoreFloat4x4(&m_pcbMappedGameObjects3[i].m_xmf4x4RedererMeshWorld[k], XMMatrixTranspose(XMLoadFloat4x4(&result)));
 					}
 				}
 			}
@@ -660,7 +656,7 @@ public:
 	}
 	void SetBoneObject(CAnimationObject* pRoot)
 	{
-		for (int i = 0; i < m_nBindpos; i++) 
+		for (int i = 0; i < m_nBindpos; i++)
 		{
 			m_ppBoneObject[i] = GetFindObject(pRoot, m_pBoneIndexList[i]);
 		}
@@ -685,11 +681,11 @@ public:
 class CHeightMapTerrain : public CGameObject
 {
 public:
-	CHeightMapTerrain(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature, LPCTSTR pFileName, int nWidth, int nLength, int nBlockWidth, int nBlockLength, XMFLOAT3 xmf3Scale, XMFLOAT4 xmf4Color);
+	CHeightMapTerrain(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature, LPCTSTR pFileName, int nWidth, int nLength, int nBlockWidth, int nBlockLength, XMFLOAT3 xmf3Scale, XMFLOAT4 xmf4Color, ID3D12Resource* pShadowMap);
 	virtual ~CHeightMapTerrain();
 
 private:
-	CHeightMapImage				*m_pHeightMapImage;
+	CHeightMapImage * m_pHeightMapImage;
 
 	int							m_nWidth;
 	int							m_nLength;

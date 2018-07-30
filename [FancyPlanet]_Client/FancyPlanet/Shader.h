@@ -36,12 +36,12 @@ public:
 
 	void CreateCbvAndSrvDescriptorHeaps(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, int nConstantBufferViews, int nShaderResourceViews);
 	void CreateConstantBufferViews(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, int nConstantBufferViews, ID3D12Resource *pd3dConstantBuffers, UINT nStride);
-	void CreateShaderResourceViews(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, CTexture *pTexture, UINT nRootParameterStartIndex, bool bAutoIncrement);
+	void CreateShaderResourceViews(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, CTexture *pTexture, UINT nRootParameterStartIndex, bool bAutoIncrement, ID3D12Resource* pShadowMap);
 
 	virtual void CreateShaderVariables(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList);
-	ID3D12RootSignature *GetGraphicsRootSignature() 
+	ID3D12RootSignature *GetGraphicsRootSignature()
 	{
-		return(m_pd3dGraphicsRootSignature); 
+		return(m_pd3dGraphicsRootSignature);
 	}
 	virtual void UpdateShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList);
 	virtual void ReleaseShaderVariables();
@@ -56,7 +56,7 @@ public:
 
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera);
 	void ShadowRender(ID3D12GraphicsCommandList *pd3dCommandList);
-	D3D12_CPU_DESCRIPTOR_HANDLE GetCPUDescriptorHandleForHeapStart() 
+	D3D12_CPU_DESCRIPTOR_HANDLE GetCPUDescriptorHandleForHeapStart()
 	{
 		return(m_pd3dDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
 	}
@@ -66,6 +66,7 @@ public:
 	D3D12_GPU_DESCRIPTOR_HANDLE GetGPUCbvDescriptorStartHandle() { return(m_d3dCbvGPUDescriptorStartHandle); }
 	D3D12_CPU_DESCRIPTOR_HANDLE GetCPUSrvDescriptorStartHandle() { return(m_d3dSrvCPUDescriptorStartHandle); }
 	D3D12_GPU_DESCRIPTOR_HANDLE GetGPUSrvDescriptorStartHandle() { return(m_d3dSrvGPUDescriptorStartHandle); }
+	D3D12_GPU_DESCRIPTOR_HANDLE& GetShadowGPUDescriptorHandle();
 	ID3D12DescriptorHeap* GetDescriptorHeap()
 	{
 		return m_pd3dDescriptorHeap;
@@ -76,7 +77,7 @@ public:
 	void SetDescriptorHeaps(ID3D12GraphicsCommandList *pd3dCommandList);
 
 protected:
-	ID3D12PipelineState				**m_ppd3dPipelineStates = NULL;
+	ID3D12PipelineState * *m_ppd3dPipelineStates = NULL;
 	int								m_nPipelineStates = 0;
 
 	ID3D12DescriptorHeap			*m_pd3dDescriptorHeap = NULL;
@@ -85,6 +86,8 @@ protected:
 	D3D12_GPU_DESCRIPTOR_HANDLE		m_d3dCbvGPUDescriptorStartHandle;
 	D3D12_CPU_DESCRIPTOR_HANDLE		m_d3dSrvCPUDescriptorStartHandle;
 	D3D12_GPU_DESCRIPTOR_HANDLE		m_d3dSrvGPUDescriptorStartHandle;
+
+	D3D12_GPU_DESCRIPTOR_HANDLE m_d3dShadowGPUDescriptorHandle;
 
 	ID3D12RootSignature				*m_pd3dGraphicsRootSignature = NULL;
 };
@@ -171,7 +174,7 @@ public:
 	virtual D3D12_SHADER_BYTECODE CreatePixelShader(ID3DBlob **ppd3dShaderBlob);
 
 	virtual void CreateShader(ID3D12Device *pd3dDevice, ID3D12RootSignature *pd3dGraphicsRootSignature, UINT nRenderTargets);
-	
+
 private:
 };
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -243,53 +246,6 @@ struct MATERIALS
 {
 	MATERIAL				m_pReflections[MAX_MATERIALS];
 };
-
-class CTextureToFullScreenShader : public CShader
-{
-public:
-	CTextureToFullScreenShader(ID3D12Resource* pd3dDepthStencilBuffer);
-	virtual ~CTextureToFullScreenShader();
-
-	virtual D3D12_INPUT_LAYOUT_DESC CreateInputLayout();
-
-	virtual D3D12_SHADER_BYTECODE CreateVertexShader(ID3DBlob **ppd3dShaderBlob, bool bIsShadow);
-	virtual D3D12_SHADER_BYTECODE CreatePixelShader(ID3DBlob **ppd3dShaderBlob);
-	virtual void CreateShaderResourceViews(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, CTexture *pTexture, UINT nRootParameterStartIndex, bool bAutoIncrement);
-	virtual void CreateGraphicsRootSignature(ID3D12Device *pd3dDevice);
-
-	virtual void CreateShader(ID3D12Device *pd3dDevice, ID3D12RootSignature *pd3dGraphicsRootSignature, UINT nRenderTargets = 1);
-
-	virtual void BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, CPlayer* pPlayer, void *pContext = NULL);
-	virtual void ReleaseObjects();
-	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera);
-
-	void UpdateShadowShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList, SHADOW_INFO* pCameraInfo);
-	void UpdateShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList);
-	void SetMaterial(int nIndex, MATERIAL *pMaterial);
-	void BuildLightsAndMaterials();
-	virtual void ReleaseShaderVariables();
-	void CreateShaderVariables(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList);
-protected:
-	CTexture						*m_pTexture;
-private:
-	CPlayer						*m_pPlayer = NULL;
-	LIGHTS						*m_pLights = NULL;
-
-	ID3D12Resource				*m_pd3dcbLights = NULL;
-	LIGHTS						*m_pcbMappedLights = NULL;
-
-	ID3D12Resource				*m_pd3dcbMaterials = NULL;
-	MATERIALS					*m_pcbMappedMaterials = NULL;
-
-	ID3D12Resource				*m_pd3dcbShadow = NULL;
-	SHADOW_INFO		*m_pcbMappedShadow = NULL;
-
-	MATERIALS					*m_pMaterials = NULL;
-	int							m_nMaterials = 0;
-
-	ID3D12Resource* m_pd3dDepthStencilBuffer = NULL;
-	D3D12_GPU_DESCRIPTOR_HANDLE m_d3dShadowGPUDescriptorHandle;
-};
 class CShadowShader
 {
 public:
@@ -329,4 +285,37 @@ private:
 	XMFLOAT3 m_xmf3Lightdir = XMFLOAT3(0.57735f, -0.57735f, 0.57735f);
 
 	float m_fLightRotationAngle = 0.0f;
+};
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+class CEffectShader : public CShader
+{
+private:
+	CTexture * m_pTexture;
+public:
+	virtual D3D12_INPUT_LAYOUT_DESC CreateInputLayout();
+	virtual D3D12_SHADER_BYTECODE CreateVertexShader(ID3DBlob **ppd3dShaderBlob, bool bIsShadow);
+	virtual D3D12_SHADER_BYTECODE CreatePixelShader(ID3DBlob **ppd3dShaderBlob);
+	D3D12_DEPTH_STENCIL_DESC CreateDepthStencilState();
+	virtual void CreateShader(ID3D12Device *pd3dDevice, ID3D12RootSignature *pd3dGraphicsRootSignature, UINT nRenderTargets);
+	void BuildShader(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList);
+	void OnPrepareRender(ID3D12GraphicsCommandList *pd3dCommandList);
+	CEffectShader();
+	~CEffectShader();
+
+	D3D12_BLEND_DESC CreateBlendState();
+};
+class MeshEffectShader : public CEffectShader
+{
+public:
+	MeshEffectShader();
+	~MeshEffectShader();
+
+	virtual D3D12_INPUT_LAYOUT_DESC CreateInputLayout();
+	virtual D3D12_SHADER_BYTECODE CreateVertexShader(ID3DBlob **ppd3dShaderBlob, bool bIsShadow);
+	virtual D3D12_SHADER_BYTECODE CreatePixelShader(ID3DBlob **ppd3dShaderBlob);
+
+	void OnPrepareRender(ID3D12GraphicsCommandList *pd3dCommandList);
 };

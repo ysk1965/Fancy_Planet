@@ -14,8 +14,6 @@ CGameFramework::CGameFramework()
 	m_pdxgiSwapChain = NULL;
 	m_pd3dDevice = NULL;
 
-	for (int i = 0; i < m_nRenderTargetBuffers; i++)
-		m_ppd3dRenderTargetBuffers[i] = NULL;
 	for (int i = 0; i < m_nSwapChainBuffers; i++)
 		m_ppd3dSwapChainBackBuffers[i] = NULL;
 	m_nSwapChainBufferIndex = 0;
@@ -42,8 +40,6 @@ CGameFramework::CGameFramework()
 
 	m_nWndClientWidth = FRAME_BUFFER_WIDTH;
 	m_nWndClientHeight = FRAME_BUFFER_HEIGHT;
-
-	m_pComputeShader = new CComputShader(m_nWndClientWidth, m_nWndClientHeight);
 
 	m_ptOldCursorPos.x = m_nWndClientWidth / 2;
 	m_ptOldCursorPos.y = m_nWndClientHeight / 2;
@@ -121,11 +117,6 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 	m_hWnd = hMainWnd;
 
 	CreateDirect3DDevice();
-
-	m_pComputeShader->CreateComputeRootSignature(m_pd3dDevice);
-	m_pComputeShader->BuildPSO(m_pd3dDevice);
-	m_pComputeShader->BuildTextures(m_pd3dDevice);
-
 	CreateCommandQueueAndList();
 	CreateRtvAndDsvDescriptorHeaps();
 	CreateSwapChain();
@@ -288,7 +279,7 @@ void CGameFramework::CreateRtvAndDsvDescriptorHeaps()
 {
 	D3D12_DESCRIPTOR_HEAP_DESC d3dDescriptorHeapDesc;
 	::ZeroMemory(&d3dDescriptorHeapDesc, sizeof(D3D12_DESCRIPTOR_HEAP_DESC));
-	d3dDescriptorHeapDesc.NumDescriptors = m_nSwapChainBuffers + m_nRenderTargetBuffers;
+	d3dDescriptorHeapDesc.NumDescriptors = m_nSwapChainBuffers; // 이미시브 컬러를 위한 버퍼
 	d3dDescriptorHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
 	d3dDescriptorHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
 	d3dDescriptorHeapDesc.NodeMask = 0;
@@ -300,50 +291,6 @@ void CGameFramework::CreateRtvAndDsvDescriptorHeaps()
 	hResult = m_pd3dDevice->CreateDescriptorHeap(&d3dDescriptorHeapDesc, __uuidof(ID3D12DescriptorHeap), (void **)&m_pd3dDsvDescriptorHeap);
 	m_nDsvDescriptorIncrementSize = m_pd3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
 }
-
-void CGameFramework::CreateRenderTargetViews()
-{
-	CTexture *pTexture = new CTexture(m_nRenderTargetBuffers, RESOURCE_TEXTURE2D_ARRAY, 0);
-
-	D3D12_CLEAR_VALUE d3dClearValue = { DXGI_FORMAT_R8G8B8A8_UNORM,{ 0.0f, 0.0f, 0.0f, 1.0f } };
-	for (UINT i = 0; i < m_nRenderTargetBuffers; i++)
-	{
-		//버퍼를 만든다.
-		m_ppd3dRenderTargetBuffers[i] = pTexture->CreateTexture(m_pd3dDevice, m_nWndClientWidth, m_nWndClientHeight
-			, DXGI_FORMAT_R8G8B8A8_UNORM, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ, &d3dClearValue, i);
-		m_ppd3dRenderTargetBuffers[i]->AddRef();
-	}
-
-	D3D12_CPU_DESCRIPTOR_HANDLE d3dRtvCPUDescriptorHandle = m_pd3dRtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
-	d3dRtvCPUDescriptorHandle.ptr += (m_nSwapChainBuffers * m_nRtvDescriptorIncrementSize);
-
-	D3D12_RENDER_TARGET_VIEW_DESC d3dRenderTargetViewDesc;
-	d3dRenderTargetViewDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-	d3dRenderTargetViewDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
-	d3dRenderTargetViewDesc.Texture2D.MipSlice = 0;
-	d3dRenderTargetViewDesc.Texture2D.PlaneSlice = 0;
-
-	for (UINT i = 0; i < m_nRenderTargetBuffers; i++)
-	{
-		m_pd3dRtvRenderTargetBufferCPUHandles[i] = d3dRtvCPUDescriptorHandle;
-		m_pd3dDevice->CreateRenderTargetView(pTexture->GetTexture(i), &d3dRenderTargetViewDesc, m_pd3dRtvRenderTargetBufferCPUHandles[i]);
-		d3dRtvCPUDescriptorHandle.ptr += m_nRtvDescriptorIncrementSize;
-	}
-	m_pShadowShader = new CShadowShader(m_pd3dDevice, m_pd3dPreShadowCommandList, m_nWndClientWidth, m_nWndClientHeight);
-	m_pShadowShader->SetPlayer(m_pPlayer);
-
-	m_pScreenShader = new CTextureToFullScreenShader(m_pShadowShader->GetShadowMap());
-	m_pScreenShader->CreateGraphicsRootSignature(m_pd3dDevice);
-	m_pScreenShader->CreateShader(m_pd3dDevice, m_pScreenShader->GetGraphicsRootSignature(), 4);
-	m_pScreenShader->BuildObjects(m_pd3dDevice, m_pd3dScreenCommandList, m_pPlayer, pTexture);
-
-	m_pUIShader = new UIShader(m_pPlayer);
-	m_pUIShader->CreateGraphicsRootSignature(m_pd3dDevice);
-	m_pUIShader->CreateShader(m_pd3dDevice, 4);
-	m_pUIShader->BuildObjects(m_pd3dDevice, m_pd3dScreenCommandList);
-
-}
-
 
 void CGameFramework::CreateSwapChainRenderTargetViews()
 {
@@ -373,7 +320,7 @@ void CGameFramework::CreateDepthStencilView()
 	d3dResourceDesc.Height = m_nWndClientHeight;
 	d3dResourceDesc.DepthOrArraySize = 1;
 	d3dResourceDesc.MipLevels = 1;
-	d3dResourceDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+	d3dResourceDesc.Format = DXGI_FORMAT_R24G8_TYPELESS;
 	d3dResourceDesc.SampleDesc.Count = (m_bMsaa4xEnable) ? 4 : 1;
 	d3dResourceDesc.SampleDesc.Quality = (m_bMsaa4xEnable) ? (m_nMsaa4xQualityLevels - 1) : 0;
 	d3dResourceDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
@@ -404,6 +351,7 @@ void CGameFramework::CreateDepthStencilView()
 	m_d3dDsvDepthStencilBufferCPUHandle = m_pd3dDsvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
 
 	m_pd3dDevice->CreateDepthStencilView(m_pd3dDepthStencilBuffer, &d3dDepthStencilViewDesc, m_d3dDsvDepthStencilBufferCPUHandle);
+	
 }
 
 void CGameFramework::OnResizeBackBuffers()
@@ -413,11 +361,7 @@ void CGameFramework::OnResizeBackBuffers()
 	hResult = m_pd3dScreenCommandList->Reset(m_pd3dScreenCommandAllocator, NULL);
 	hResult = m_pd3dPreShadowCommandAllocator->Reset();
 	hResult = m_pd3dPreShadowCommandList->Reset(m_pd3dPreShadowCommandAllocator, NULL);
-
-	for (int i = 0; i < m_nRenderTargetBuffers; i++)
-		if (m_ppd3dRenderTargetBuffers[i])
-			m_ppd3dRenderTargetBuffers[i]->Release();
-
+	
 	for (int i = 0; i < m_nSwapChainBuffers; i++)
 		if (m_ppd3dSwapChainBackBuffers[i])
 			m_ppd3dSwapChainBackBuffers[i]->Release();
@@ -438,8 +382,8 @@ void CGameFramework::OnResizeBackBuffers()
 
 	CreateSwapChainRenderTargetViews();
 	CreateDepthStencilView();
-	CreateRenderTargetViews();
 
+	m_pComputeShader->BuildTextures(m_pd3dDevice, m_pd3dDepthStencilBuffer, m_nWndClientWidth, m_nWndClientHeight);
 	hResult = m_pd3dScreenCommandList->Close();
 	m_pd3dPreShadowCommandList->Close();
 
@@ -530,7 +474,7 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 			my_packet->size = sizeof(my_packet);
 			send_wsabuf.len = sizeof(my_packet);
 			my_packet->type = CS_READY;
-			my_packet->state = g_my_info.m_isready;
+			my_packet->state = g_my_info.m_isReady;
 			DWORD iobyte;
 			printf("packet : READY  \n");
 			if (g_my_info.m_scene == 0)//레디패킷은 로비일대만
@@ -564,70 +508,74 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 		}
 		case 'W':
 		{
-			g_player_info[g_myid].anim_state = ANIMATION_IDLE_STATE;
-			g_my_info.anim_state = ANIMATION_IDLE_STATE;
+			g_player_info[g_myid].anim_state = static_cast<int>(SOLDIER::ANIMATION_IDLE_STATE);
+			g_my_info.anim_state = static_cast<int>(SOLDIER::ANIMATION_IDLE_STATE);
 
 			cs_packet_pos *p = reinterpret_cast<cs_packet_pos *>(send_buffer);
 			p->size = sizeof(cs_packet_pos);
 			p->type = CS_POS;
 			p->id = g_myid;
-			p->keyInputState = ANIMATION_IDLE_STATE;
+			p->keyInputState = static_cast<int>(SOLDIER::ANIMATION_IDLE_STATE);
 			send_wsabuf.len = sizeof(cs_packet_pos);
 			send_wsabuf.buf = reinterpret_cast<char *>(p);
 			DWORD iobyte;
 			WSASend(g_mysocket, &send_wsabuf, 1, &iobyte, 0, NULL, NULL);
 			printf("키를 뗌 \n");
+			m_isMoveInput = false;
 			break;
 		}
 		case 'A':
 		{
-			g_player_info[g_myid].anim_state = ANIMATION_IDLE_STATE;
-			g_my_info.anim_state = ANIMATION_IDLE_STATE;
+			g_player_info[g_myid].anim_state = static_cast<int>(SOLDIER::ANIMATION_IDLE_STATE);
+			g_my_info.anim_state = static_cast<int>(SOLDIER::ANIMATION_IDLE_STATE);
 
 			cs_packet_pos *p = reinterpret_cast<cs_packet_pos *>(send_buffer);
 			p->size = sizeof(cs_packet_pos);
 			p->type = CS_POS;
 			p->id = g_myid;
-			p->keyInputState = ANIMATION_IDLE_STATE;
+			p->keyInputState = static_cast<int>(SOLDIER::ANIMATION_IDLE_STATE);
 			send_wsabuf.len = sizeof(cs_packet_pos);
 			send_wsabuf.buf = reinterpret_cast<char *>(p);
 			DWORD iobyte;
 			WSASend(g_mysocket, &send_wsabuf, 1, &iobyte, 0, NULL, NULL);
 			printf("키를 뗌 \n");
+			m_isMoveInput = false;
 			break;
 		}
 		case 'S':
 		{
-			g_player_info[g_myid].anim_state = ANIMATION_IDLE_STATE;
-			g_my_info.anim_state = ANIMATION_IDLE_STATE;
+			g_player_info[g_myid].anim_state = static_cast<int>(SOLDIER::ANIMATION_IDLE_STATE);
+			g_my_info.anim_state = static_cast<int>(SOLDIER::ANIMATION_IDLE_STATE);
 
 			cs_packet_pos *p = reinterpret_cast<cs_packet_pos *>(send_buffer);
 			p->size = sizeof(cs_packet_pos);
 			p->type = CS_POS;
 			p->id = g_myid;
-			p->keyInputState = ANIMATION_IDLE_STATE;
+			p->keyInputState = static_cast<int>(SOLDIER::ANIMATION_IDLE_STATE);
 			send_wsabuf.len = sizeof(cs_packet_pos);
 			send_wsabuf.buf = reinterpret_cast<char *>(p);
 			DWORD iobyte;
 			WSASend(g_mysocket, &send_wsabuf, 1, &iobyte, 0, NULL, NULL);
 			printf("키를 뗌 \n");
+			m_isMoveInput = false;
 			break;
 		}
 		case 'D':
 		{
-			g_player_info[g_myid].anim_state = ANIMATION_IDLE_STATE;
-			g_my_info.anim_state = ANIMATION_IDLE_STATE;
+			g_player_info[g_myid].anim_state = static_cast<int>(SOLDIER::ANIMATION_IDLE_STATE);
+			g_my_info.anim_state = static_cast<int>(SOLDIER::ANIMATION_IDLE_STATE);
 
 			cs_packet_pos *p = reinterpret_cast<cs_packet_pos *>(send_buffer);
 			p->size = sizeof(cs_packet_pos);
 			p->type = CS_POS;
 			p->id = g_myid;
-			p->keyInputState = ANIMATION_IDLE_STATE;
+			p->keyInputState = static_cast<int>(SOLDIER::ANIMATION_IDLE_STATE);
 			send_wsabuf.len = sizeof(cs_packet_pos);
 			send_wsabuf.buf = reinterpret_cast<char *>(p);
 			DWORD iobyte;
 			WSASend(g_mysocket, &send_wsabuf, 1, &iobyte, 0, NULL, NULL);
 			printf("키를 뗌 \n");
+			m_isMoveInput = false;
 			break;
 		}
 		}
@@ -639,6 +587,7 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 		break;
 	}
 }
+
 LRESULT CALLBACK CGameFramework::OnProcessingWindowMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
 {
 	switch (nMessageID)
@@ -685,9 +634,6 @@ void CGameFramework::OnDestroy()
 	if (m_pd3dDsvDescriptorHeap)
 		m_pd3dDsvDescriptorHeap->Release();
 
-	for (int i = 0; i < m_nRenderTargetBuffers; i++)
-		if (m_ppd3dRenderTargetBuffers[i])
-			m_ppd3dRenderTargetBuffers[i]->Release();
 	for (int i = 0; i < m_nSwapChainBuffers; i++)
 		if (m_ppd3dSwapChainBackBuffers[i])
 			m_ppd3dSwapChainBackBuffers[i]->Release();
@@ -725,6 +671,8 @@ void CGameFramework::OnDestroy()
 
 void CGameFramework::BuildObjects()
 {
+	m_nCharacterType =1;
+
 	ShowCursor(false);
 
 	HRESULT hResult;
@@ -734,19 +682,22 @@ void CGameFramework::BuildObjects()
 		hResult = m_ppd3dCommandAllocators[i]->Reset();
 		hResult = m_ppd3dCommandLists[i]->Reset(m_ppd3dCommandAllocators[i], NULL);
 	}
-
+	hResult = m_pd3dScreenCommandAllocator->Reset();
+	hResult = m_pd3dScreenCommandList->Reset(m_pd3dScreenCommandAllocator, NULL);
 	m_nDivision = 10;
+
+	BuildLightsAndMaterials();
+	CreateLightsAndMaterialsShaderVariables(m_pd3dDevice, m_pd3dScreenCommandList);
 
 	m_ppScenes = new CScene*[NUM_SUBSETS];
 
 	int i = 0;
 
 	TerrainAndSkyBoxScene *pTScene = new TerrainAndSkyBoxScene();
-	pTScene->BuildObjects(m_pd3dDevice, m_ppd3dCommandLists[i]);
 	m_ppScenes[i++] = pTScene;
 
-	UIScene *pUScene = new UIScene();
-	m_ppScenes[i++] = pUScene;
+	EffectScene *pEffectScene = new EffectScene();
+	m_ppScenes[i++] = pEffectScene;
 
 	CharacterScene *pCScene = new CharacterScene();
 	m_ppScenes[i++] = pCScene;
@@ -754,16 +705,38 @@ void CGameFramework::BuildObjects()
 	ObjectScene *pOScene = new ObjectScene();
 	m_ppScenes[i++] = pOScene;
 
-	m_ppScenes[TERRAIN]->m_pPlayer = m_pPlayer = new CPlayer(m_pd3dDevice, m_ppd3dCommandLists[2], m_ppScenes[0]->GetGraphicsRootSignature(), m_ppScenes[TERRAIN]->GetTerrain(), 0);
-	m_pPlayer->BuildObject(m_ppScenes[TERRAIN]->GetTerrain());
+	m_ppScenes[TERRAIN]->m_pPlayer = m_pPlayer = new CPlayer(m_pd3dDevice, m_ppd3dCommandLists[2], m_ppScenes[0]->GetGraphicsRootSignature(), 0);
+	m_pPlayer->BuildObject();
 	m_pPlayer->ChangeCamera(FIRST_PERSON_CAMERA, 0.0f);
 
+	m_pShadowShader = new CShadowShader(m_pd3dDevice, m_pd3dPreShadowCommandList, m_nWndClientWidth, m_nWndClientHeight);
+	m_pShadowShader->SetPlayer(m_pPlayer);
 
-	for (int j = PHYSX; j < NUM_SUBSETS; j++)
-	{
-		m_ppScenes[j]->m_pPlayer = m_pPlayer;
-		m_ppScenes[j]->BuildObjects(m_pd3dDevice, m_ppd3dCommandLists[j]);
-	}
+	m_pComputeShader = new CComputShader(m_pd3dDevice);
+	m_pComputeShader->CreateComputeRootSignature(m_pd3dDevice);
+	m_pComputeShader->BuildPSO(m_pd3dDevice);
+
+	m_pUIShader = new UIShader(m_pPlayer);
+	m_pUIShader->CreateGraphicsRootSignature(m_pd3dDevice);
+	m_pUIShader->CreateShader(m_pd3dDevice, 1);
+	m_pUIShader->BuildObjects(m_pd3dDevice, m_pd3dScreenCommandList);
+
+	pTScene->BuildObjects(m_pd3dDevice, m_ppd3dCommandLists[TERRAIN], m_pShadowShader->GetShadowMap(), m_nCharacterType);
+	pTScene->SetLightsAndMaterialsShaderVariables(m_pd3dcbLights, m_pd3dcbMaterials, m_pShadowShader->GetShadowMap());
+
+	m_ppScenes[OBJECT]->m_pPlayer = m_pPlayer;
+	m_ppScenes[OBJECT]->BuildObjects(m_pd3dDevice, m_ppd3dCommandLists[OBJECT], m_pShadowShader->GetShadowMap(), m_nCharacterType);
+	m_ppScenes[OBJECT]->SetLightsAndMaterialsShaderVariables(m_pd3dcbLights, m_pd3dcbMaterials, m_pShadowShader->GetShadowMap());
+
+	m_ppScenes[CHARACTER]->m_pPlayer = m_pPlayer;
+	m_ppScenes[CHARACTER]->BuildObjects(m_pd3dDevice, m_ppd3dCommandLists[CHARACTER], m_pShadowShader->GetShadowMap(), m_nCharacterType);
+	m_ppScenes[CHARACTER]->SetLightsAndMaterialsShaderVariables(m_pd3dcbLights, m_pd3dcbMaterials, m_pShadowShader->GetShadowMap());
+
+	m_ppScenes[EFFECT]->m_pPlayer = m_pPlayer;
+	m_ppScenes[EFFECT]->SetCharacter(m_ppScenes[CHARACTER]->GetCharatersNum(), m_ppScenes[CHARACTER]->GetSoldierObjects(), m_ppScenes[CHARACTER]->GetDroneObjects());
+	m_ppScenes[EFFECT]->BuildObjects(m_pd3dDevice, m_ppd3dCommandLists[EFFECT], m_pShadowShader->GetShadowMap(), m_nCharacterType);
+	m_ppScenes[EFFECT]->SetLightsAndMaterialsShaderVariables(m_pd3dcbLights, m_pd3dcbMaterials, m_pShadowShader->GetShadowMap());
+
 	m_pCamera = m_pPlayer->GetCamera();
 
 	m_ppbDivision = new bool*[m_nDivision];
@@ -780,9 +753,11 @@ void CGameFramework::BuildObjects()
 		hResult = m_ppd3dCommandLists[i]->Close();
 	}
 
-	ID3D12CommandList *ppd3dCommandLists[] = { m_ppd3dCommandLists[0],  m_ppd3dCommandLists[1],  m_ppd3dCommandLists[2], m_ppd3dCommandLists[3] };
+	hResult = m_pd3dScreenCommandList->Close();
 
-	m_pd3dCommandQueue->ExecuteCommandLists(NUM_SUBSETS, ppd3dCommandLists);
+	ID3D12CommandList *ppd3dCommandLists[] = { m_ppd3dCommandLists[0],  m_ppd3dCommandLists[1],  m_ppd3dCommandLists[2], m_ppd3dCommandLists[3], m_pd3dScreenCommandList };
+
+	m_pd3dCommandQueue->ExecuteCommandLists(NUM_SUBSETS + 1, ppd3dCommandLists);
 
 	WaitForGpuComplete();
 
@@ -794,6 +769,96 @@ void CGameFramework::BuildObjects()
 			m_ppScenes[i]->ReleaseUploadBuffers();
 
 	m_GameTimer.Reset();
+}
+void CGameFramework::BuildLightsAndMaterials()
+{
+	m_pLights = new LIGHTS;
+	::ZeroMemory(m_pLights, sizeof(LIGHTS));
+
+	m_pLights->m_xmf4GlobalAmbient = XMFLOAT4(0.1f, 0.1f, 0.1f, 1.0f);
+
+	m_pLights->m_pLights[0].m_bEnable = false;
+	m_pLights->m_pLights[0].m_nType = POINT_LIGHT;
+	m_pLights->m_pLights[0].m_fRange = 100.0f;
+	m_pLights->m_pLights[0].m_xmf4Ambient = XMFLOAT4(0.1f, 0.1f, 0.1f, 1.0f);
+	m_pLights->m_pLights[0].m_xmf4Diffuse = XMFLOAT4(0.8f, 0.8f, 0.8f, 1.0f);
+	m_pLights->m_pLights[0].m_xmf4Specular = XMFLOAT4(0.1f, 0.1f, 0.1f, 0.0f);
+	m_pLights->m_pLights[0].m_xmf3Position = XMFLOAT3(30.0f, 200.0f, 30.0f);
+	m_pLights->m_pLights[0].m_xmf3Direction = XMFLOAT3(0.0f, 0.0f, 0.0f);
+	m_pLights->m_pLights[0].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.001f, 0.0001f);
+
+	m_pLights->m_pLights[1].m_bEnable = false;
+	m_pLights->m_pLights[1].m_nType = SPOT_LIGHT;
+	m_pLights->m_pLights[1].m_fRange = 100.0f;
+	m_pLights->m_pLights[1].m_xmf4Ambient = XMFLOAT4(0.1f, 0.1f, 0.1f, 1.0f);
+	m_pLights->m_pLights[1].m_xmf4Diffuse = XMFLOAT4(0.35f, 0.35f, 0.35f, 1.0f);
+	m_pLights->m_pLights[1].m_xmf4Specular = XMFLOAT4(0.58f, 0.58f, 0.58f, 0.0f);
+	m_pLights->m_pLights[1].m_xmf3Position = XMFLOAT3(-50.0f, 20.0f, -5.0f);
+	m_pLights->m_pLights[1].m_xmf3Direction = XMFLOAT3(0.0f, 0.0f, 1.0f);
+	m_pLights->m_pLights[1].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.01f, 0.0001f);
+	m_pLights->m_pLights[1].m_fFalloff = 8.0f;
+	m_pLights->m_pLights[1].m_fPhi = (float)cos(XMConvertToRadians(40.0f));
+	m_pLights->m_pLights[1].m_fTheta = (float)cos(XMConvertToRadians(20.0f));
+
+	m_pLights->m_pLights[2].m_bEnable = true;
+	m_pLights->m_pLights[2].m_nType = DIRECTIONAL_LIGHT;
+	m_pLights->m_pLights[2].m_xmf4Ambient = XMFLOAT4(0.3f, 0.3f, 0.35f, 1.0f);
+	m_pLights->m_pLights[2].m_xmf4Diffuse = XMFLOAT4(0.5f, 0.5f, 0.5f, 1.0f);
+	m_pLights->m_pLights[2].m_xmf4Specular = XMFLOAT4(0.00002f, 0.00002f, 0.00002f, 1.0f);
+	m_pLights->m_pLights[2].m_xmf3Direction = XMFLOAT3(0.0f, -1.0f, 0.0f);
+
+	m_pLights->m_pLights[3].m_bEnable = false;
+	m_pLights->m_pLights[3].m_nType = SPOT_LIGHT;
+	m_pLights->m_pLights[3].m_fRange = 60.0f;
+	m_pLights->m_pLights[3].m_xmf4Ambient = XMFLOAT4(0.5f, 0.5f, 0.5f, 1.0f);
+	m_pLights->m_pLights[3].m_xmf4Diffuse = XMFLOAT4(0.5f, 0.5f, 0.5f, 1.0f);
+	m_pLights->m_pLights[3].m_xmf4Specular = XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
+	m_pLights->m_pLights[3].m_xmf3Position = XMFLOAT3(0.0f, 300.0f, 0.0f);
+	m_pLights->m_pLights[3].m_xmf3Direction = XMFLOAT3(0.0f, -1.0f, 0.0f);
+	m_pLights->m_pLights[3].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.01f, 0.0001f);
+	m_pLights->m_pLights[3].m_fFalloff = 8.0f;
+	m_pLights->m_pLights[3].m_fPhi = (float)cos(XMConvertToRadians(90.0f));
+	m_pLights->m_pLights[3].m_fTheta = (float)cos(XMConvertToRadians(0.0f));
+
+	m_pLights->m_pLights[4].m_bEnable = false;
+	m_pLights->m_pLights[4].m_nType = DIRECTIONAL_LIGHT;
+	m_pLights->m_pLights[4].m_xmf4Ambient = XMFLOAT4(0.25f, 0.25f, 0.25f, 1.0f);
+	m_pLights->m_pLights[4].m_xmf4Diffuse = XMFLOAT4(0.75f, 0.75f, 0.75f, 1.0f);
+	m_pLights->m_pLights[4].m_xmf4Specular = XMFLOAT4(0.3f, 0.3f, 0.3f, 1.0f);
+	m_pLights->m_pLights[4].m_xmf3Direction = XMFLOAT3(1.0f, 1.0f, 1.0f);
+
+	m_pMaterials = new MATERIALS;
+	::ZeroMemory(m_pMaterials, sizeof(MATERIALS));
+
+	m_pMaterials->m_pReflections[0] = { XMFLOAT4(0.2f, 0.2f, 0.2f, 1.0f), XMFLOAT4(0.2f, 0.2f, 0.2f, 1.0f), XMFLOAT4(0.2f, 0.2f, 0.2f, 1.0f), XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f) };
+	m_pMaterials->m_pReflections[1] = { XMFLOAT4(0.5f, 0.5f, 0.5f, 1.0f), XMFLOAT4(0.5f, 0.5f, 0.5f, 1.0f), XMFLOAT4(1.0f, 1.0f, 1.0f, 10.0f), XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f) };
+	m_pMaterials->m_pReflections[2] = { XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f), XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f), XMFLOAT4(1.0f, 1.0f, 1.0f, 15.0f), XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f) };
+	m_pMaterials->m_pReflections[3] = { XMFLOAT4(0.5f, 0.0f, 1.0f, 1.0f), XMFLOAT4(0.0f, 0.5f, 1.0f, 1.0f), XMFLOAT4(1.0f, 1.0f, 1.0f, 20.0f), XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f) };
+	m_pMaterials->m_pReflections[4] = { XMFLOAT4(0.0f, 0.5f, 1.0f, 1.0f), XMFLOAT4(0.5f, 0.0f, 1.0f, 1.0f), XMFLOAT4(1.0f, 1.0f, 1.0f, 25.0f), XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f) };
+	m_pMaterials->m_pReflections[5] = { XMFLOAT4(0.0f, 0.5f, 0.5f, 1.0f), XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f), XMFLOAT4(1.0f, 1.0f, 1.0f, 30.0f), XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f) };
+	m_pMaterials->m_pReflections[6] = { XMFLOAT4(0.5f, 0.5f, 1.0f, 1.0f), XMFLOAT4(0.5f, 0.5f, 1.0f, 1.0f), XMFLOAT4(1.0f, 1.0f, 1.0f, 35.0f), XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f) };
+	m_pMaterials->m_pReflections[7] = { XMFLOAT4(1.0f, 0.5f, 1.0f, 1.0f), XMFLOAT4(1.0f, 0.0f, 1.0f, 1.0f), XMFLOAT4(1.0f, 1.0f, 1.0f, 40.0f), XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f) };
+
+	m_nMaterials = 8; 
+}
+
+void CGameFramework::CreateLightsAndMaterialsShaderVariables(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList)
+{
+	UINT ncbElementBytes = ((sizeof(LIGHTS) + 255) & ~255); //256의 배수
+	m_pd3dcbLights = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
+
+	m_pd3dcbLights->Map(0, NULL, (void **)&m_pcbMappedLights);
+
+	UINT ncbMaterialBytes = ((sizeof(MATERIALS) + 255) & ~255); //256의 배수
+	m_pd3dcbMaterials = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbMaterialBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
+
+	m_pd3dcbMaterials->Map(0, NULL, (void **)&m_pcbMappedMaterials);
+}
+
+void CGameFramework::UpdateLightsAndMaterialsShaderVariables()
+{
+	::memcpy(m_pcbMappedLights, m_pLights, sizeof(LIGHTS));
+	::memcpy(m_pcbMappedMaterials, m_pMaterials, sizeof(MATERIALS));
 }
 
 void CGameFramework::ReleaseObjects()
@@ -809,50 +874,12 @@ void CGameFramework::ReleaseObjects()
 		for (int i = 0; i < NUM_SUBSETS; i++)
 			delete m_ppScenes[i];
 
-	if (m_pScreenShader)
-		m_pScreenShader->ReleaseObjects();
-
-	if (m_pScreenShader)
-		delete m_pScreenShader;
-
 	if (m_pUIShader)
 		m_pUIShader->ReleaseObjects();
 
 	if (m_pUIShader)
 		delete m_pUIShader;
 
-}
-void CGameFramework::CollisionCheckByBullet()
-{
-	if (m_pPlayer->GetBeAttackedState())
-	{
-		cs_packet_attacked * my_attacked_packet = reinterpret_cast<cs_packet_attacked *>(send_buffer);
-		my_attacked_packet->size = sizeof(cs_packet_attacked);
-		send_wsabuf.len = sizeof(cs_packet_attacked);
-		my_attacked_packet->type = CS_ATTACKED;
-
-		send_wsabuf.buf = reinterpret_cast<char *>(my_attacked_packet);
-
-		DWORD iobyte;
-		WSASend(g_mysocket, &send_wsabuf, 1, &iobyte, 0, NULL, NULL);
-		m_pPlayer->SetBeAttackedStateToFalse();
-	}
-	if (g_my_info.hp <= 0 && g_my_info.state != DIED)
-		if (g_my_info.hp <= 0 && g_my_info.state != DIED)
-		{
-			cs_packet_character_state * my_state_packet = reinterpret_cast<cs_packet_character_state *>(send_buffer);
-			my_state_packet->size = sizeof(cs_packet_character_state);
-			send_wsabuf.len = sizeof(cs_packet_character_state);
-			my_state_packet->type = CS_PLAYER_STATE_CHANGE;
-			my_state_packet->state = DIED;
-			g_my_info.state = DIED;
-			my_state_packet->id = g_myid;
-			g_player_info[g_myid].state = DIED;
-			send_wsabuf.buf = reinterpret_cast<char *>(my_state_packet);
-
-			DWORD iobyte;
-			WSASend(g_mysocket, &send_wsabuf, 1, &iobyte, 0, NULL, NULL);
-		}
 }
 void CGameFramework::NotifyIdleState()
 {
@@ -865,8 +892,9 @@ void CGameFramework::NotifyIdleState()
 		cs_packet_pos * my_pos_packet = reinterpret_cast<cs_packet_pos *>(send_buffer);
 		my_pos_packet->size = sizeof(cs_packet_pos);
 		send_wsabuf.len = sizeof(cs_packet_pos);
+		my_pos_packet->id = g_myid;
 		my_pos_packet->type = CS_POS;
-
+		my_pos_packet->keyInputState = 0;
 		send_wsabuf.buf = reinterpret_cast<char *>(my_pos_packet);
 		g_my_info.pos = GetPlayerMatrix();
 		DWORD iobyte;
@@ -875,67 +903,50 @@ void CGameFramework::NotifyIdleState()
 	}
 }
 
-void CGameFramework::SendBulletPacket(UINT nShell)
+void CGameFramework::SendBulletPacket()
 {
+	std::chrono::milliseconds ms;
 
+	ms = std::chrono::duration_cast<std::chrono::milliseconds>(chrono::system_clock::now() - m_bulletstart);
 
+	if (g_my_info.anim_state == 0 && ms.count() > 500 && g_my_info.state != DIED)
+	{
+		if (m_nCharacterType == 0)
+		{
+			m_ppScenes[CHARACTER]->ChangeAnimation(static_cast<int>(SOLDIER::ANIMATION_SHOT), m_nCharacterType);
+		}
+		else if (m_nCharacterType == 1)
+		{
+			m_ppScenes[CHARACTER]->ChangeAnimation(static_cast<int>(DRONE::ANIMATION_SHOT), m_nCharacterType);
+		}
 
-	DWORD iobyte;
-	WSASend(g_mysocket, &send_wsabuf, 1, &iobyte, 0, NULL, NULL);
+		g_player_info[g_myid].anim_state = static_cast<int>(SOLDIER::ANIMATION_SHOT);
+		g_my_info.anim_state = static_cast<int>(SOLDIER::ANIMATION_SHOT);
+
+		cs_packet_shot * my_pos_packet = reinterpret_cast<cs_packet_shot *>(send_buffer);
+		my_pos_packet->size = sizeof(cs_packet_shot);
+		send_wsabuf.len = sizeof(cs_packet_shot);
+		my_pos_packet->id = g_myid;
+		my_pos_packet->type = CS_SHOT;
+		my_pos_packet->m_xmf3CameraLookAt = m_pCamera->GetLookVector();
+		send_wsabuf.buf = reinterpret_cast<char *>(my_pos_packet);
+		DWORD iobyte;
+		WSASend(g_mysocket, &send_wsabuf, 1, &iobyte, 0, NULL, NULL);
+
+		m_bulletstart = chrono::system_clock::now();
+	}
 }
-
-
 
 void CGameFramework::ProcessInput()
 {
 	static UCHAR pKeysBuffer[256];
 	static bool bJumpState = false;
 	bool bProcessedByScene = false;
-	bool IsInput = false;
+
 	bool bPlayerKeySwitch = m_pPlayer->GetKeySwitch();
 
 	std::chrono::milliseconds ms;
 	ms = std::chrono::duration_cast<std::chrono::milliseconds>(chrono::system_clock::now() - start);
-
-
-
-	for (int i = 0; i < FLAGE_NUM; i++)
-	{
-
-		if (m_pPlayer->GetFlag(i) && g_my_info.state != DIED)
-		{
-			switch (i)
-			{
-			case JUMP:
-			{
-				break;
-			}
-			case LAUNCH:
-			{
-				if ((GetTickCount() - m_pPlayer->GetStartTime(LAUNCH)) > (DWORD)580 &&
-					m_pPlayer->GetRenderObject()->m_pAnimationTime->m_iState == 4)
-				{
-					POINT ptCursorPos;
-					GetCursorPos(&ptCursorPos);
-					m_pPlayer->SetMousPos(ptCursorPos.x, ptCursorPos.y);
-
-					CalculatePickRay(m_pPlayer->GetMousPos());
-
-					UINT nShell = 0;
-					nShell = m_ppScenes[OBJECT]->SetProjectile(xmf3PickDirection);
-					m_pPlayer->SetFlag(LAUNCH, false);
-
-					SendBulletPacket(nShell);
-				}
-				break;
-			}
-			case ETC:
-			{
-				break;
-			}
-			}
-		}
-	}
 
 	if (bPlayerKeySwitch&&g_my_info.state != DIED)
 	{
@@ -946,102 +957,237 @@ void CGameFramework::ProcessInput()
 		{
 
 			DWORD dwDirection = 0;
-			if (m_pPlayer->GetRenderObject()->m_pAnimationTime->m_iState != 4)
+			if (m_pPlayer->GetRenderObject()->m_pAnimationTime->m_iState != static_cast<int>(SOLDIER::ANIMATION_SHOT))
 			{
-				if (pKeysBuffer[87] & 0xF0)
+				if (pKeysBuffer[87] & 0xF0)// && m_isMoveInput == false)
 				{
 
 					dwDirection |= DIR_FORWARD;
-					g_player_info[g_myid].anim_state = ANIMATION_MOVE_FORWARD;
-					g_my_info.anim_state = ANIMATION_MOVE_FORWARD;
+
+					if (m_nCharacterType == 0)
+					{
+						g_player_info[g_myid].anim_state = static_cast<int>(SOLDIER::ANIMATION_MOVE_FORWARD);
+						g_my_info.anim_state = static_cast<int>(SOLDIER::ANIMATION_MOVE_FORWARD);
+					}
+					else if (m_nCharacterType == 1)
+					{
+						g_player_info[g_myid].anim_state = static_cast<int>(DRONE::ANIMATION_MOVE);
+						g_my_info.anim_state = static_cast<int>(DRONE::ANIMATION_MOVE);
+					}
 
 					cs_packet_pos *p = reinterpret_cast<cs_packet_pos *>(send_buffer);
 					p->size = sizeof(cs_packet_pos);
 					p->type = CS_POS;
 					p->id = g_myid;
-					p->keyInputState = ANIMATION_MOVE_FORWARD;
+
+					if (m_nCharacterType == 0)
+					{
+						p->keyInputState = static_cast<int>(SOLDIER::ANIMATION_MOVE_FORWARD);
+					}
+					else if (m_nCharacterType == 1)
+					{
+						p->keyInputState = static_cast<int>(DRONE::ANIMATION_MOVE);
+					}
 					send_wsabuf.len = sizeof(cs_packet_pos);
 					send_wsabuf.buf = reinterpret_cast<char *>(p);
 					DWORD iobyte;
 					WSASend(g_mysocket, &send_wsabuf, 1, &iobyte, 0, NULL, NULL);
-					/*if (!m_pPlayer->GetJumpState())
+					if (!m_pPlayer->GetJumpState())
 					{
-					m_ppScenes[CHARACTER]->ChangeAnimation(ANIMATION_MOVE_FORWARD);
-					IsInput = true;
-					}*/
-					printf("이동 패킷 전송 [%d] \n", p->id);
+						if (m_nCharacterType == 0)
+						{
+							m_ppScenes[CHARACTER]->ChangeAnimation(static_cast<int>(SOLDIER::ANIMATION_MOVE_FORWARD), m_nCharacterType);
+						}
+						else if (m_nCharacterType == 1)
+						{
+							m_ppScenes[CHARACTER]->ChangeAnimation(static_cast<int>(DRONE::ANIMATION_MOVE), m_nCharacterType);
+						}
+					}
+					//printf("이동 패킷 전송 [%d] \n", p->id);
+					m_isMoveInput = true;
 					keystate = true;
 				}
-				else if (pKeysBuffer[83] & 0xF0)
+				else if (pKeysBuffer[83] & 0xF0)//&& !m_isMoveInput)
 				{
 					dwDirection |= DIR_BACKWARD;
-					g_player_info[g_myid].anim_state = ANIMATION_MOVE_BACKWARD;
-					g_my_info.anim_state = ANIMATION_MOVE_BACKWARD;
+
+					if (m_nCharacterType == 0)
+					{
+						g_player_info[g_myid].anim_state = static_cast<int>(SOLDIER::ANIMATION_MOVE_BACKWARD);
+						g_my_info.anim_state = static_cast<int>(SOLDIER::ANIMATION_MOVE_BACKWARD);
+					}
+					else if (m_nCharacterType == 1)
+					{
+						g_player_info[g_myid].anim_state = static_cast<int>(DRONE::ANIMATION_MOVE);
+						g_my_info.anim_state = static_cast<int>(DRONE::ANIMATION_MOVE);
+					}
+					cs_packet_pos *p = reinterpret_cast<cs_packet_pos *>(send_buffer);
+					p->size = sizeof(cs_packet_pos);
+					p->type = CS_POS;
+					p->id = g_myid;
+
+					if (m_nCharacterType == 0)
+					{
+						p->keyInputState = static_cast<int>(SOLDIER::ANIMATION_MOVE_BACKWARD);
+					}
+					else if (m_nCharacterType == 1)
+					{
+						p->keyInputState = static_cast<int>(DRONE::ANIMATION_MOVE);
+					}
+					send_wsabuf.len = sizeof(cs_packet_pos);
+					send_wsabuf.buf = reinterpret_cast<char *>(p);
+					DWORD iobyte;
+					WSASend(g_mysocket, &send_wsabuf, 1, &iobyte, 0, NULL, NULL);
+					if (!m_pPlayer->GetJumpState())
+					{
+						if (m_nCharacterType == 0)
+						{
+							m_ppScenes[CHARACTER]->ChangeAnimation(static_cast<int>(SOLDIER::ANIMATION_MOVE_BACKWARD), m_nCharacterType);
+						}
+						else if (m_nCharacterType == 1)
+						{
+							m_ppScenes[CHARACTER]->ChangeAnimation(static_cast<int>(DRONE::ANIMATION_MOVE), m_nCharacterType);
+						}
+					}
+					m_isMoveInput = true;
+					keystate = true;
+				}
+				else if (pKeysBuffer[65] & 0xF0)//&&!m_isMoveInput)
+				{
+					dwDirection |= DIR_LEFT;
+					if (m_nCharacterType == 0)
+					{
+						g_player_info[g_myid].anim_state = static_cast<int>(SOLDIER::ANIMATION_MOVE_LEFT);
+						g_my_info.anim_state = static_cast<int>(SOLDIER::ANIMATION_MOVE_LEFT);
+					}
+					else if (m_nCharacterType == 1)
+					{
+						g_player_info[g_myid].anim_state = static_cast<int>(DRONE::ANIMATION_MOVE_LEFT);
+						g_my_info.anim_state = static_cast<int>(DRONE::ANIMATION_MOVE_LEFT);
+					}
 
 					cs_packet_pos *p = reinterpret_cast<cs_packet_pos *>(send_buffer);
 					p->size = sizeof(cs_packet_pos);
 					p->type = CS_POS;
 					p->id = g_myid;
-					p->keyInputState = ANIMATION_MOVE_BACKWARD;
+
+					if (m_nCharacterType == 0)
+					{
+						p->keyInputState = static_cast<int>(SOLDIER::ANIMATION_MOVE_LEFT);
+					}
+					else if (m_nCharacterType == 1)
+					{
+						p->keyInputState = static_cast<int>(DRONE::ANIMATION_MOVE_LEFT);
+					}
+
 					send_wsabuf.len = sizeof(cs_packet_pos);
 					send_wsabuf.buf = reinterpret_cast<char *>(p);
 					DWORD iobyte;
 					WSASend(g_mysocket, &send_wsabuf, 1, &iobyte, 0, NULL, NULL);
-					printf("이동 패킷 전송 \n");
+					if (!m_pPlayer->GetJumpState())
+					{
+						if (m_nCharacterType == 0)
+						{
+							m_ppScenes[CHARACTER]->ChangeAnimation(static_cast<int>(SOLDIER::ANIMATION_MOVE_LEFT), m_nCharacterType);
+						}
+						else if (m_nCharacterType == 1)
+						{
+							m_ppScenes[CHARACTER]->ChangeAnimation(static_cast<int>(DRONE::ANIMATION_MOVE_LEFT), m_nCharacterType);
+						}
+					}
+					m_isMoveInput = true;
 					keystate = true;
 				}
-				else if (pKeysBuffer[65] & 0xF0)
-				{
-					dwDirection |= DIR_LEFT;
-					g_player_info[g_myid].anim_state = ANIMATION_MOVE_LEFT;
-					g_my_info.anim_state = ANIMATION_MOVE_LEFT;
-					cs_packet_pos *p = reinterpret_cast<cs_packet_pos *>(send_buffer);
-					p->size = sizeof(cs_packet_pos);
-					p->type = CS_POS;
-					p->id = g_myid;
-					p->keyInputState = ANIMATION_MOVE_LEFT;
-					send_wsabuf.len = sizeof(cs_packet_pos);
-					send_wsabuf.buf = reinterpret_cast<char *>(p);
-					DWORD iobyte;
-					WSASend(g_mysocket, &send_wsabuf, 1, &iobyte, 0, NULL, NULL);
-					printf("이동 패킷 전송 \n");
-					keystate = true;
-				}
-				else if (pKeysBuffer[68] & 0xF0)
+				else if (pKeysBuffer[68] & 0xF0)//&&!m_isMoveInput)
 				{
 					dwDirection |= DIR_RIGHT;
-					g_player_info[g_myid].anim_state = ANIMATION_MOVE_RIGHT;
-					g_my_info.anim_state = ANIMATION_MOVE_RIGHT;
+
+					if (m_nCharacterType == 0)
+					{
+						g_player_info[g_myid].anim_state = static_cast<int>(SOLDIER::ANIMATION_MOVE_RIGHT);
+						g_my_info.anim_state = static_cast<int>(SOLDIER::ANIMATION_MOVE_RIGHT);
+					}
+					else if (m_nCharacterType == 1)
+					{
+						g_player_info[g_myid].anim_state = static_cast<int>(DRONE::ANIMATION_MOVE_RIGHT);
+						g_my_info.anim_state = static_cast<int>(DRONE::ANIMATION_MOVE_RIGHT);
+					}
+
 					cs_packet_pos *p = reinterpret_cast<cs_packet_pos *>(send_buffer);
 					p->size = sizeof(cs_packet_pos);
 					p->type = CS_POS;
 					p->id = g_myid;
-					p->keyInputState = ANIMATION_MOVE_RIGHT;
+					if (m_nCharacterType == 0)
+					{
+						p->keyInputState = static_cast<int>(SOLDIER::ANIMATION_MOVE_RIGHT);
+					}
+					else if (m_nCharacterType == 1)
+					{
+						p->keyInputState = static_cast<int>(DRONE::ANIMATION_MOVE_RIGHT);
+					}
 					send_wsabuf.len = sizeof(cs_packet_pos);
 					send_wsabuf.buf = reinterpret_cast<char *>(p);
 					DWORD iobyte;
 					WSASend(g_mysocket, &send_wsabuf, 1, &iobyte, 0, NULL, NULL);
-					printf("이동 패킷 전송 \n");
+					if (!m_pPlayer->GetJumpState())
+					{
+						if (m_nCharacterType == 0)
+						{
+							m_ppScenes[CHARACTER]->ChangeAnimation(static_cast<int>(SOLDIER::ANIMATION_MOVE_RIGHT), m_nCharacterType);
+						}
+						else if (m_nCharacterType == 1)
+						{
+							m_ppScenes[CHARACTER]->ChangeAnimation(static_cast<int>(DRONE::ANIMATION_MOVE_RIGHT), m_nCharacterType);
+						}
+					}
+					m_isMoveInput = true;
 					keystate = true;
 				}
 				if (pKeysBuffer[VK_NEXT] & 0xF0)
 				{
 					dwDirection |= DIR_DOWN;
-					IsInput = true;
+					//IsInput = true;
 					keystate = true;
 				}
 				if (pKeysBuffer[VK_SPACE] & 0xF0) // jump
 				{
-
-					IsInput = true;
+					cs_packet_jump *p = reinterpret_cast<cs_packet_jump *>(send_buffer);
+					p->size = sizeof(cs_packet_jump);
+					p->type = CS_JUMP;
+					p->id = g_myid;
+					send_wsabuf.len = sizeof(cs_packet_jump);
+					send_wsabuf.buf = reinterpret_cast<char *>(p);
+					DWORD iobyte;
+					WSASend(g_mysocket, &send_wsabuf, 1, &iobyte, 0, NULL, NULL);
+					if (!m_pPlayer->GetJumpState())
+					{
+						if (m_nCharacterType == 0)
+						{
+							g_player_info[g_myid].anim_state = static_cast<int>(SOLDIER::ANIMATION_MOVE_JUMP);
+							g_my_info.anim_state = static_cast<int>(SOLDIER::ANIMATION_MOVE_JUMP);
+							m_ppScenes[CHARACTER]->ChangeAnimation(static_cast<int>(SOLDIER::ANIMATION_MOVE_JUMP), m_nCharacterType);
+						}
+						else if (m_nCharacterType == 1)
+						{
+							g_player_info[g_myid].anim_state = static_cast<int>(DRONE::ANIMATION_MOVE);
+							g_my_info.anim_state = static_cast<int>(DRONE::ANIMATION_MOVE);
+							m_ppScenes[CHARACTER]->ChangeAnimation(static_cast<int>(DRONE::ANIMATION_MOVE), m_nCharacterType);
+						}
+					}
 					keystate = true;
 
 				}
 				if (pKeysBuffer[VK_LSHIFT] & 0xF0)
 				{
+					if (m_nCharacterType == 0)
+					{
+						m_ppScenes[CHARACTER]->ChangeAnimation(static_cast<int>(SOLDIER::ANIMATION_SKILL), m_nCharacterType);
+					}
+					else if (m_nCharacterType == 1)
+					{
+						m_ppScenes[CHARACTER]->ChangeAnimation(static_cast<int>(DRONE::ANIMATION_SKILL), m_nCharacterType);
+					}
 
-					m_ppScenes[CHARACTER]->ChangeAnimation(ANIMATION_MOVE_DANCE);
-					IsInput = true;
 					keystate = true;
 				}
 			}
@@ -1051,24 +1197,12 @@ void CGameFramework::ProcessInput()
 			{
 				GetCursorPos(&ptCursorPos);
 				if (GetCapture() == m_hWnd
-					&& (m_pPlayer->GetRenderObject()->m_pAnimationTime->m_iState != 4))
+					&& (m_pPlayer->GetRenderObject()->m_pAnimationTime->m_iState != static_cast<int>(SOLDIER::ANIMATION_SHOT)))
 				{
-					m_ppScenes[CHARACTER]->ChangeAnimation(4);
-					g_player_info[g_myid].anim_state = 4;
-					g_my_info.anim_state = 4;
-					cs_packet_pos * my_pos_packet = reinterpret_cast<cs_packet_pos *>(send_buffer);
-					my_pos_packet->size = sizeof(cs_packet_pos);
-					send_wsabuf.len = sizeof(cs_packet_pos);
-					my_pos_packet->type = CS_POS;
-
-					send_wsabuf.buf = reinterpret_cast<char *>(my_pos_packet);
-					g_my_info.pos = GetPlayerMatrix();
-					DWORD iobyte;
-					WSASend(g_mysocket, &send_wsabuf, 1, &iobyte, 0, NULL, NULL);
-					keystate = false;
-
 					m_pPlayer->SetStartTime(GetTickCount(), LAUNCH);
 					m_pPlayer->SetFlag(LAUNCH, true);
+					m_ppScenes[1]->SetParticle(0, m_nCharacterType);
+					SendBulletPacket();
 				}
 
 				cxDelta = (float)(ptCursorPos.x - m_ptOldCursorPos.x) / 3.0f;
@@ -1100,30 +1234,57 @@ void CGameFramework::ProcessInput()
 			}
 		}
 	}
-	if (!IsInput)//키가 눌리지 않았을때?
+	if (!m_isMoveInput)//키가 눌리지 않았을때?
 	{
 		if (g_my_info.state != DIED)
 		{
 			if (!m_pPlayer->GetJumpState())//키가 안눌려있고 죽지도않고 점프상태도아니다.
 			{
-				g_player_info[g_myid].anim_state = ANIMATION_IDLE_STATE;
-				g_my_info.anim_state = ANIMATION_IDLE_STATE;
-				m_ppScenes[CHARACTER]->ChangeAnimation(ANIMATION_IDLE_STATE);
 				NotifyIdleState();
 
+				if (m_nCharacterType == 0)
+				{
+					g_player_info[g_myid].anim_state = static_cast<int>(SOLDIER::ANIMATION_IDLE_STATE);
+					g_my_info.anim_state = static_cast<int>(SOLDIER::ANIMATION_IDLE_STATE);
+					m_ppScenes[CHARACTER]->ChangeAnimation(static_cast<int>(SOLDIER::ANIMATION_IDLE_STATE), m_nCharacterType);
+				}
+				else if (m_nCharacterType == 1)
+				{
+					g_player_info[g_myid].anim_state = static_cast<int>(DRONE::ANIMATION_IDLE_STATE);
+					g_my_info.anim_state = static_cast<int>(DRONE::ANIMATION_IDLE_STATE);
+					m_ppScenes[CHARACTER]->ChangeAnimation(static_cast<int>(DRONE::ANIMATION_IDLE_STATE), m_nCharacterType);
+				}
 			}
 			else//키가 안눌려있고 점프상태면 점프하는동안 계속 보내줘야함
 			{
-				g_player_info[g_myid].anim_state = ANIMATION_MOVE_JUMP;
-				g_my_info.anim_state = ANIMATION_MOVE_JUMP;
-				m_ppScenes[CHARACTER]->ChangeAnimation(ANIMATION_MOVE_JUMP);
+				if (m_nCharacterType == 0)
+				{
+					g_player_info[g_myid].anim_state = static_cast<int>(SOLDIER::ANIMATION_MOVE_JUMP);
+					g_my_info.anim_state = static_cast<int>(SOLDIER::ANIMATION_MOVE_JUMP);
+					m_ppScenes[CHARACTER]->ChangeAnimation(static_cast<int>(SOLDIER::ANIMATION_MOVE_JUMP), m_nCharacterType);
+				}
+				else if (m_nCharacterType == 1)
+				{
+					g_player_info[g_myid].anim_state = static_cast<int>(DRONE::ANIMATION_MOVE);
+					g_my_info.anim_state = static_cast<int>(DRONE::ANIMATION_MOVE);
+					m_ppScenes[CHARACTER]->ChangeAnimation(static_cast<int>(DRONE::ANIMATION_MOVE), m_nCharacterType);
+				}
 			}
 		}
 		else//죽었으면 쓰러지는 애니메이션
 		{
-			g_player_info[g_myid].anim_state = ANIMATION_DIED;
-			g_my_info.anim_state = ANIMATION_DIED;
-			m_ppScenes[CHARACTER]->ChangeAnimation(ANIMATION_DIED);
+			if (m_nCharacterType == 0)
+			{
+				g_player_info[g_myid].anim_state = static_cast<int>(SOLDIER::ANIMATION_DIED);
+				g_my_info.anim_state = static_cast<int>(SOLDIER::ANIMATION_DIED);
+				m_ppScenes[CHARACTER]->ChangeAnimation(static_cast<int>(SOLDIER::ANIMATION_DIED), m_nCharacterType);
+			}
+			else if (m_nCharacterType == 1)
+			{
+				g_player_info[g_myid].anim_state = static_cast<int>(DRONE::ANIMATION_DIED);
+				g_my_info.anim_state = static_cast<int>(DRONE::ANIMATION_DIED);
+				m_ppScenes[CHARACTER]->ChangeAnimation(static_cast<int>(DRONE::ANIMATION_DIED), m_nCharacterType);
+			}
 		}
 	}
 
@@ -1140,7 +1301,7 @@ void CGameFramework::ProcessInput()
 			my_pos_packet->size = sizeof(cs_packet_pos);
 			send_wsabuf.len = sizeof(cs_packet_pos);
 			my_pos_packet->type = CS_POS;
-			my_pos_packet->keyInputState = ANIMATION_MOVE_JUMP;
+			my_pos_packet->keyInputState = static_cast<int>(SOLDIER::ANIMATION_MOVE_JUMP);
 			send_wsabuf.buf = reinterpret_cast<char *>(my_pos_packet);
 			g_my_info.pos = GetPlayerMatrix();
 			DWORD iobyte;
@@ -1151,7 +1312,7 @@ void CGameFramework::ProcessInput()
 	m_pPlayer->Update(m_GameTimer.GetTimeElapsed());
 	//m_pPlayer->SetWorldPosition(XMFLOAT3(g_my_info.pos._41, g_my_info.pos._42, g_my_info.pos._43));
 
-	m_ppScenes[CHARACTER]->ChangeAnimation(g_my_info.anim_state);
+	m_ppScenes[CHARACTER]->ChangeAnimation(g_my_info.anim_state, m_nCharacterType);
 }
 void CGameFramework::CalculatePickRay(const XMFLOAT2& xmf2MousePos)
 {
@@ -1175,6 +1336,8 @@ void CGameFramework::AnimateObjects()
 	float fTimeElapsed = m_GameTimer.GetTimeElapsed();
 	if (m_pPlayer)
 		m_pPlayer->Animate(fTimeElapsed);
+
+	m_ppScenes[OBJECT]->AnimateObjects(fTimeElapsed, NULL);
 }
 
 void CGameFramework::SpaceDivision()
@@ -1228,11 +1391,9 @@ void CGameFramework::RenderSubset(int iIndex)
 
 		m_ppd3dCommandLists[iIndex]->RSSetViewports(1, m_pCamera->GetViewport());
 		m_ppd3dCommandLists[iIndex]->RSSetScissorRects(1, m_pCamera->GetScissorRect());
-		m_ppd3dCommandLists[iIndex]->OMSetRenderTargets(4, m_pd3dRtvRenderTargetBufferCPUHandles, TRUE, &m_d3dDsvDepthStencilBufferCPUHandle);
+		m_ppd3dCommandLists[iIndex]->OMSetRenderTargets(1, &m_pd3dRtvSwapChainBackBufferCPUHandles[m_nSwapChainBufferIndex], TRUE, &m_d3dDsvDepthStencilBufferCPUHandle);
 
 		m_ppScenes[iIndex]->Render(m_ppd3dCommandLists[iIndex], m_pCamera);
-
-		m_ppd3dCommandLists[iIndex]->Close();
 
 		SetEvent(m_workerFinishedRenderFrame[iIndex]);
 	}
@@ -1265,40 +1426,28 @@ void CGameFramework::PrepareFrame()
 
 	m_pShadowShader->SwapResource(m_pd3dScreenCommandList, false);
 
-	for (int i = 0; i < NUM_SUBSETS; i++)
-	{
-		::SynchronizeResourceTransition(m_pd3dScreenCommandList, m_ppd3dRenderTargetBuffers[i], D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_RENDER_TARGET);
-	}
-	for (int i = 0; i < NUM_SUBSETS; i++)
-	{
-		m_pd3dScreenCommandList->ClearRenderTargetView(m_pd3dRtvRenderTargetBufferCPUHandles[i], pfClearColor, 0, NULL);
-	}
+	::SynchronizeResourceTransition(m_pd3dScreenCommandList, m_ppd3dSwapChainBackBuffers[m_nSwapChainBufferIndex], D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+	
+	m_pd3dScreenCommandList->ClearRenderTargetView(m_pd3dRtvSwapChainBackBufferCPUHandles[m_nSwapChainBufferIndex], pfClearColor, 0, NULL);
+	
 	m_pd3dScreenCommandList->ClearDepthStencilView(m_d3dDsvDepthStencilBufferCPUHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, NULL);
-	m_ppd3dCommandLists[0]->OMSetRenderTargets(4, m_pd3dRtvRenderTargetBufferCPUHandles, TRUE, &m_d3dDsvDepthStencilBufferCPUHandle);
-	m_ppd3dCommandLists[1]->OMSetRenderTargets(4, m_pd3dRtvRenderTargetBufferCPUHandles, TRUE, &m_d3dDsvDepthStencilBufferCPUHandle);
-	m_ppd3dCommandLists[2]->OMSetRenderTargets(4, m_pd3dRtvRenderTargetBufferCPUHandles, TRUE, &m_d3dDsvDepthStencilBufferCPUHandle);
-	m_ppd3dCommandLists[3]->OMSetRenderTargets(4, m_pd3dRtvRenderTargetBufferCPUHandles, TRUE, &m_d3dDsvDepthStencilBufferCPUHandle);
-
+	
 	m_pShadowShader->UpdateTransform();
 }
 
 void CGameFramework::FrameAdvance()
 {
-	m_ppScenes[PHYSX]->AnimateObjects(0, m_pCamera);
-	m_ppScenes[OBJECT]->AnimateObjects(0, m_pCamera);
-
 	m_GameTimer.Tick(0.0f);
 	ProcessInput();
-	AnimateObjects();
+	AnimateObjects(); 
+	UpdateLightsAndMaterialsShaderVariables();
 	PrepareFrame();
-	SpaceDivision();
 
 	m_pUIShader->SetAndCalculateScoreLocation(60 - g_fgametime);
-	m_pUIShader->SetAndCalculateHPLocation(g_my_info.hp);
+	m_pUIShader->SetAndCalculateHPLocation(g_my_info.m_iHP);
 
-	m_ppScenes[CHARACTER]->ModelsSetPosition(g_player_info, g_myid);
-	CollisionCheckByBullet();//총알충돌체크
-
+	m_ppScenes[CHARACTER]->ModelsSetPosition(g_player_info, g_myid, m_nCharacterType);
+	
 	for (int i = 0; i < NUM_SUBSETS; i++)
 	{
 		SetEvent(m_workerBeginRenderFrame[i]);
@@ -1307,51 +1456,30 @@ void CGameFramework::FrameAdvance()
 	WaitForMultipleObjects(NUM_SUBSETS, m_workerFinishShadowPass, TRUE, INFINITE);
 
 	ID3D12CommandList *ppd3dCommandLists1[] = { m_pd3dPreShadowCommandList
-		, m_ppd3dShadowCommandLists[0],  m_ppd3dShadowCommandLists[1]
-		,  m_ppd3dShadowCommandLists[2], m_ppd3dShadowCommandLists[3] };
+		, m_ppd3dShadowCommandLists[0], m_ppd3dShadowCommandLists[EFFECT],  m_ppd3dShadowCommandLists[2], m_ppd3dShadowCommandLists[3] };
 
 	m_pd3dCommandQueue->ExecuteCommandLists(NUM_SUBSETS + 1, ppd3dCommandLists1);
 
 	WaitForMultipleObjects(NUM_SUBSETS, m_workerFinishedRenderFrame, TRUE, INFINITE);
 
+	::SynchronizeResourceTransition(m_ppd3dCommandLists[1], m_ppd3dSwapChainBackBuffers[m_nSwapChainBufferIndex], D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_COPY_SOURCE);
+	::SynchronizeResourceTransition(m_ppd3dCommandLists[1], m_pd3dDepthStencilBuffer, D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_GENERIC_READ);
+	
+	for (int i = 0; i < NUM_SUBSETS; i++)
+	{
+		m_ppd3dCommandLists[i]->Close();
+	}
+
 	ID3D12CommandList *ppd3dCommandLists2[] = { m_pd3dScreenCommandList
-		, m_ppd3dCommandLists[0],  m_ppd3dCommandLists[1]
-		,  m_ppd3dCommandLists[2], m_ppd3dCommandLists[3] };
+		, m_ppd3dCommandLists[0]
+		,  m_ppd3dCommandLists[2], m_ppd3dCommandLists[3],  m_ppd3dCommandLists[1] };
 
 	HRESULT hResult = m_pd3dScreenCommandList->Close();
 
 	m_pd3dCommandQueue->ExecuteCommandLists(NUM_SUBSETS + 1, ppd3dCommandLists2);
 
 	WaitForGpuComplete();
-
-	hResult = m_pd3dScreenCommandAllocator->Reset();
-	hResult = m_pd3dScreenCommandList->Reset(m_pd3dScreenCommandAllocator, NULL);
-	m_pd3dScreenCommandList->RSSetViewports(1, m_pCamera->GetViewport());
-	m_pd3dScreenCommandList->RSSetScissorRects(1, m_pCamera->GetScissorRect());
-
-	::SynchronizeResourceTransition(m_pd3dScreenCommandList, m_ppd3dRenderTargetBuffers[0], D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ);
-	::SynchronizeResourceTransition(m_pd3dScreenCommandList, m_ppd3dRenderTargetBuffers[1], D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ);
-	::SynchronizeResourceTransition(m_pd3dScreenCommandList, m_ppd3dRenderTargetBuffers[2], D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ);
-	::SynchronizeResourceTransition(m_pd3dScreenCommandList, m_ppd3dRenderTargetBuffers[3], D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ);
-
-	::SynchronizeResourceTransition(m_pd3dScreenCommandList, m_ppd3dSwapChainBackBuffers[m_nSwapChainBufferIndex], D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
-
-	m_pd3dScreenCommandList->ClearDepthStencilView(m_d3dDsvDepthStencilBufferCPUHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, NULL);
-	m_pd3dScreenCommandList->ClearRenderTargetView(m_pd3dRtvSwapChainBackBufferCPUHandles[m_nSwapChainBufferIndex], Colors::Azure, 0, NULL);
-	m_pd3dScreenCommandList->OMSetRenderTargets(1, &m_pd3dRtvSwapChainBackBufferCPUHandles[m_nSwapChainBufferIndex], TRUE, &m_d3dDsvDepthStencilBufferCPUHandle);
-
-	m_pScreenShader->UpdateShadowShaderVariables(m_pd3dScreenCommandList, m_pShadowShader->GetShadowInfo());
-	m_pScreenShader->Render(m_pd3dScreenCommandList, m_pCamera);
-
-	::SynchronizeResourceTransition(m_pd3dScreenCommandList, m_ppd3dSwapChainBackBuffers[m_nSwapChainBufferIndex], D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_COPY_SOURCE);
-
-	hResult = m_pd3dScreenCommandList->Close();
-
-	ID3D12CommandList *ppd3dScreenCommandLists[] = { m_pd3dScreenCommandList };
-
-	m_pd3dCommandQueue->ExecuteCommandLists(1, ppd3dScreenCommandLists);
-	WaitForGpuComplete();
-
+	
 	//계산쉐이더 부분
 	{
 		hResult = m_pd3dScreenCommandAllocator->Reset();
@@ -1359,11 +1487,12 @@ void CGameFramework::FrameAdvance()
 		m_pd3dScreenCommandList->RSSetViewports(1, m_pCamera->GetViewport());
 		m_pd3dScreenCommandList->RSSetScissorRects(1, m_pCamera->GetScissorRect());
 
-		m_pComputeShader->SetValue(1);
 		m_pComputeShader->Compute(m_pd3dDevice, m_pd3dScreenCommandList, m_ppd3dSwapChainBackBuffers[m_nSwapChainBufferIndex]);
+		::SynchronizeResourceTransition(m_pd3dScreenCommandList, m_pd3dDepthStencilBuffer, D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_DEPTH_WRITE);
 
 		hResult = m_pd3dScreenCommandList->Close();
 
+		ID3D12CommandList *ppd3dScreenCommandLists[] = { m_pd3dScreenCommandList };
 		m_pd3dCommandQueue->ExecuteCommandLists(1, ppd3dScreenCommandLists);
 
 		WaitForGpuComplete();
@@ -1376,7 +1505,6 @@ void CGameFramework::FrameAdvance()
 		m_pd3dScreenCommandList->RSSetViewports(1, m_pCamera->GetViewport());
 		m_pd3dScreenCommandList->RSSetScissorRects(1, m_pCamera->GetScissorRect());
 
-		m_pd3dScreenCommandList->ClearDepthStencilView(m_d3dDsvDepthStencilBufferCPUHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, NULL);
 		m_pd3dScreenCommandList->OMSetRenderTargets(1, &m_pd3dRtvSwapChainBackBufferCPUHandles[m_nSwapChainBufferIndex], TRUE, &m_d3dDsvDepthStencilBufferCPUHandle);
 
 		m_pUIShader->Render(m_pd3dScreenCommandList, m_pCamera);
@@ -1384,6 +1512,7 @@ void CGameFramework::FrameAdvance()
 		::SynchronizeResourceTransition(m_pd3dScreenCommandList, m_ppd3dSwapChainBackBuffers[m_nSwapChainBufferIndex], D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 		hResult = m_pd3dScreenCommandList->Close();
 
+		ID3D12CommandList *ppd3dScreenCommandLists[] = { m_pd3dScreenCommandList };
 		m_pd3dCommandQueue->ExecuteCommandLists(1, ppd3dScreenCommandLists);
 		WaitForGpuComplete();
 	}
@@ -1411,8 +1540,7 @@ void CGameFramework::InitNetwork(HWND main_window)
 	ZeroMemory(&ServerAddr, sizeof(SOCKADDR_IN));
 	ServerAddr.sin_family = AF_INET;
 	ServerAddr.sin_port = htons(MY_SERVER_PORT);
-	ServerAddr.sin_addr.s_addr = inet_addr("127.0.0.1"); // 재용
-	//ServerAddr.sin_addr.s_addr = inet_addr("10.30.1.33");
+	ServerAddr.sin_addr.s_addr = inet_addr("127.0.0.1"); 
 
 	int Result = WSAConnect(g_mysocket, (sockaddr *)&ServerAddr, sizeof(ServerAddr), NULL, NULL, NULL, NULL);
 
@@ -1450,33 +1578,28 @@ void CGameFramework::ProcessPacket(char *ptr)
 		}
 		if (id == g_myid) { // 내 아이디와 패킷의 아이디가 같다면? == 위의 조건문을 돌았다 == 내 정보
 			g_player_info[id].m_isconnected = true;
-			g_my_info.pos._14 = 0.f;
-			g_my_info.pos._24 = 0.f;
-			g_my_info.pos._34 = 0.f;
-			g_my_info.pos._44 = 1.f;
-			g_player_info[id].pos._14 = 0.f;
-			g_player_info[id].pos._24 = 0.f;
-			g_player_info[id].pos._34 = 0.f;
-			g_player_info[id].pos._44 = 1.f;
-			g_my_info.roomnumb = 0;
 
+			g_my_info.pos = my_packet->m_pos;
+			g_player_info[id].pos = my_packet->m_pos;
+			g_my_info.m_iTeam = my_packet->m_iTeam;
+			g_player_info[id].m_iTeam = my_packet->m_iTeam;
 			cs_packet_requestObject * my_pos_packet = reinterpret_cast<cs_packet_requestObject *>(send_buffer);
 			my_pos_packet->size = sizeof(cs_packet_requestObject);
 			send_wsabuf.len = sizeof(cs_packet_requestObject);
 			my_pos_packet->type = CS_REQUEST_OBJECT;
-
 			DWORD iobyte;
-
 			WSASend(g_mysocket, &send_wsabuf, 1, &iobyte, 0, NULL, NULL);
 
+
+
+			m_pPlayer->SetWorldPosition(g_my_info.pos);
+			printf("접속 초기 위치 %f %f %f \n", m_pPlayer->GetPosition().x, m_pPlayer->GetPosition().y, m_pPlayer->GetPosition().z);
+			printf("나의 팀 : %d (1 : 블루팀, 2 : 레드팀) \n", my_packet->m_iTeam);
 		}
 		else {
 			g_player_info[id].m_isconnected = true;
-			g_player_info[id].pos._14 = 0.f;
-			g_player_info[id].pos._24 = 0.f;
-			g_player_info[id].pos._34 = 0.f;
-			g_player_info[id].pos._44 = 1.f;
-			g_player_info[id].roomnumb = 0;
+			g_player_info[id].pos = my_packet->m_pos;
+			g_player_info[id].m_iTeam = my_packet->m_iTeam;
 			printf("Other Client [%d] is Connect to Server", id);
 
 		}
@@ -1525,11 +1648,8 @@ void CGameFramework::ProcessPacket(char *ptr)
 		g_player_info[id].pos._24 = 0.f;
 		g_player_info[id].pos._34 = 0.f;
 		g_player_info[id].pos._44 = 1.f;
+		g_player_info[id].anim_state = my_packet->keyInputState;
 
-		if (!m_pPlayer->GetJumpState())
-		{
-
-		}
 		m_pPlayer->SetWorldPosition(g_my_info.pos);
 
 		//printf("이동 캐릭터 [%d], 포지션%f,%f,%f\n", id, g_player_info[id].pos._41, g_player_info[id].pos._42, g_player_info[id].pos._43);
@@ -1567,6 +1687,7 @@ void CGameFramework::ProcessPacket(char *ptr)
 		g_player_info[id].pos._41 = my_packet->m_pos._41;
 		g_player_info[id].pos._42 = my_packet->m_pos._42;
 		g_player_info[id].pos._43 = my_packet->m_pos._43;
+
 		m_pPlayer->SetWorldPosition(g_my_info.pos);
 		break;
 	}
@@ -1591,7 +1712,7 @@ void CGameFramework::ProcessPacket(char *ptr)
 		if (id == g_myid)
 		{
 
-			if (true == g_my_info.m_isready)
+			if (true == g_my_info.m_isReady)
 				printf("My Client is Ready\n");
 			else
 				printf("My Client is Not Ready\n");
@@ -1600,7 +1721,7 @@ void CGameFramework::ProcessPacket(char *ptr)
 		{//다른 캐릭터의 준비 패킷이라면?
 
 			{
-				if (true == g_player_info[id].m_isready)
+				if (true == g_player_info[id].m_isReady)
 					printf("Client [%d] is Ready\n", id);
 				else
 					printf("Client [%d] is Not Ready\n", id);
@@ -1661,12 +1782,12 @@ void CGameFramework::ProcessPacket(char *ptr)
 	case SC_ATTACKED:
 	{
 		sc_packet_attacked *my_packet = reinterpret_cast<sc_packet_attacked*>(ptr);
-		g_player_info[my_packet->id].hp = my_packet->hp;
+		g_player_info[my_packet->id].m_iHP = my_packet->hp;
 		if (my_packet->id == g_myid && g_my_info.state != DIED)
 		{
-			g_my_info.hp = my_packet->hp;
+			g_my_info.m_iHP = my_packet->hp;
 		}
-		else g_player_info[my_packet->id].hp = my_packet->hp;
+		else g_player_info[my_packet->id].m_iHP = my_packet->hp;
 		printf("%d 클라이언트가 공격받았습니다. hp : %d\n", my_packet->id, my_packet->hp);
 		break;
 	}
@@ -1682,7 +1803,10 @@ void CGameFramework::ProcessPacket(char *ptr)
 			{
 				printf("내 캐릭터가 죽었습니다\n");
 				g_my_info.state = my_packet->state;
-				m_ppScenes[CHARACTER]->ChangeAnimation(8); // 죽는 애니메이션
+				if(m_nCharacterType == 0)
+					m_ppScenes[CHARACTER]->ChangeAnimation(static_cast<int>(SOLDIER::ANIMATION_DIED), m_nCharacterType); // 죽는 애니메이션
+				else if(m_nCharacterType == 1)
+					m_ppScenes[CHARACTER]->ChangeAnimation(static_cast<int>(DRONE::ANIMATION_DIED), m_nCharacterType); // 죽는 애니메이션
 			}
 			else
 			{
@@ -1700,11 +1824,33 @@ void CGameFramework::ProcessPacket(char *ptr)
 
 
 		m_xmf3ObjectsPos[my_packet->m_ObjectID] = my_packet->m_xmf3ObjectPosition;
-		//Sleep(10);
+
 		m_ppScenes[OBJECT]->SetObjectsVectorFromPacket(my_packet->m_xmf3ObjectPosition, my_packet->m_ObjectID);
 		break;
 	}
 
+	case SC_MOVE_OBJECT:
+	{
+		sc_packet_updateObject *my_packet = reinterpret_cast<sc_packet_updateObject*>(ptr);
+
+		m_xmf3ObjectsPos[my_packet->m_ObjectID] = my_packet->m_xmf3ObjectPosition;
+		m_ppScenes[OBJECT]->SetObjectsVectorFromPacket(my_packet->m_xmf3ObjectPosition, my_packet->m_ObjectID);
+		//printf("[%d] 오브젝트 이동\n", my_packet->m_ObjectID);
+
+		break;
+	}
+	case SC_LOAD_STATIC_OBJECT:
+	{
+		sc_packet_loadStaticObject *my_packet = reinterpret_cast<sc_packet_loadStaticObject*>(ptr);
+		printf("건물정보 %s, 위치  %f %f %f \n", my_packet->m_ObjectID, my_packet->m_xmf3ObjectPosition.x, my_packet->m_xmf3ObjectPosition.y, my_packet->m_xmf3ObjectPosition.z);
+		break;
+	}
+	case SC_STEP_BASE:
+	{
+		sc_packet_stepBase *my_packet = reinterpret_cast<sc_packet_stepBase*>(ptr);
+		printf("점령지 [%d]가 [%d]팀에 의해 점령 중. 점령율 : %f 퍼센트 \n", my_packet->m_iOccupiedBase, my_packet->m_iTeam, my_packet->m_fPercentOfOccupation);
+		break;
+	}
 	default:
 	{
 		printf("Unknown PACKET type [%d]\n", ptr[1]);
@@ -1712,7 +1858,6 @@ void CGameFramework::ProcessPacket(char *ptr)
 	}
 	}
 }
-
 
 
 
@@ -1744,6 +1889,8 @@ void CGameFramework::ReadPacket(SOCKET sock)
 			memcpy(packet_buffer + saved_packet_size, ptr, iobyte);
 			saved_packet_size += iobyte;
 			iobyte = 0;
+
 		}
 	}
+
 }

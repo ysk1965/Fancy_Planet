@@ -11,6 +11,12 @@ class CPhysXFramework;
 
 
 
+#define MAX_BUFF_SIZE   1024
+#define MAX_PACKET_SIZE  255
+#define OBJECTS_NUMBER 30
+#define STATION_NUMBER 3//점령지 수
+#define Team_NUMBER 2//팀 수
+
 #define MAX_USER 10
 #define MY_SERVER_PORT  4000
 #define MAX_STR_SIZE  100
@@ -19,15 +25,12 @@ class CPhysXFramework;
 #define CS_READY  2
 #define CS_ROTATE  3
 #define CS_RIGHT    4
-#define CS_CHAT      5
+#define CS_JUMP      5
 #define CS_PLAYER_STATE_CHANGE 6
 #define CS_GRAVITY_TEST 7
 #define CS_ATTACKED 9
 #define CS_SHOT      10
-
 #define CS_REQUEST_OBJECT 20
-#define CS_MOVE_OBJECT 21
-
 #define CS_LOGIN	99
 
 #define SC_POS           1
@@ -38,14 +41,21 @@ class CPhysXFramework;
 #define SC_PLAYER_STATE_CHANGE 6
 #define SC_GRAVITY_CHANGE 7
 #define SC_ROTATE 8
+#define SC_JUMP 9
 #define SC_TIME 11
 #define SC_ATTACKED 9
 #define SC_SHOT   10
 
-#define SC_LOAD_OBJECT 20
+#define SC_LOAD_OBJECT 20							//객체,건물
 #define SC_MOVE_OBJECT 21
+#define SC_LOAD_STATIC_OBJECT 22
+
+#define SC_STEP_BASE 30								//점령
+
+#define SC_GAME_RESULT 40
 
 #define SC_LOGIN 99
+
 
 
 
@@ -59,6 +69,14 @@ struct cs_packet_pos {
 	unsigned short key;
 	int keyInputState;
 };
+
+struct cs_packet_ready {
+	unsigned char size;
+	unsigned char type;
+	int roomnumb = 0;
+	bool state;
+};
+
 
 struct sc_packet_pos {
 	unsigned char size;
@@ -83,20 +101,18 @@ struct sc_packet_rotate {
 	unsigned short id;
 	XMFLOAT4X3 m_pos;
 };
-struct cs_packet_ready {
+struct cs_packet_jump {
 	unsigned char size;
 	unsigned char type;
-	int roomnumb = 0;
-	bool state;
+	unsigned short id;
 };
-
-
-
 
 struct sc_packet_put_player {
 	unsigned char size;
 	unsigned char type;
 	unsigned short id;
+	XMFLOAT4X4 m_pos;
+	int m_iTeam;
 	char name[10];
 };
 struct sc_packet_remove_player {
@@ -116,6 +132,7 @@ struct cs_packet_shot {
 	unsigned char size;
 	unsigned char type;
 	unsigned short id;
+	XMFLOAT3 m_xmf3CameraLookAt;
 };
 struct sc_packet_shot {
 	unsigned char size;
@@ -197,12 +214,14 @@ struct cs_packet_login {
 	wchar_t name[10];
 };
 
-///////////////////////오브젝트 패킷/////////////////////////
+
+////////////////////////////오브젝트//////////////////////////////
 struct cs_packet_requestObject
 {
 	unsigned char size;
 	unsigned char type;
 };
+
 struct sc_packet_loadObject
 {
 	unsigned char size;
@@ -211,12 +230,41 @@ struct sc_packet_loadObject
 	XMFLOAT3 m_xmf3ObjectPosition;
 };
 
-struct cs_packet_loadObject
+
+
+struct sc_packet_updateObject
 {
 	unsigned char size;
 	unsigned char type;
-	unsigned short id;
-	//XMFLOAT3 m_xmf3ObjectPosition[OBJECTS_NUMBER];
+	unsigned char m_ObjectID;
+	XMFLOAT3 m_xmf3ObjectPosition;
+};
+/////////////////게임 프로세스///////////
+struct sc_packet_gameResult
+{
+	unsigned char size;
+	unsigned char type;
+	unsigned char m_iWinTeam;
+
+};
+
+//////////////////점령전/////////////////////
+struct sc_packet_loadStaticObject
+{
+	unsigned char size;
+	unsigned char type;
+	char m_ObjectID[9];
+	unsigned char m_iOccupationState;
+	XMFLOAT3 m_xmf3ObjectPosition;
+};
+
+struct sc_packet_stepBase
+{
+	unsigned char size;
+	unsigned char type;
+	unsigned char m_iTeam;
+	unsigned char m_iOccupiedBase;
+	float m_fPercentOfOccupation;
 };
 // basic unsigned types
 typedef unsigned short USHORT;
@@ -240,13 +288,14 @@ typedef struct PLAYER_INFO
 	DWORD message_time;
 
 	bool m_isconnected = false;
-	bool m_isready = false;
-	int roomnumb = 0;
+	bool m_isReady = false;
+	int m_iRoomNumb = 0;
 	int m_scene = 0;
-	int hp;
+	int m_iTeam;
+	int m_iHP;
 	PLAYER_INFO()
 	{
-		hp = 100;
+		m_iHP = 100;
 
 		pos._11 = 10.f;
 		pos._12 = 0.f;

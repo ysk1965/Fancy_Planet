@@ -68,7 +68,7 @@ D3D12_SHADER_RESOURCE_VIEW_DESC CComputShader::GetShaderResourceViewDesc(D3D12_R
 void CComputShader::CreateUavAndSrvDescriptorHeaps(ID3D12Device *pd3dDevice, int nUnorderedAccessViews, int nShaderResourceViews)
 {
 	D3D12_DESCRIPTOR_HEAP_DESC d3dDescriptorHeapDesc;
-	d3dDescriptorHeapDesc.NumDescriptors = nUnorderedAccessViews + nShaderResourceViews;
+	d3dDescriptorHeapDesc.NumDescriptors = nUnorderedAccessViews + nShaderResourceViews + 1; // 이미시브 컬러 맵
 	d3dDescriptorHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 	d3dDescriptorHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 	d3dDescriptorHeapDesc.NodeMask = 0;
@@ -82,8 +82,10 @@ void CComputShader::CreateUavAndSrvDescriptorHeaps(ID3D12Device *pd3dDevice, int
 		m_d3dSrvCPUDescriptorStartHandle[i].ptr = m_d3dUavCPUDescriptorStartHandle[i].ptr + (::gnCbvSrvDescriptorIncrementSize * nUnorderedAccessViews);
 		m_d3dSrvGPUDescriptorStartHandle[i].ptr = m_d3dUavGPUDescriptorStartHandle[i].ptr + (::gnCbvSrvDescriptorIncrementSize * nUnorderedAccessViews);
 	}
+	m_d3dStencilMapCPUHandle.ptr = m_d3dSrvCPUDescriptorStartHandle[m_nTexture - 1].ptr + ::gnCbvSrvDescriptorIncrementSize;
+	m_d3dStencilMapGPUHandle.ptr = m_d3dSrvGPUDescriptorStartHandle[m_nTexture - 1].ptr + ::gnCbvSrvDescriptorIncrementSize;
 }
-void CComputShader::CreateShaderResourceViews(ID3D12Device *pd3dDevice, CTexture *pTexture)
+void CComputShader::CreateShaderResourceViews(ID3D12Device *pd3dDevice, CTexture *pTexture, ID3D12Resource* pStencilMap)
 {
 	int nTextures = pTexture->GetTextureCount();
 
@@ -99,6 +101,17 @@ void CComputShader::CreateShaderResourceViews(ID3D12Device *pd3dDevice, CTexture
 		D3D12_SHADER_RESOURCE_VIEW_DESC d3dShaderResourceViewDesc = GetShaderResourceViewDesc(d3dResourceDesc, nTextureType);
 		pd3dDevice->CreateShaderResourceView(pShaderResource, &d3dShaderResourceViewDesc, d3dSrvCPUDescriptorHandle);
 	}
+	D3D12_SHADER_RESOURCE_VIEW_DESC d3dShaderResourceDsec;
+
+	d3dShaderResourceDsec.Format = DXGI_FORMAT_X24_TYPELESS_G8_UINT;
+	d3dShaderResourceDsec.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+	d3dShaderResourceDsec.Texture2D.MipLevels = 1;
+	d3dShaderResourceDsec.Texture2D.PlaneSlice = 1;
+	d3dShaderResourceDsec.Texture2D.MostDetailedMip = 0;
+	d3dShaderResourceDsec.Texture2D.ResourceMinLODClamp = 0;
+	d3dShaderResourceDsec.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+
+	pd3dDevice->CreateShaderResourceView(pStencilMap, &d3dShaderResourceDsec, m_d3dStencilMapCPUHandle);
 }
 void CComputShader::CreateUnorderedAccessViews(ID3D12Device *pd3dDevice, CTexture *pTexture)
 {
@@ -113,13 +126,13 @@ void CComputShader::CreateUnorderedAccessViews(ID3D12Device *pd3dDevice, CTextur
 		pd3dDevice->CreateUnorderedAccessView(pResource, nullptr, NULL, d3dUavCPUDescriptorHandle);
 	}
 }
-CComputShader::CComputShader(UINT nWndClientWidth, UINT nWndClientHeight)
+CComputShader::CComputShader(ID3D12Device *pd3dDevice)
 {
-	m_nWndClientWidth = nWndClientWidth;
-	m_nWndClientHeight = nWndClientHeight;
-
-	m_nPipelineStates = 1;
+	m_nPipelineStates = 3;
 	m_ppd3dPipelineStates = new ID3D12PipelineState*[m_nPipelineStates];
+
+	CreateUavAndSrvDescriptorHeaps(pd3dDevice, m_nTexture, m_nTexture);
+	CalcGaussWeights(2.5f);
 }
 
 
@@ -130,12 +143,15 @@ CComputShader::~CComputShader()
 
 	if (m_pd3dTexB)
 		m_pd3dTexB->Release();
+
+	if (m_pd3dOriginSceneTex)
+		m_pd3dOriginSceneTex->Release();
 }
 
 void CComputShader::CreateComputeRootSignature(ID3D12Device *pd3dDevice)
 {
 
-	CD3DX12_DESCRIPTOR_RANGE pd3dDescriptorRanges[2];
+	CD3DX12_DESCRIPTOR_RANGE pd3dDescriptorRanges[4];
 
 	pd3dDescriptorRanges[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
 	pd3dDescriptorRanges[0].NumDescriptors = 1;
@@ -143,17 +159,31 @@ void CComputShader::CreateComputeRootSignature(ID3D12Device *pd3dDevice)
 	pd3dDescriptorRanges[0].RegisterSpace = 0;
 	pd3dDescriptorRanges[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 
-	pd3dDescriptorRanges[1].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
+	pd3dDescriptorRanges[1].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
 	pd3dDescriptorRanges[1].NumDescriptors = 1;
-	pd3dDescriptorRanges[1].BaseShaderRegister = 0; 
+	pd3dDescriptorRanges[1].BaseShaderRegister = 1;
 	pd3dDescriptorRanges[1].RegisterSpace = 0;
 	pd3dDescriptorRanges[1].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 
-	CD3DX12_ROOT_PARAMETER pd3dRootParameters[3];
+	pd3dDescriptorRanges[2].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+	pd3dDescriptorRanges[2].NumDescriptors = 1;
+	pd3dDescriptorRanges[2].BaseShaderRegister = 2;
+	pd3dDescriptorRanges[2].RegisterSpace = 0;
+	pd3dDescriptorRanges[2].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+	
+	pd3dDescriptorRanges[3].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
+	pd3dDescriptorRanges[3].NumDescriptors = 1;
+	pd3dDescriptorRanges[3].BaseShaderRegister = 0; 
+	pd3dDescriptorRanges[3].RegisterSpace = 0;
+	pd3dDescriptorRanges[3].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+	CD3DX12_ROOT_PARAMETER pd3dRootParameters[5];
 
 	pd3dRootParameters[0].InitAsDescriptorTable(1, &pd3dDescriptorRanges[0]);
 	pd3dRootParameters[1].InitAsDescriptorTable(1, &pd3dDescriptorRanges[1]);
-	pd3dRootParameters[2].InitAsConstants(1,0);
+	pd3dRootParameters[2].InitAsDescriptorTable(1, &pd3dDescriptorRanges[2]);
+	pd3dRootParameters[3].InitAsDescriptorTable(1, &pd3dDescriptorRanges[3]);
+	pd3dRootParameters[4].InitAsConstants(12,0);
 	
 	D3D12_ROOT_SIGNATURE_FLAGS d3dRootSignatureFlags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
 
@@ -178,68 +208,180 @@ void CComputShader::CreateComputeRootSignature(ID3D12Device *pd3dDevice)
 
 void CComputShader::BuildPSO(ID3D12Device *pd3dDevice)
 {
-	ID3DBlob *pd3dComputeShaderBlob = NULL;
+	ID3DBlob *pd3dComputeShaderBlob1 = NULL;
+	ID3DBlob *pd3dComputeShaderBlob2 = NULL;
+	ID3DBlob *pd3dComputeShaderBlob3 = NULL;
+	ID3DBlob *pd3dComputeShaderBlob4 = NULL;
+
 	D3D12_COMPUTE_PIPELINE_STATE_DESC d3dPipelineStateDesc = {};
 
 	d3dPipelineStateDesc.pRootSignature = pd3dComputeRootSignature;
-	d3dPipelineStateDesc.CS = CreateComputeShader(&pd3dComputeShaderBlob);
+	d3dPipelineStateDesc.CS = CreateComputeShader(&pd3dComputeShaderBlob1, Mul);
 	d3dPipelineStateDesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
+	HRESULT hResult = pd3dDevice->CreateComputePipelineState(&d3dPipelineStateDesc, IID_PPV_ARGS(&m_ppd3dPipelineStates[Mul]));
+	pd3dComputeShaderBlob1->Release();
 
-	HRESULT hResult = pd3dDevice->CreateComputePipelineState(&d3dPipelineStateDesc, IID_PPV_ARGS(&m_ppd3dPipelineStates[0]));
+	d3dPipelineStateDesc.CS = CreateComputeShader(&pd3dComputeShaderBlob2, Horizontal);
+	hResult = pd3dDevice->CreateComputePipelineState(&d3dPipelineStateDesc, IID_PPV_ARGS(&m_ppd3dPipelineStates[Horizontal]));
+	pd3dComputeShaderBlob2->Release();
 
+	d3dPipelineStateDesc.CS = CreateComputeShader(&pd3dComputeShaderBlob3, Vertical);
+	hResult = pd3dDevice->CreateComputePipelineState(&d3dPipelineStateDesc, IID_PPV_ARGS(&m_ppd3dPipelineStates[Vertical]));
+	pd3dComputeShaderBlob3->Release();
+
+	d3dPipelineStateDesc.CS = CreateComputeShader(&pd3dComputeShaderBlob4, Add);
+	hResult = pd3dDevice->CreateComputePipelineState(&d3dPipelineStateDesc, IID_PPV_ARGS(&m_ppd3dPipelineStates[Add]));
+	pd3dComputeShaderBlob4->Release();
 }
 
-void CComputShader::BuildTextures(ID3D12Device *pd3dDevice)
+void CComputShader::BuildTextures(ID3D12Device *pd3dDevice, ID3D12Resource* pStencilMap, UINT nWndClientWidth, UINT nWndClientHeight)
 {
 	m_pTexture = new CTexture(m_nTexture, RESOURCE_TEXTURE2D, 0);
-	
+
+	m_nWndClientWidth = nWndClientWidth;
+	m_nWndClientHeight = nWndClientHeight;
+
 	//버퍼를 만든다.
-	m_pd3dTexA = m_pTexture->ComputeCreateTexture(pd3dDevice, m_nWndClientWidth, m_nWndClientHeight
+	m_pd3dTexA = m_pTexture->ComputeCreateTexture(pd3dDevice, nWndClientWidth, nWndClientHeight
 		, DXGI_FORMAT_R8G8B8A8_UNORM, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COMMON, NULL, 0);
 	m_pd3dTexA->AddRef();
 
-	m_pd3dTexB = m_pTexture->ComputeCreateTexture(pd3dDevice, m_nWndClientWidth, m_nWndClientHeight
+	m_pd3dTexB = m_pTexture->ComputeCreateTexture(pd3dDevice, nWndClientWidth, nWndClientHeight
 		, DXGI_FORMAT_R8G8B8A8_UNORM, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COMMON, NULL, 1);
 	m_pd3dTexB->AddRef();
 	
-	CreateUavAndSrvDescriptorHeaps(pd3dDevice, m_nTexture, m_nTexture);
+	m_pd3dOriginSceneTex = m_pTexture->ComputeCreateTexture(pd3dDevice, nWndClientWidth, nWndClientHeight
+		, DXGI_FORMAT_R8G8B8A8_UNORM, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COMMON, NULL, 2);
+	m_pd3dOriginSceneTex->AddRef();
+
 	CreateUnorderedAccessViews(pd3dDevice, m_pTexture);
-	CreateShaderResourceViews(pd3dDevice, m_pTexture);
+	CreateShaderResourceViews(pd3dDevice, m_pTexture, pStencilMap);
 }
-D3D12_SHADER_BYTECODE CComputShader::CreateComputeShader(ID3DBlob **ppd3dShaderBlob)
+D3D12_SHADER_BYTECODE CComputShader::CreateComputeShader(ID3DBlob **ppd3dShaderBlob, UINT nIndex)
 {
-	return CompileShaderFromFile(L"Compute.hlsl", "CS", "cs_5_1", ppd3dShaderBlob);
+	if(nIndex == Vertical)
+		return CompileShaderFromFile(L"Compute.hlsl", "Vertical_CS", "cs_5_1", ppd3dShaderBlob);
+	else if(nIndex == Horizontal)
+		return CompileShaderFromFile(L"Compute.hlsl", "Horizontal_CS", "cs_5_1", ppd3dShaderBlob);
+	else if(nIndex == Add)
+		return CompileShaderFromFile(L"Compute.hlsl", "Add_CS", "cs_5_1", ppd3dShaderBlob);
+	else
+		return CompileShaderFromFile(L"Compute.hlsl", "Mul_CS", "cs_5_1", ppd3dShaderBlob);
 }
 
+void CComputShader::ReleaseShaderVariable()
+{
+	m_pd3dTexA->Release();
+	m_pd3dTexB->Release();
+}
+
+void CComputShader::CalcGaussWeights(float fSigma)
+{
+	float twoSigma2 = 2.0f*fSigma*fSigma;
+
+	// Estimate the blur radius based on sigma since sigma controls the "width" of the bell curve.
+	// For example, for sigma = 3, the width of the bell curve is 
+	int blurRadius = (int)ceil(2.0f * fSigma);
+
+	int size = 2 * blurRadius + 1;
+
+	float weightSum = 0.0f;
+
+	for (int i = -blurRadius; i <= blurRadius; ++i)
+	{
+		float x = (float)i;
+
+		m_Value.fW[i + blurRadius] = expf(-x * x / twoSigma2);
+
+		weightSum += m_Value.fW[i + blurRadius];
+	}
+
+	// Divide by the sum so all the weights add up to 1.0.
+	for (int i = 0; i < size; ++i)
+	{
+		m_Value.fW[i] /= weightSum;
+	}
+}
 void CComputShader::Compute(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12Resource* pBackBuffer)
 {
+	//스텐실과 곱하여 이미시브 컬러가 발현되는 부분 구하기
 	pd3dCommandList->SetComputeRootSignature(pd3dComputeRootSignature);
-	pd3dCommandList->SetPipelineState(m_ppd3dPipelineStates[0]);
+	pd3dCommandList->SetPipelineState(m_ppd3dPipelineStates[Mul]);
 	pd3dCommandList->SetDescriptorHeaps(1, &m_pd3dUavSrvDescriptorHeap);
 
-	::SynchronizeResourceTransition(pd3dCommandList, m_pd3dTexA, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST);
+	::SynchronizeResourceTransition(pd3dCommandList, m_pd3dOriginSceneTex, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST);
 
-	pd3dCommandList->CopyResource(m_pd3dTexA, pBackBuffer);
-
-	::SynchronizeResourceTransition(pd3dCommandList, m_pd3dTexA, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_GENERIC_READ);
+	pd3dCommandList->CopyResource(m_pd3dOriginSceneTex, pBackBuffer);
+	
+	::SynchronizeResourceTransition(pd3dCommandList, m_pd3dOriginSceneTex, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_GENERIC_READ);
+	::SynchronizeResourceTransition(pd3dCommandList, m_pd3dTexA, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_GENERIC_READ);
 	::SynchronizeResourceTransition(pd3dCommandList, m_pd3dTexB, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 
-	pd3dCommandList->SetComputeRootDescriptorTable(0, m_d3dSrvGPUDescriptorStartHandle[A]);
-	pd3dCommandList->SetComputeRootDescriptorTable(1, m_d3dUavGPUDescriptorStartHandle[B]);
-	pd3dCommandList->SetComputeRoot32BitConstants(2, 1, &m_fValue, 0);
-	
-	// How many groups do we need to dispatch to cover a row of pixels, where each
-	// group covers 256 pixels (the 256 is defined in the ComputeShader).
+	pd3dCommandList->SetComputeRootDescriptorTable(EMISSIVE, m_d3dStencilMapGPUHandle);
+	pd3dCommandList->SetComputeRootDescriptorTable(SCENE, m_d3dSrvGPUDescriptorStartHandle[OriginScene]);
+
+	pd3dCommandList->SetComputeRootDescriptorTable(Output, m_d3dUavGPUDescriptorStartHandle[B]);
+
+	int blurRadius = 11 / 2;
+
+	pd3dCommandList->SetComputeRoot32BitConstants(4, 1,  &blurRadius, 0);
+	pd3dCommandList->SetComputeRoot32BitConstants(4, 11, m_Value.fW, 1);
+
 	UINT nGroupsX = (UINT)ceilf(m_nWndClientWidth / 256.0f);
 
 	pd3dCommandList->Dispatch(nGroupsX, m_nWndClientHeight, 1);
-	
-	::SynchronizeResourceTransition(pd3dCommandList, m_pd3dTexA, D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_COMMON);
-	::SynchronizeResourceTransition(pd3dCommandList, m_pd3dTexB, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COPY_SOURCE);
+		
+	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	// 이미시브가 발현되는 부분만 블러효과 주기
+	for (int i = 0; i < 2; i++)
+	{
+		pd3dCommandList->SetPipelineState(m_ppd3dPipelineStates[Horizontal]);
+		//B의 그려진 완성된 이미지를 읽기로 사용하고, A를 결과를 쓰는용도로 사용한다.
+
+		pd3dCommandList->SetComputeRootDescriptorTable(Output, m_d3dUavGPUDescriptorStartHandle[A]);
+		pd3dCommandList->SetComputeRootDescriptorTable(Input, m_d3dSrvGPUDescriptorStartHandle[B]);
+
+		::SynchronizeResourceTransition(pd3dCommandList, m_pd3dTexA, D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+		::SynchronizeResourceTransition(pd3dCommandList, m_pd3dTexB, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_GENERIC_READ);
+		pd3dCommandList->Dispatch(nGroupsX, m_nWndClientHeight, 1);
+		//A의 그려진 완성된 이미지를 읽기로 사용하고, B에 결과를 쓰는용도로 사용한다.
+		pd3dCommandList->SetPipelineState(m_ppd3dPipelineStates[Vertical]);
+
+		pd3dCommandList->SetComputeRootDescriptorTable(Input, m_d3dSrvGPUDescriptorStartHandle[A]);
+		pd3dCommandList->SetComputeRootDescriptorTable(Output, m_d3dUavGPUDescriptorStartHandle[B]);
+
+		::SynchronizeResourceTransition(pd3dCommandList, m_pd3dTexA, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_GENERIC_READ);
+		::SynchronizeResourceTransition(pd3dCommandList, m_pd3dTexB, D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+
+		UINT nGroupsY = (UINT)ceilf(m_nWndClientHeight / 256.0f);
+
+		pd3dCommandList->Dispatch(m_nWndClientWidth, nGroupsY, 1);
+
+		pd3dCommandList->SetPipelineState(m_ppd3dPipelineStates[Vertical]);
+	}
+	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	// 블러된 이미지와 현재 이미지를 더하기
+	// 결과가 그려진 B에 원래 씬의 이미지를 더해서 A에 저장한다.
+
+	pd3dCommandList->SetPipelineState(m_ppd3dPipelineStates[Add]);
+
+	::SynchronizeResourceTransition(pd3dCommandList, m_pd3dTexA, D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+	::SynchronizeResourceTransition(pd3dCommandList, m_pd3dTexB, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_GENERIC_READ);
+
+	pd3dCommandList->SetComputeRootDescriptorTable(Output, m_d3dUavGPUDescriptorStartHandle[A]);
+	pd3dCommandList->SetComputeRootDescriptorTable(Input, m_d3dSrvGPUDescriptorStartHandle[B]);
+
+	pd3dCommandList->Dispatch(nGroupsX, m_nWndClientHeight, 1);
+
+	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	//A에 저장된 이미지를 백버퍼에 복사하기
+	::SynchronizeResourceTransition(pd3dCommandList, m_pd3dTexA, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COPY_SOURCE);
 	::SynchronizeResourceTransition(pd3dCommandList, pBackBuffer, D3D12_RESOURCE_STATE_COPY_SOURCE, D3D12_RESOURCE_STATE_COPY_DEST);
+	::SynchronizeResourceTransition(pd3dCommandList, m_pd3dTexB, D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_COMMON);
 
-	pd3dCommandList->CopyResource(pBackBuffer, m_pd3dTexB);
+	pd3dCommandList->CopyResource(pBackBuffer, m_pd3dTexA);
 
-	::SynchronizeResourceTransition(pd3dCommandList, m_pd3dTexB, D3D12_RESOURCE_STATE_COPY_SOURCE, D3D12_RESOURCE_STATE_COMMON);
+	::SynchronizeResourceTransition(pd3dCommandList, m_pd3dTexA, D3D12_RESOURCE_STATE_COPY_SOURCE, D3D12_RESOURCE_STATE_COMMON);
 	::SynchronizeResourceTransition(pd3dCommandList, pBackBuffer, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_RENDER_TARGET);
+	::SynchronizeResourceTransition(pd3dCommandList, m_pd3dOriginSceneTex, D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_COMMON);
 }
