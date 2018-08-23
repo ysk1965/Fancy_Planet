@@ -1,31 +1,145 @@
 ﻿C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\Common7\IDE\VC\VCTargets\Microsoft.CppBuild.targets(391,5): warning MSB8028: 중간 디렉터리(x64\Debug\)에 다른 프로젝트(2017Server.vcxproj)에서 공유하는 파일이 포함되어 있습니다.  이로 인해 잘못된 정리 및 다시 빌드 동작이 수행될 수 있습니다.
   server_main.cpp
-d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\physxframework.h(17): error C2143: 구문 오류: ';'이(가) '*' 앞에 없습니다.
-d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\physxframework.h(17): error C4430: 형식 지정자가 없습니다. int로 가정합니다. 참고: C++에서는 기본 int를 지원하지 않습니다.
-d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\physxframework.h(17): error C2238: ';' 앞에 예기치 않은 토큰이 있습니다.
-d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\physxframework.h(18): error C2143: 구문 오류: ';'이(가) '*' 앞에 없습니다.
-d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\physxframework.h(18): error C4430: 형식 지정자가 없습니다. int로 가정합니다. 참고: C++에서는 기본 int를 지원하지 않습니다.
-d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\physxframework.h(18): error C2238: ';' 앞에 예기치 않은 토큰이 있습니다.
-d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\physxframework.h(19): error C2143: 구문 오류: ';'이(가) '*' 앞에 없습니다.
-d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\physxframework.h(19): error C4430: 형식 지정자가 없습니다. int로 가정합니다. 참고: C++에서는 기본 int를 지원하지 않습니다.
-d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\physxframework.h(19): error C2238: ';' 앞에 예기치 않은 토큰이 있습니다.
-d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\physxframework.h(20): error C2143: 구문 오류: ';'이(가) '*' 앞에 없습니다.
-d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\physxframework.h(20): error C4430: 형식 지정자가 없습니다. int로 가정합니다. 참고: C++에서는 기본 int를 지원하지 않습니다.
-d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\physxframework.h(20): error C2238: ';' 앞에 예기치 않은 토큰이 있습니다.
-d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\physxframework.h(21): error C2143: 구문 오류: ';'이(가) '*' 앞에 없습니다.
-d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\physxframework.h(21): error C4430: 형식 지정자가 없습니다. int로 가정합니다. 참고: C++에서는 기본 int를 지원하지 않습니다.
-d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\physxframework.h(21): error C2238: ';' 앞에 예기치 않은 토큰이 있습니다.
-d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\physxframework.h(22): error C3646: 'm_PxDefaultErrorCallback': 알 수 없는 재정의 지정자입니다.
-d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\physxframework.h(22): error C4430: 형식 지정자가 없습니다. int로 가정합니다. 참고: C++에서는 기본 int를 지원하지 않습니다.
-d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\physxframework.h(23): error C3646: 'm_PxDefaultAllocatorCallback': 알 수 없는 재정의 지정자입니다.
-d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\physxframework.h(23): error C4430: 형식 지정자가 없습니다. int로 가정합니다. 참고: C++에서는 기본 int를 지원하지 않습니다.
-d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\physxframework.h(24): error C2143: 구문 오류: ';'이(가) '*' 앞에 없습니다.
-d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\physxframework.h(24): error C4430: 형식 지정자가 없습니다. int로 가정합니다. 참고: C++에서는 기본 int를 지원하지 않습니다.
-d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\physxframework.h(24): error C2238: ';' 앞에 예기치 않은 토큰이 있습니다.
-d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\physxframework.h(25): error C2143: 구문 오류: ';'이(가) '*' 앞에 없습니다.
-d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\physxframework.h(25): error C4430: 형식 지정자가 없습니다. int로 가정합니다. 참고: C++에서는 기본 int를 지원하지 않습니다.
-d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\physxframework.h(25): error C2238: ';' 앞에 예기치 않은 토큰이 있습니다.
-d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(138): warning C4244: '=': 'int'에서 'float'(으)로 변환하면서 데이터가 손실될 수 있습니다.
-d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(139): warning C4477: 'printf' : 서식 문자열 '%d'에 'int' 형식의 인수가 필요하지만 variadic 인수 1의 형식이 'double'입니다.
-d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(208): warning C4477: 'printf' : 서식 문자열 '%d'에 'int' 형식의 인수가 필요하지만 variadic 인수 1의 형식이 '::size_t'입니다.
-  d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(208): note: 서식 문자열에서 '%zd'을(를) 사용하는 것이 좋습니다.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\timer.h : warning C4819: 현재 코드 페이지(949)에서 표시할 수 없는 문자가 파일에 들어 있습니다. 데이터가 손실되지 않게 하려면 해당 파일을 유니코드 형식으로 저장하십시오.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\timer.h(1): error C2059: 구문 오류: '<<'
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\timer.h(1): error C2143: 구문 오류: ';'이(가) '?' 앞에 없습니다.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\timer.h(1): error C4430: 형식 지정자가 없습니다. int로 가정합니다. 참고: C++에서는 기본 int를 지원하지 않습니다.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\timer.h(35): error C2065: 'MAX_SAMPLE_COUNT': 선언되지 않은 식별자입니다.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\timer.h(44): error C2059: 구문 오류: '=='
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\timer.h(73): error C2143: 구문 오류: ';'이(가) '{' 앞에 없습니다.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\timer.h(73): error C2447: '{': 함수 헤더가 없습니다. 이전 스타일의 형식 목록입니까?
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\timer.h(94): error C2059: 구문 오류: '>>'
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\timer.h(94): warning C4467: ATL 특성은 사용되지 않습니다.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\timer.h(94): error C2337: 'FancyPlanet': 특성을 찾을 수 없습니다.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\timer.h(94): error C2143: 구문 오류: ';'이(가) '/' 앞에 없습니다.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\timer.h(94): error C4430: 형식 지정자가 없습니다. int로 가정합니다. 참고: C++에서는 기본 int를 지원하지 않습니다.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\protocol.h(32): error C2143: 구문 오류: ';'이(가) '{' 앞에 없습니다.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\protocol.h(32): error C2447: '{': 함수 헤더가 없습니다. 이전 스타일의 형식 목록입니까?
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(16): error C2871: 'DirectX': 같은 이름을 가진 네임스페이스가 없습니다.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(42): error C3646: 'm_pos': 알 수 없는 재정의 지정자입니다.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(42): error C4430: 형식 지정자가 없습니다. int로 가정합니다. 참고: C++에서는 기본 int를 지원하지 않습니다.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(61): error C2065: 'm_pos': 선언되지 않은 식별자입니다.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(121): error C2065: 'sc_packet_time': 선언되지 않은 식별자입니다.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(121): error C2146: 구문 오류: ';'이(가) 'time_packet' 식별자 앞에 없습니다.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(121): error C2065: 'time_packet': 선언되지 않은 식별자입니다.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(122): error C2065: 'time_packet': 선언되지 않은 식별자입니다.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(122): error C2228: '.size' 왼쪽에는 클래스/구조체/공용 구조체가 있어야 합니다.
+  d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(122): note: 'unknown-type' 형식입니다.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(122): error C2065: 'sc_packet_time': 선언되지 않은 식별자입니다.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(123): error C2065: 'time_packet': 선언되지 않은 식별자입니다.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(123): error C2228: '.type' 왼쪽에는 클래스/구조체/공용 구조체가 있어야 합니다.
+  d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(123): note: 'unknown-type' 형식입니다.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(123): error C2065: 'SC_TIME': 선언되지 않은 식별자입니다.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(124): error C2065: 'time_packet': 선언되지 않은 식별자입니다.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(124): error C2228: '.m_ftime' 왼쪽에는 클래스/구조체/공용 구조체가 있어야 합니다.
+  d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(124): note: 'unknown-type' 형식입니다.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(126): error C2065: 'time_packet': 선언되지 않은 식별자입니다.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(126): error C2228: '.m_ftime' 왼쪽에는 클래스/구조체/공용 구조체가 있어야 합니다.
+  d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(126): note: 'unknown-type' 형식입니다.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(130): error C2065: 'time_packet': 선언되지 않은 식별자입니다.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(134): error C2065: 'sc_gravity_change': 선언되지 않은 식별자입니다.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(134): error C2146: 구문 오류: ';'이(가) 'gravity_packet' 식별자 앞에 없습니다.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(134): error C2065: 'gravity_packet': 선언되지 않은 식별자입니다.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(136): error C2065: 'gravity_packet': 선언되지 않은 식별자입니다.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(136): error C2228: '.size' 왼쪽에는 클래스/구조체/공용 구조체가 있어야 합니다.
+  d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(136): note: 'unknown-type' 형식입니다.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(136): error C2065: 'sc_gravity_change': 선언되지 않은 식별자입니다.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(137): error C2065: 'gravity_packet': 선언되지 않은 식별자입니다.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(137): error C2228: '.type' 왼쪽에는 클래스/구조체/공용 구조체가 있어야 합니다.
+  d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(137): note: 'unknown-type' 형식입니다.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(137): error C2065: 'SC_GRAVITY_CHANGE': 선언되지 않은 식별자입니다.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(138): error C2065: 'gravity_packet': 선언되지 않은 식별자입니다.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(138): error C2228: '.gravity_state' 왼쪽에는 클래스/구조체/공용 구조체가 있어야 합니다.
+  d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(138): note: 'unknown-type' 형식입니다.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(139): error C2065: 'gravity_packet': 선언되지 않은 식별자입니다.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(139): error C2228: '.gravity_state' 왼쪽에는 클래스/구조체/공용 구조체가 있어야 합니다.
+  d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(139): note: 'unknown-type' 형식입니다.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(143): error C2065: 'gravity_packet': 선언되지 않은 식별자입니다.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(152): error C2065: 'sc_packet_scene_change': 선언되지 않은 식별자입니다.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(152): error C2146: 구문 오류: ';'이(가) 'scene_packet' 식별자 앞에 없습니다.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(152): error C2065: 'scene_packet': 선언되지 않은 식별자입니다.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(153): error C2065: 'scene_packet': 선언되지 않은 식별자입니다.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(153): error C2228: '.size' 왼쪽에는 클래스/구조체/공용 구조체가 있어야 합니다.
+  d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(153): note: 'unknown-type' 형식입니다.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(153): error C2065: 'sc_packet_scene_change': 선언되지 않은 식별자입니다.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(154): error C2065: 'scene_packet': 선언되지 않은 식별자입니다.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(154): error C2228: '.type' 왼쪽에는 클래스/구조체/공용 구조체가 있어야 합니다.
+  d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(154): note: 'unknown-type' 형식입니다.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(154): error C2065: 'SC_SCENE_CHANGE': 선언되지 않은 식별자입니다.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(155): error C2065: 'scene_packet': 선언되지 않은 식별자입니다.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(155): error C2228: '.scenestate' 왼쪽에는 클래스/구조체/공용 구조체가 있어야 합니다.
+  d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(155): note: 'unknown-type' 형식입니다.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(159): error C2065: 'scene_packet': 선언되지 않은 식별자입니다.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(126): warning C4473: 'printf': 서식 문자열에 대한 인수가 충분하게 전달되지 않았습니다.
+  d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(126): note: 자리 표시자 및 해당 매개 변수에는 variadic 인수가 1개 필요하지만 0개가 제공되었습니다.
+  d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(126): note: 누락된 variadic 인수 1이(가) 서식 문자열 '%f'에 필요합니다.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(139): warning C4473: 'printf': 서식 문자열에 대한 인수가 충분하게 전달되지 않았습니다.
+  d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(139): note: 자리 표시자 및 해당 매개 변수에는 variadic 인수가 1개 필요하지만 0개가 제공되었습니다.
+  d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(139): note: 누락된 variadic 인수 1이(가) 서식 문자열 '%d'에 필요합니다.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(205): error C2065: 'CS_READY': 선언되지 않은 식별자입니다.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(205): error C2131: 식이 상수로 계산되지 않았습니다.
+  d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(205): note: 비상수 인수 또는 비상수 기호를 참조하여 실패했습니다.
+  d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(205): note: 'CS_READY' 사용량 참조
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(214): error C2065: 'sc_packet_ready': 선언되지 않은 식별자입니다.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(214): error C2146: 구문 오류: ';'이(가) 'ready_packet' 식별자 앞에 없습니다.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(214): error C2065: 'ready_packet': 선언되지 않은 식별자입니다.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(215): error C2065: 'ready_packet': 선언되지 않은 식별자입니다.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(215): error C2228: '.id' 왼쪽에는 클래스/구조체/공용 구조체가 있어야 합니다.
+  d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(215): note: 'unknown-type' 형식입니다.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(216): error C2065: 'ready_packet': 선언되지 않은 식별자입니다.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(216): error C2228: '.size' 왼쪽에는 클래스/구조체/공용 구조체가 있어야 합니다.
+  d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(216): note: 'unknown-type' 형식입니다.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(217): error C2065: 'ready_packet': 선언되지 않은 식별자입니다.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(217): error C2228: '.type' 왼쪽에는 클래스/구조체/공용 구조체가 있어야 합니다.
+  d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(217): note: 'unknown-type' 형식입니다.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(217): error C2065: 'SC_READY': 선언되지 않은 식별자입니다.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(218): error C2065: 'ready_packet': 선언되지 않은 식별자입니다.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(218): error C2228: '.state' 왼쪽에는 클래스/구조체/공용 구조체가 있어야 합니다.
+  d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(218): note: 'unknown-type' 형식입니다.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(222): error C2065: 'ready_packet': 선언되지 않은 식별자입니다.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(241): error C2065: 'sc_packet_scene_change': 선언되지 않은 식별자입니다.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(241): error C2146: 구문 오류: ';'이(가) 'start_packet' 식별자 앞에 없습니다.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(241): error C2065: 'start_packet': 선언되지 않은 식별자입니다.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(242): error C2065: 'start_packet': 선언되지 않은 식별자입니다.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(242): error C2228: '.type' 왼쪽에는 클래스/구조체/공용 구조체가 있어야 합니다.
+  d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(242): note: 'unknown-type' 형식입니다.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(242): error C2065: 'SC_SCENE_CHANGE': 선언되지 않은 식별자입니다.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(243): error C2065: 'start_packet': 선언되지 않은 식별자입니다.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(243): error C2228: '.size' 왼쪽에는 클래스/구조체/공용 구조체가 있어야 합니다.
+  d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(243): note: 'unknown-type' 형식입니다.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(244): error C2065: 'start_packet': 선언되지 않은 식별자입니다.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(244): error C2228: '.scenestate' 왼쪽에는 클래스/구조체/공용 구조체가 있어야 합니다.
+  d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(244): note: 'unknown-type' 형식입니다.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(245): error C2065: 'start_packet': 선언되지 않은 식별자입니다.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(245): error C2228: '.id' 왼쪽에는 클래스/구조체/공용 구조체가 있어야 합니다.
+  d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(245): note: 'unknown-type' 형식입니다.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(246): error C2065: 'start_packet': 선언되지 않은 식별자입니다.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(254): error C2065: 'CS_POS': 선언되지 않은 식별자입니다.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(254): error C2131: 식이 상수로 계산되지 않았습니다.
+  d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(254): note: 비상수 인수 또는 비상수 기호를 참조하여 실패했습니다.
+  d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(254): note: 'CS_POS' 사용량 참조
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(256): error C2065: 'cs_packet_pos': 선언되지 않은 식별자입니다.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(256): error C2065: 'p': 선언되지 않은 식별자입니다.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(256): error C2061: 구문 오류: 식별자 'cs_packet_pos'
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(261): error C2039: 'm_pos': 'Client'의 멤버가 아닙니다.
+  d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(38): note: 'Client' 선언을 참조하십시오.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(261): error C2228: '._11' 왼쪽에는 클래스/구조체/공용 구조체가 있어야 합니다.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(261): error C2065: 'p': 선언되지 않은 식별자입니다.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(261): error C2227: '->m_pos' 왼쪽은 클래스/구조체/공용 구조체/제네릭 형식을 가리켜야 합니다.
+  d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(261): note: 'unknown-type' 형식입니다.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(262): error C2039: 'm_pos': 'Client'의 멤버가 아닙니다.
+  d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(38): note: 'Client' 선언을 참조하십시오.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(262): error C2228: '._12' 왼쪽에는 클래스/구조체/공용 구조체가 있어야 합니다.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(262): error C2065: 'p': 선언되지 않은 식별자입니다.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(262): error C2227: '->m_pos' 왼쪽은 클래스/구조체/공용 구조체/제네릭 형식을 가리켜야 합니다.
+  d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(262): note: 'unknown-type' 형식입니다.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(263): error C2039: 'm_pos': 'Client'의 멤버가 아닙니다.
+  d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(38): note: 'Client' 선언을 참조하십시오.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(263): error C2228: '._13' 왼쪽에는 클래스/구조체/공용 구조체가 있어야 합니다.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(263): error C2065: 'p': 선언되지 않은 식별자입니다.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(263): error C2227: '->m_pos' 왼쪽은 클래스/구조체/공용 구조체/제네릭 형식을 가리켜야 합니다.
+  d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(263): note: 'unknown-type' 형식입니다.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(264): error C2039: 'm_pos': 'Client'의 멤버가 아닙니다.
+  d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(38): note: 'Client' 선언을 참조하십시오.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(264): error C2228: '._21' 왼쪽에는 클래스/구조체/공용 구조체가 있어야 합니다.
+d:\fancyplanet_github\fancy_planet\[fancyplanet]_server\server_main.cpp(264): fatal error C1003: 오류 수가 100개를 초과했습니다. 컴파일을 중지합니다.
