@@ -30,3 +30,11 @@
 *.exe
 *.out
 *.app
+
+
+
+[FancyPlanet]_Client/.vs/FancyPlanet/v15
+[FancyPlanet]_Client/x64
+
+[FancyPlanet]_Server/.vs/FancyPlanet/v15
+[FancyPlanet]_Server/x64
