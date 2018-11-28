@@ -13,6 +13,22 @@
 *.userprefs
 
 # Build results
+[FancyPlanet]_Server/.vs
+[FancyPlanet]_Client/.vs
+
+*.obj
+*.idb
+*.pdb
+*.tlog
+*.iobj
+*.ipdb
+*.pdb
+*.res
+*.pch
+*.ilk
+
+
+
 [Dd]ebug/
 [Dd]ebugPublic/
 [Rr]elease/
