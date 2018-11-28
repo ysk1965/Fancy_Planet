@@ -132,7 +132,6 @@ CComputShader::CComputShader(ID3D12Device *pd3dDevice)
 	m_ppd3dPipelineStates = new ID3D12PipelineState*[m_nPipelineStates];
 
 	CreateUavAndSrvDescriptorHeaps(pd3dDevice, m_nTexture, m_nTexture);
-	CalcGaussWeights(2.5f);
 }
 
 
@@ -183,7 +182,7 @@ void CComputShader::CreateComputeRootSignature(ID3D12Device *pd3dDevice)
 	pd3dRootParameters[1].InitAsDescriptorTable(1, &pd3dDescriptorRanges[1]);
 	pd3dRootParameters[2].InitAsDescriptorTable(1, &pd3dDescriptorRanges[2]);
 	pd3dRootParameters[3].InitAsDescriptorTable(1, &pd3dDescriptorRanges[3]);
-	pd3dRootParameters[4].InitAsConstants(12,0);
+	pd3dRootParameters[4].InitAsConstants(2,0);
 	
 	D3D12_ROOT_SIGNATURE_FLAGS d3dRootSignatureFlags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
 
@@ -275,35 +274,48 @@ void CComputShader::ReleaseShaderVariable()
 	m_pd3dTexB->Release();
 }
 
-void CComputShader::CalcGaussWeights(float fSigma)
+void CComputShader::SetComputeEffect(UINT nIndex)
 {
-	float twoSigma2 = 2.0f*fSigma*fSigma;
-
-	// Estimate the blur radius based on sigma since sigma controls the "width" of the bell curve.
-	// For example, for sigma = 3, the width of the bell curve is 
-	int blurRadius = (int)ceil(2.0f * fSigma);
-
-	int size = 2 * blurRadius + 1;
-
-	float weightSum = 0.0f;
-
-	for (int i = -blurRadius; i <= blurRadius; ++i)
+	if (nIndex == 0)
 	{
-		float x = (float)i;
-
-		m_Value.fW[i + blurRadius] = expf(-x * x / twoSigma2);
-
-		weightSum += m_Value.fW[i + blurRadius];
+		if (m_fDamage >= 1.0f)
+		{
+			m_dwDamage = GetTickCount();
+			m_fDamage = 0.0f;
+		}
 	}
-
-	// Divide by the sum so all the weights add up to 1.0.
-	for (int i = 0; i < size; ++i)
+	else if(nIndex == 1)
 	{
-		m_Value.fW[i] /= weightSum;
+		if (m_fVibration >= 1.0f)
+		{
+			m_dwVibration = GetTickCount();
+			m_fVibration = 0.0f;
+		}
 	}
 }
+
+void CComputShader::CalcComputeEffect()
+{
+	DWORD dwTime = GetTickCount();
+
+	if (m_fDamage < 1.0f)
+	{
+		float fTime = (dwTime - m_dwDamage) / 1000.0f;
+		m_fDamage =  fTime / DAMAGE_TIME;
+	}
+	
+	if (m_fVibration < 1.0f)
+	{
+		float fTime = (dwTime - m_dwVibration) / 1000.0f;
+		m_fVibration = fTime / VIBRATION_TIME;
+	}
+	
+}
+
 void CComputShader::Compute(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12Resource* pBackBuffer)
 {
+	CalcComputeEffect();
+
 	//스텐실과 곱하여 이미시브 컬러가 발현되는 부분 구하기
 	pd3dCommandList->SetComputeRootSignature(pd3dComputeRootSignature);
 	pd3dCommandList->SetPipelineState(m_ppd3dPipelineStates[Mul]);
@@ -321,11 +333,12 @@ void CComputShader::Compute(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList 
 	pd3dCommandList->SetComputeRootDescriptorTable(SCENE, m_d3dSrvGPUDescriptorStartHandle[OriginScene]);
 
 	pd3dCommandList->SetComputeRootDescriptorTable(Output, m_d3dUavGPUDescriptorStartHandle[B]);
+	
+	m_Value.fRed = 2.0f * m_fDamage * (m_fDamage - 1.0f) + 1.0f;
+	m_Value.fVibration = static_cast<UINT>((-160.0f * m_fVibration * (m_fVibration - 1.0f)) );
 
-	int blurRadius = 11 / 2;
-
-	pd3dCommandList->SetComputeRoot32BitConstants(4, 1,  &blurRadius, 0);
-	pd3dCommandList->SetComputeRoot32BitConstants(4, 11, m_Value.fW, 1);
+	pd3dCommandList->SetComputeRoot32BitConstants(4, 1, &m_Value.fRed, 0);
+	pd3dCommandList->SetComputeRoot32BitConstants(4, 1, &m_Value.fVibration, 1);
 
 	UINT nGroupsX = (UINT)ceilf(m_nWndClientWidth / 256.0f);
 

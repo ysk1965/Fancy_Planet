@@ -34,6 +34,129 @@ CMesh::CMesh(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandLis
 		m_d3dIndexBufferView.SizeInBytes = sizeof(UINT) * m_nIndices;
 	}
 }
+CMesh::CMesh(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, TCHAR *pstrFileName)
+{
+	LoadMesh(pd3dDevice, pd3dCommandList, pstrFileName);
+}
+void CMesh::LoadMesh(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, TCHAR *pstrFileName)
+{
+	ifstream InFile;
+
+	InFile.open(pstrFileName, ostream::binary);
+
+	if (!InFile)
+	{
+		exit(1);
+	}
+	UINT nType = 0;
+	XMFLOAT3 *pxmf3Positions = NULL;
+	XMFLOAT2 *pxmf2TextureCoords0 = NULL;
+	XMFLOAT3 *pxmf3Normals = NULL;
+	XMFLOAT3 *pxmf3Tangents = NULL;
+	XMFLOAT3 *pxmf3BoneWeights = NULL;
+	XMINT4 *pxmi4BoneIndices = NULL;
+
+	UINT *pIndices = NULL;
+
+	int nVertices = 0, nIndices = 0;
+
+	InFile.read((char*)&nType, sizeof(int)); // 타입
+
+	InFile.read((char*)&nVertices, sizeof(int)); // 정점 갯수 받기
+	InFile.read((char*)&nIndices, sizeof(int)); // 전체 인덱스 갯수 받기
+
+	pIndices = new UINT[nIndices];
+	pxmf3Positions = new XMFLOAT3[nVertices];
+
+	if (nType > 0)
+		pxmf2TextureCoords0 = new XMFLOAT2[nVertices];
+	if (nType > 1)
+		pxmf3Normals = new XMFLOAT3[nVertices];
+	if (nType > 2)
+		pxmf3Tangents = new XMFLOAT3[nVertices];
+
+
+	InFile.read((char*)pIndices, sizeof(UINT) * nIndices); // 인덱스 받기
+	InFile.read((char*)pxmf3Positions, sizeof(XMFLOAT3) * nVertices); // 정점 받기
+	if (nType > 0)
+		InFile.read((char*)pxmf2TextureCoords0, sizeof(XMFLOAT2) * nVertices); // uv 받기	
+	if (nType > 1)
+		InFile.read((char*)pxmf3Normals, sizeof(XMFLOAT3) * nVertices); // 법선 받기	
+	if (nType > 2)
+		InFile.read((char*)pxmf3Tangents, sizeof(XMFLOAT3) * nVertices); // 탄젠트 받기
+
+	InFile.close();
+
+	if (nType == 0)
+		m_nStride = sizeof(CVertex);
+	else if (nType == 1)
+		m_nStride = sizeof(CTexturedVertex);
+	else if (nType == 2)
+		m_nStride = sizeof(CIlluminatedTexturedVertex);
+	else if (nType == 3)
+		m_nStride = sizeof(CIlluminatedTexturedTBNVertex);
+
+	m_nVertices = nVertices;
+
+	if (nType == 0)
+	{
+		CVertex *pVertices = new CVertex[m_nVertices];
+		for (UINT i = 0; i < m_nVertices; i++)
+			pVertices[i] = CVertex(pxmf3Positions[i]);
+		m_pd3dVertexBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, pVertices, m_nStride * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dVertexUploadBuffer);
+	}
+	else if (nType == 1)
+	{
+		CTexturedVertex *pVertices = new CTexturedVertex[m_nVertices];
+		for (UINT i = 0; i < m_nVertices; i++)
+			pVertices[i] = CTexturedVertex(pxmf3Positions[i], pxmf2TextureCoords0[i]);
+		m_pd3dVertexBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, pVertices, m_nStride * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dVertexUploadBuffer);
+	}
+	else if (nType == 2)
+	{
+		CIlluminatedTexturedVertex *pVertices = new CIlluminatedTexturedVertex[m_nVertices];
+		for (UINT i = 0; i < m_nVertices; i++)
+			pVertices[i] = CIlluminatedTexturedVertex(pxmf3Positions[i], pxmf3Normals[i], pxmf2TextureCoords0[i]);
+		m_pd3dVertexBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, pVertices, m_nStride * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dVertexUploadBuffer);
+	}
+	else if (nType == 3)
+	{
+		CIlluminatedTexturedTBNVertex *pVertices = new CIlluminatedTexturedTBNVertex[m_nVertices];
+		for (UINT i = 0; i < m_nVertices; i++)
+			pVertices[i] = CIlluminatedTexturedTBNVertex(pxmf3Positions[i], pxmf3Tangents[i], pxmf3Normals[i], pxmf2TextureCoords0[i]);
+		m_pd3dVertexBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, pVertices, m_nStride * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dVertexUploadBuffer);
+	}
+
+	m_d3dVertexBufferView.BufferLocation = m_pd3dVertexBuffer->GetGPUVirtualAddress();
+	m_d3dVertexBufferView.StrideInBytes = m_nStride;
+	m_d3dVertexBufferView.SizeInBytes = m_nStride * m_nVertices;
+
+	if (nIndices > 0)
+	{
+		m_nIndices = nIndices;
+
+		m_pd3dIndexBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, pIndices, sizeof(UINT) * m_nIndices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_INDEX_BUFFER, &m_pd3dIndexUploadBuffer);
+
+		m_d3dIndexBufferView.BufferLocation = m_pd3dIndexBuffer->GetGPUVirtualAddress();
+		m_d3dIndexBufferView.Format = DXGI_FORMAT_R32_UINT;
+		m_d3dIndexBufferView.SizeInBytes = sizeof(UINT) * m_nIndices;
+	}
+
+	if (pxmf3Positions)
+		delete[] pxmf3Positions;
+
+	if (pxmf2TextureCoords0)
+		delete[] pxmf2TextureCoords0;
+
+	if (pxmf3Normals)
+		delete[] pxmf3Normals;
+
+	if (pxmf3Tangents)
+		delete[] pxmf3Tangents;
+
+	if (pIndices)
+		delete[] pIndices;
+}
 
 CMesh::~CMesh()
 {

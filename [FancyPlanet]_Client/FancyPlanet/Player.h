@@ -9,12 +9,17 @@
 
 #define FLAGE_NUM			3
 
-#define JUMP 0
-#define LAUNCH 1
-#define ETC 2
-
 #include "Object.h"
 #include "Camera.h"
+
+#define HUMAN_SKILL1 2.0f
+#define HUMAN_SKILL2 4.0f
+
+#define DRONE_SKILL1 2.0f
+#define DRONE_SKILL2 4.0f
+
+#define CREATURE_SKILL1 2.0f
+#define CREATURE_SKILL2 4.0f
 
 struct CB_PLAYER_INFO
 {
@@ -29,6 +34,8 @@ protected:
 	XMFLOAT3					m_xmf3Up = XMFLOAT3(0.0f, 1.0f, 0.0f);
 	XMFLOAT3					m_xmf3Look = XMFLOAT3(0.0f, 0.0f, 1.0f);
 
+	XMFLOAT3				m_xmf3OldPosition = XMFLOAT3(0.0f, 0.0f, 0.0f);
+
 	float           			m_fPitch = 0.0f;
 	float           			m_fYaw = 0.0f;
 	float           			m_fRoll = 0.0f;
@@ -40,6 +47,7 @@ protected:
 
 	float						m_fSpeed = 1.0f;
 	float						m_fTimeDelta = 0.0f;
+	bool						m_bMoveSkillState = false;
 
 	bool						m_bJumpState = false;
 private:
@@ -51,7 +59,32 @@ private:
 	CAnimationObject* m_pRenderObject;
 	bool m_bAttackedState = false;
 	bool m_bKeySwitch = true;
+
+	int m_nCharacter = 0;
+
+	float m_fSkill1 = 1.0f;
+	float m_fSkill2 = 1.0f;
+
+
+	DWORD m_dwSkill1;
+	DWORD m_dwSkill2;
 public:
+	float GetSkill1Time()
+	{
+		return m_fSkill1;
+	}
+	float GetSkill2Time()
+	{
+		return m_fSkill2;
+	}
+	void SetCharacterType(int nType)
+	{
+		m_nCharacter = nType;
+	}
+	int GetCharacterType()
+	{
+		return m_nCharacter;
+	}
 	void SetMousPos(const float& fX, const float& fY)
 	{
 		m_xmf2MousPos.x = fX;
@@ -115,18 +148,27 @@ public:
 	}
 	void SetWorldPosition(const XMFLOAT4X4& xmf3Pos)
 	{
-		m_pCamera->Move(m_xmf3Position.x - xmf3Pos._41, m_xmf3Position.y - xmf3Pos._42, m_xmf3Position.z - xmf3Pos._43);
-		m_xmf4x4World = xmf3Pos;
-		m_xmf3Position.x= xmf3Pos._41;
-		m_xmf3Position.y= xmf3Pos._42;
-		m_xmf3Position.z= xmf3Pos._43;
+		m_xmf3Position.x = xmf3Pos._41;
+		m_xmf3Position.y = xmf3Pos._42;
+		m_xmf3Position.z = xmf3Pos._43;
+	}
+	void SetLookVector(const XMFLOAT3& xmf3Look)
+	{
+		m_xmf3Look = xmf3Look;
+	}
+	void SetRightVector(const XMFLOAT3& xmf3Right)
+	{
+		m_xmf3Right = xmf3Right;
+	}
+	void SetUpVector(const XMFLOAT3& xmf3Up)
+	{
+		m_xmf3Up = xmf3Up;
 	}
 public:
-	CPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature
-		, int nMeshes = 1);
+	CPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, int nMeshes = 1);
 	virtual ~CPlayer();
 	void	BuildObject();
-	XMFLOAT3 GetPosition()
+	XMFLOAT3& GetPosition()
 	{
 		return(m_xmf3Position);
 	}
@@ -142,11 +184,12 @@ public:
 	{
 		return(m_xmf3Right);
 	}
-	void SetPosition(const XMFLOAT3& xmf3Position)
+	void SetPosition(XMFLOAT3& xmf3Position)
 	{
 		Move(XMFLOAT3(xmf3Position.x - m_xmf3Position.x, xmf3Position.y - m_xmf3Position.y, xmf3Position.z - m_xmf3Position.z), false);
 	}
-
+	void SetMoveSKillState(bool state) { m_bMoveSkillState = state; }
+	bool GetMoveSkillState() { return m_bMoveSkillState; }
 	float GetYaw() const { return(m_fYaw); }
 	float GetPitch() const { return(m_fPitch); }
 	float GetRoll() const { return(m_fRoll); }
@@ -158,7 +201,8 @@ public:
 	void Move(const XMFLOAT3& xmf3Shift, bool bVelocity = false);
 	void Move(float fxOffset = 0.0f, float fyOffset = 0.0f, float fzOffset = 0.0f);
 	void Rotate(float x, float y, float z);
-
+	void CalcSkill();
+	void UseSkill(UINT nIndex);
 	void Update(float fTimeElapsed);
 
 	virtual void OnPlayerUpdateCallback(float fTimeElapsed);

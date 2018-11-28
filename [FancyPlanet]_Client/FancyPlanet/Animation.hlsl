@@ -311,6 +311,7 @@ float4 PS_TDL(A_VS_OUTPUT input) : SV_TARGET
 	float shadowFactor = CalcShadowFactor(input.ShadowPosH);
 	float4 cllumination = Lighting(input.positionW, normalW, diffuse, 0, 30, shadowFactor);
 
+	//return float4(diffuse, 1.0f);
 	return cllumination;
 }
 float4 PS_Specular_TDL(A_VS_OUTPUT input) : SV_TARGET

@@ -105,7 +105,7 @@ float4 Object_PS(VS_OUTPUT input) : SV_TARGET
 {
 	float2 uv1;
 	uv1.x = input.uv.x;
-	uv1.y = 1.0f - input.uv.y;
+	uv1.    y = 1.0f - input.uv.y;
 
 	float3 diffuse = gtxtObject_Diffuse.Sample(gWrapSamplerState, uv1).rgb;
 	

@@ -47,11 +47,18 @@ protected:
 	ID3D12Resource					*m_pd3dcbCamera = NULL;
 	SHADOW_INFO				*m_pcbMappedCamera = NULL;
 
+	int m_nCharacter;
+	bool IsLobby = true;
 public:
 	CCamera();
 	CCamera(CCamera *pCamera);
 	virtual ~CCamera();
 
+	void SetLobbyFlag(bool bFlag)
+	{
+		IsLobby = bFlag;
+	}
+	void SetCharacterType(int nCharacter);
 	virtual void CreateShaderVariables(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList);
 	virtual void ReleaseShaderVariables();
 	virtual void UpdateShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList);
@@ -102,6 +109,10 @@ public:
 
 	virtual void Move(const XMFLOAT3& xmf3Shift) { m_xmf3Position.x += xmf3Shift.x; m_xmf3Position.y += xmf3Shift.y; m_xmf3Position.z += xmf3Shift.z; }
 	virtual void Rotate(float fPitch = 0.0f, float fYaw = 0.0f, float fRoll = 0.0f) { }
+	void RotatePosition(XMMATRIX& xmmtxRotate)
+	{
+		m_xmf3Position = Vector3::TransformCoord(m_xmf3Position, xmmtxRotate);
+	};
 	virtual void Update(XMFLOAT3& xmf3LookAt, float fTimeElapsed) { }
 	void Move(float fx, float fy, float fz)
 	{
@@ -123,6 +134,9 @@ public:
 
 class CFirstPersonCamera : public CCamera
 {
+	XMVECTOR DefaultForward = XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f);
+	XMVECTOR DefaultRight = XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f);
+	XMFLOAT3 m_xmf3CamTarget;
 public:
 	CFirstPersonCamera(CCamera *pCamera);
 	virtual ~CFirstPersonCamera() { }

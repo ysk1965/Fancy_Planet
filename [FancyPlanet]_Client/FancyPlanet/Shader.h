@@ -27,6 +27,7 @@ public:
 	virtual D3D12_RASTERIZER_DESC CreateRasterizerState();
 	virtual D3D12_BLEND_DESC CreateBlendState();
 	virtual D3D12_DEPTH_STENCIL_DESC CreateDepthStencilState();
+	D3D12_SHADER_RESOURCE_VIEW_DESC GetShaderResourceViewDesc(D3D12_RESOURCE_DESC d3dResourceDesc, UINT nTextureType);
 
 	virtual D3D12_SHADER_BYTECODE CreateVertexShader(ID3DBlob **ppd3dShaderBlob, bool bIsShadow);
 	virtual D3D12_SHADER_BYTECODE CreatePixelShader(ID3DBlob **ppd3dShaderBlob);
@@ -113,6 +114,7 @@ public:
 	virtual ~CDefferredLightingTexturedShader();
 	virtual void CreateShader(ID3D12Device *pd3dDevice, ID3D12RootSignature *pd3dGraphicsRootSignature, UINT nRenderTargets);
 	virtual D3D12_INPUT_LAYOUT_DESC CreateInputLayout();
+	D3D12_DEPTH_STENCIL_DESC CreateDepthStencilState();
 
 	virtual D3D12_SHADER_BYTECODE CreateVertexShader(ID3DBlob **ppd3dShaderBlob, bool bIsShadow);
 	virtual D3D12_SHADER_BYTECODE CreatePixelShader(ID3DBlob **ppd3dShaderBlob);
@@ -252,6 +254,7 @@ public:
 	CShadowShader(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, UINT nWndClientWidth, UINT nWndClientHeight);
 	virtual ~CShadowShader();
 
+	void Release();
 	void CreateDsvDescriptorHeaps(ID3D12Device *pd3dDevice);
 	void CreateResource(ID3D12Device *pd3dDevice, UINT nWndClientWidth, UINT nWndClientHeight);
 	void CreateDepthStencilView(ID3D12Device *pd3dDevice);
@@ -318,4 +321,30 @@ public:
 	virtual D3D12_SHADER_BYTECODE CreatePixelShader(ID3DBlob **ppd3dShaderBlob);
 
 	void OnPrepareRender(ID3D12GraphicsCommandList *pd3dCommandList);
+};
+
+class StaticObjectShader : public CShader
+{
+public:
+	StaticObjectShader();
+	~StaticObjectShader();
+
+	void CreateShader(ID3D12Device *pd3dDevice, ID3D12RootSignature *pd3dGraphicsRootSignature);
+	void CreatePSO(ID3D12Device *pd3dDevice, ID3D12RootSignature *pd3dGraphicsRootSignature, UINT nIndex);
+	
+	D3D12_BLEND_DESC CreateBlendState(bool bFlag);
+	D3D12_DEPTH_STENCIL_DESC CreateDepthStencilState(bool bFlag);
+	void CreateShaderResourceViews(ID3D12Device *pd3dDevice, CTexture *pTexture, ID3D12Resource* pShadowMap);
+	void CreateShaderVariables(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList);
+	D3D12_INPUT_LAYOUT_DESC CreateInputLayout();
+	virtual D3D12_SHADER_BYTECODE CreateVertexShader(ID3DBlob **ppd3dShaderBlob, UINT nIndex);
+	virtual D3D12_SHADER_BYTECODE CreatePixelShader(ID3DBlob **ppd3dShaderBlob, UINT nType);
+
+	virtual void BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12Resource* pShadowMap);
+	void OnPrepareShadowRender(ID3D12GraphicsCommandList *pd3dCommandList);
+	void OnPrepareRender(ID3D12GraphicsCommandList *pd3dCommandList, UINT nIndex, UINT nType);
+private:
+	CTexture * m_pTexture = NULL;
+
+	ID3D12PipelineState *m_pd3dShadowPipelineState = NULL;
 };

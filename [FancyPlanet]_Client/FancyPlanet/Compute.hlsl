@@ -6,19 +6,8 @@ Texture2D gOriginSceneTex           : register(t2);
 RWTexture2D<float4> gOutput : register(u0);
 cbuffer cbSettings : register(b0)
 {
-	float gRadius;
-	// Support up to 11 blur weights.
-	float w0;
-	float w1;
-	float w2;
-	float w3;
-	float w4;
-	float w5;
-	float w6;
-	float w7;
-	float w8;
-	float w9;
-	float w10;
+	float fRed;
+	uint nVibration;
 };
 #define N 256
 
@@ -35,6 +24,16 @@ void Add_CS(int3 groupThreadID : SV_GroupThreadID, int3 dispatchThreadID : SV_Di
 	float4 fResult;
 
 	gOutput[dispatchThreadID.xy] = gInput[dispatchThreadID.xy] * 2.0f + gOriginSceneTex[dispatchThreadID.xy];
+
+	gOutput[dispatchThreadID.xy] = gOutput[dispatchThreadID.xy] * float4(1.0f, fRed, fRed, 1.0f);
+
+	fResult = gOutput[int2(dispatchThreadID.x, dispatchThreadID.y)] + gOutput[int2(dispatchThreadID.x - nVibration, dispatchThreadID.y - nVibration)] +
+		gOutput[int2(dispatchThreadID.x, dispatchThreadID.y - nVibration)] + gOutput[int2(dispatchThreadID.x + nVibration, dispatchThreadID.y - nVibration)] +
+		gOutput[int2(dispatchThreadID.x + nVibration, dispatchThreadID.y)] + gOutput[int2(dispatchThreadID.x + nVibration, dispatchThreadID.y + nVibration)]+
+		gOutput[int2(dispatchThreadID.x, dispatchThreadID.y + nVibration)] + gOutput[int2(dispatchThreadID.x - nVibration, dispatchThreadID.y + nVibration)]+
+		gOutput[int2(dispatchThreadID.x - nVibration, dispatchThreadID.y)];
+	
+	gOutput[dispatchThreadID.xy] = fResult / 9.0f;
 }
 
 static const int gMaxBlurRadius = 5;

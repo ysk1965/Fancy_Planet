@@ -73,23 +73,23 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>D:\FancyPlanet\PhysX\Include;$(IncludePath)</IncludePath>
-    <LibraryPath>D:\FancyPlanet\PhysX\vc14win64;$(LibraryPath)</LibraryPath>
+    <IncludePath>D:\카톡\FancyPlanet%2808.08%29\[FancyPlanet]_Client %2808.10%29\FMOD_x64\inc;D:\카톡\FancyPlanet%2808.08%29\[FancyPlanet]_Client %283%29\FancyPlanet;D:\카톡\FancyPlanet%2808.08%29\[FancyPlanet]_Client %283%29\FMOD_x64\inc;$(IncludePath)</IncludePath>
+    <LibraryPath>D:\카톡\FancyPlanet%2808.08%29\[FancyPlanet]_Client %2808.10%29\FMOD_x64\lib;D:\카톡\FancyPlanet%2808.08%29\[FancyPlanet]_Client %283%29\FMOD_x64\lib;D:\FancyPlanet\PhysX\vc14win64;D:\카톡\FancyPlanet%2808.08%29\[FancyPlanet]_Client %283%29\FancyPlanet\x64\Release;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>D:\FancyPlanet\PhysX\Include;PhysX\Include;$(IncludePath)</IncludePath>
-    <LibraryPath>D:\FancyPlanet\PhysX\vc14win64;PhysX\vc14win64;$(LibraryPath)</LibraryPath>
+    <IncludePath>D:\카톡\FancyPlanet%2808.08%29\[FancyPlanet]_Client %2808.10%29\FMOD_x64\inc;D:\카톡\FancyPlanet%2808.08%29\[FancyPlanet]_Client %283%29\FancyPlanet;D:\카톡\FancyPlanet%2808.08%29\[FancyPlanet]_Client %283%29\FMOD_x64\inc;$(IncludePath)</IncludePath>
+    <LibraryPath>D:\카톡\FancyPlanet%2808.08%29\[FancyPlanet]_Client %2808.10%29\FMOD_x64\lib;D:\카톡\FancyPlanet%2808.08%29\[FancyPlanet]_Client %283%29\FMOD_x64\lib;D:\FancyPlanet\PhysX\vc14win64;D:\카톡\FancyPlanet%2808.08%29\[FancyPlanet]_Client %283%29\FancyPlanet\x64\Release;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>D:\FancyPlanet\PhysX\Include;$(IncludePath)</IncludePath>
-    <LibraryPath>D:\FancyPlanet\PhysX\vc14win64;$(LibraryPath)</LibraryPath>
+    <IncludePath>D:\카톡\FancyPlanet%2808.08%29\[FancyPlanet]_Client %2808.10%29\FMOD_x64\inc;D:\카톡\FancyPlanet%2808.08%29\[FancyPlanet]_Client %283%29\FancyPlanet;D:\카톡\FancyPlanet%2808.08%29\[FancyPlanet]_Client %283%29\FMOD_x64\inc;$(IncludePath)</IncludePath>
+    <LibraryPath>D:\카톡\FancyPlanet%2808.08%29\[FancyPlanet]_Client %2808.10%29\FMOD_x64\lib;D:\카톡\FancyPlanet%2808.08%29\[FancyPlanet]_Client %283%29\FMOD_x64\lib;D:\FancyPlanet\PhysX\vc14win64;D:\카톡\FancyPlanet%2808.08%29\[FancyPlanet]_Client %283%29\FancyPlanet\x64\Release;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>D:\FancyPlanet\PhysX\Include;$(IncludePath)</IncludePath>
-    <LibraryPath>D:\FancyPlanet\PhysX\vc14win64;$(LibraryPath)</LibraryPath>
+    <IncludePath>D:\카톡\FancyPlanet%2808.08%29\[FancyPlanet]_Client %2808.10%29\FMOD_x64\inc;D:\카톡\FancyPlanet%2808.08%29\[FancyPlanet]_Client %283%29\FancyPlanet;D:\카톡\FancyPlanet%2808.08%29\[FancyPlanet]_Client %283%29\FMOD_x64\inc;$(IncludePath)</IncludePath>
+    <LibraryPath>D:\카톡\FancyPlanet%2808.08%29\[FancyPlanet]_Client %2808.10%29\FMOD_x64\lib;D:\카톡\FancyPlanet%2808.08%29\[FancyPlanet]_Client %283%29\FMOD_x64\lib;D:\FancyPlanet\PhysX\vc14win64;D:\카톡\FancyPlanet%2808.08%29\[FancyPlanet]_Client %283%29\FancyPlanet\x64\Release;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -98,14 +98,14 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>D:\FancyPlanet\FancyPlanet\PhysX\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\카톡\FancyPlanet%2808.11%29\[FancyPlanet]_Client %2808.11%29\[FancyPlanet]_Client %2808.11%29\FMOD_x64\inc;../FMOD_x64\inc</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>D:\FancyPlanet\FancyPlanet\PhysX\Lib\Release;D:\FancyPlanet\FancyPlanet\PhysX\Lib\Debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>dinput8.lib;d3dcompiler.lib;dxguid.lib;winmm.lib;dxgi.lib;comctl32.lib;PhysX3ExtensionsDEBUG.lib;physx3DEBUG_x86.lib;physx3commonDEBUG_x86.lib;PhysXVisualDebuggerSDKDEBUG.lib;PhysX3CharacterKinematicDEBUG_x86.lib;PxTaskDEBUG.lib;PhysXProfileSDKDEBUG.lib;PhysX3CookingDEBUG_x86.lib;LowLevelClothDEBUG.lib;LowLevelDEBUG.lib;physX3VehicleDEBUG.lib;PvdRuntimeDEBUG.lib;SceneQueryDEBUG.lib;SimulationControllerDEBUG.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>../FMOD_x64\lib</AdditionalLibraryDirectories>
+      <AdditionalDependencies>dinput8.lib;d3dcompiler.lib;dxguid.lib;winmm.lib;dxgi.lib;comctl32.lib;fmod64_vc.lib;fmodstudio64_vc.lib</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -115,14 +115,14 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>D:\FancyPlanet\FancyPlanet\EASTL-master\test\packages\EABase\include\Common;D:\FancyPlanet\FancyPlanet\EASTL-master\include;D:\FancyPlanet\FancyPlanet\PhysX\Include;PhysX\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\카톡\FancyPlanet%2808.11%29\[FancyPlanet]_Client %2808.11%29\[FancyPlanet]_Client %2808.11%29\FMOD_x64\inc;../FMOD_x64\inc</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>D:\FancyPlanet\FancyPlanet\x64\Debug;D:\FancyPlanet\FancyPlanet\PhysX\vc14win64;D:\FancyPlanet\FancyPlanet\x64\Release;PhysX\vc14win64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>dinput8.lib;d3dcompiler.lib;dxguid.lib;winmm.lib;dxgi.lib;comctl32.lib;PhysX3ExtensionsDEBUG.lib;physx3DEBUG_x64.lib;physx3commonDEBUG_x64.lib;PhysXVisualDebuggerSDKDEBUG.lib;PhysX3CharacterKinematicDEBUG_x64.lib;PxTaskDEBUG.lib;PhysXProfileSDKDEBUG.lib;PhysX3CookingDEBUG_x64.lib;LowLevelClothDEBUG.lib;LowLevelDEBUG.lib;physX3VehicleDEBUG.lib;PvdRuntimeDEBUG.lib;SceneQueryDEBUG.lib;SimulationControllerDEBUG.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>../FMOD_x64\lib</AdditionalLibraryDirectories>
+      <AdditionalDependencies>dinput8.lib;d3dcompiler.lib;dxguid.lib;winmm.lib;dxgi.lib;comctl32.lib;fmod64_vc.lib;fmodstudio64_vc.lib</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -153,7 +153,7 @@
       <IntrinsicFunctions>false</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>D:\FancyPlanet\FancyPlanet\PhysX\Include;C:\Users\DELL\Desktop\임시\FancyPlanet Client%2807.14%29\FancyPlanet Client%2807.14%29\PhysX\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../FMOD_x64\inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
@@ -162,8 +162,8 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <StackReserveSize>0xA00000</StackReserveSize>
-      <AdditionalLibraryDirectories>D:\FancyPlanet\FancyPlanet\x64\Debug;D:\FancyPlanet\FancyPlanet\x64\Release;D:\FancyPlanet\FancyPlanet\PhysX\vc14win64;C:\Users\DELL\Desktop\임시\FancyPlanet Client%2807.14%29\FancyPlanet Client%2807.14%29\PhysX\vc14win64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>dinput8.lib;d3dcompiler.lib;dxguid.lib;winmm.lib;dxgi.lib;comctl32.lib;PhysX3ExtensionsDEBUG.lib;physx3DEBUG_x64.lib;physx3commonDEBUG_x64.lib;PhysXVisualDebuggerSDKDEBUG.lib;PhysX3CharacterKinematicDEBUG_x64.lib;PxTaskDEBUG.lib;PhysXProfileSDKDEBUG.lib;PhysX3CookingDEBUG_x64.lib;LowLevelClothDEBUG.lib;LowLevelDEBUG.lib;physX3VehicleDEBUG.lib;PvdRuntimeDEBUG.lib;SceneQueryDEBUG.lib;SimulationControllerDEBUG.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>../FMOD_x64\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>dinput8.lib;d3dcompiler.lib;dxguid.lib;winmm.lib;dxgi.lib;comctl32.lib;fmod64_vc.lib;fmodstudio64_vc.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -173,6 +173,7 @@
     <ClInclude Include="DDSTextureLoader12.h" />
     <ClInclude Include="Effect.h" />
     <ClInclude Include="FancyPlanet.h" />
+    <ClInclude Include="FmodSound.h" />
     <ClInclude Include="GameFramework.h" />
     <ClInclude Include="Mesh.h" />
     <ClInclude Include="Object.h" />
@@ -187,23 +188,38 @@
     <ClInclude Include="UIShader.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Animation.cpp" />
+    <ClCompile Include="AnimationObject.cpp" />
+    <ClCompile Include="Build.cpp" />
     <ClCompile Include="Camera.cpp" />
+    <ClCompile Include="CharacterScene.cpp" />
     <ClCompile Include="ComputShader.cpp" />
     <ClCompile Include="DDSTextureLoader12.cpp" />
     <ClCompile Include="Effect.cpp" />
+    <ClCompile Include="EffectScene.cpp" />
     <ClCompile Include="FancyPlanet.cpp" />
+    <ClCompile Include="FmodSound.cpp" />
     <ClCompile Include="GameFramwork.cpp" />
+    <ClCompile Include="Material.cpp" />
     <ClCompile Include="Mesh.cpp" />
     <ClCompile Include="Object.cpp" />
+    <ClCompile Include="ObjectScene.cpp" />
     <ClCompile Include="Player.cpp" />
+    <ClCompile Include="ProcessInput.cpp" />
     <ClCompile Include="Scene.cpp" />
+    <ClCompile Include="Server.cpp" />
     <ClCompile Include="Shader.cpp" />
+    <ClCompile Include="SkyBox.cpp" />
+    <ClCompile Include="StaticObject.cpp" />
+    <ClCompile Include="StaticObjectShader.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="Terrain.cpp" />
+    <ClCompile Include="TerrainAndSkyScene.cpp" />
     <ClCompile Include="Timer.cpp" />
     <ClCompile Include="UIShader.cpp" />
   </ItemGroup>
@@ -211,11 +227,11 @@
     <ResourceCompile Include="FancyPlanet.rc" />
   </ItemGroup>
   <ItemGroup>
-    <Image Include="..\Assets\Image\Test\rock3.png" />
-    <Image Include="..\Assets\Image\Test\rock3Normal.dds" />
     <Image Include="Assets\Image\Terrain\Base_Texture.dds" />
     <Image Include="Assets\Image\Terrain\Detail_Texture_7.dds" />
+    <Image Include="DeathStar32x32.ico" />
     <Image Include="FancyPlanet.ico" />
+    <Image Include="icon1.ico" />
     <Image Include="small.ico" />
   </ItemGroup>
   <ItemGroup>
@@ -266,6 +282,22 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </FxCompile>
     <FxCompile Include="Shaders.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </FxCompile>
+    <FxCompile Include="StaticObject.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Vertex</ShaderType>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+    </FxCompile>
+    <FxCompile Include="StaticObject_Emissive.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Vertex</ShaderType>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </FxCompile>

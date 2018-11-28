@@ -126,7 +126,7 @@ float4 PSTerrain(VS_TERRAIN_OUTPUT input) : SV_TARGET
 
 	float4 cDetailTexColor = gtxtTerrainDetailTexture.Sample(gWrapSamplerState, input.uv1);
 
-	float4 cColor = saturate((cBaseTexColor * 0.5f) + (cDetailTexColor * 0.5f));
+	float4 cColor = saturate((cBaseTexColor * 0.2f) + (cDetailTexColor * 0.8f));
 	//cColor = float4(0.0f, 0.8f, 0.0f, 1.0f);
 	float3 N = normalize(input.normalW);
 	float3 T = normalize(input.tangentW - dot(input.tangentW, N) * N);

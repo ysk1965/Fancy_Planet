@@ -3,9 +3,12 @@
 #include <math.h>
 
 
-UIShader::UIShader(CPlayer * pPlayer)
+UIShader::UIShader(CPlayer* pPlayer, UINT nCharaterType)
 {
+	m_bLobby = false;
+	m_nCharaterType = nCharaterType;
 	m_pPlayer = pPlayer;
+	m_bGaze = false;
 }
 UIShader::~UIShader()
 {
@@ -44,7 +47,7 @@ D3D12_SHADER_BYTECODE UIShader::CompileShaderFromFile(WCHAR *pszFileName, LPCSTR
 }
 void UIShader::CreateShader(ID3D12Device *pd3dDevice, UINT nRenderTargets)
 {
-	m_nPipelineStates = 9;
+	m_nPipelineStates = 18;
 	m_ppd3dPipelineStates = new ID3D12PipelineState*[m_nPipelineStates];
 
 	for (int i = 0; i < m_nPipelineStates; i++)
@@ -137,22 +140,40 @@ D3D12_DEPTH_STENCIL_DESC UIShader::CreateDepthStencilState()
 
 	return(d3dDepthStencilDesc);
 }
-D3D12_BLEND_DESC CreateBlendState()
+D3D12_BLEND_DESC CreateBlendState(bool bType)
 {
 	D3D12_BLEND_DESC d3dBlendDesc;
 	::ZeroMemory(&d3dBlendDesc, sizeof(D3D12_BLEND_DESC));
-	d3dBlendDesc.AlphaToCoverageEnable = FALSE;
-	d3dBlendDesc.IndependentBlendEnable = FALSE;
-	d3dBlendDesc.RenderTarget[0].BlendEnable = FALSE;
-	d3dBlendDesc.RenderTarget[0].LogicOpEnable = FALSE;
-	d3dBlendDesc.RenderTarget[0].SrcBlend = D3D12_BLEND_ONE;
-	d3dBlendDesc.RenderTarget[0].DestBlend = D3D12_BLEND_ZERO;
-	d3dBlendDesc.RenderTarget[0].BlendOp = D3D12_BLEND_OP_ADD;
-	d3dBlendDesc.RenderTarget[0].SrcBlendAlpha = D3D12_BLEND_ONE;
-	d3dBlendDesc.RenderTarget[0].DestBlendAlpha = D3D12_BLEND_ZERO;
-	d3dBlendDesc.RenderTarget[0].BlendOpAlpha = D3D12_BLEND_OP_ADD;
-	d3dBlendDesc.RenderTarget[0].LogicOp = D3D12_LOGIC_OP_NOOP;
-	d3dBlendDesc.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
+	if (bType)
+	{
+		d3dBlendDesc.AlphaToCoverageEnable = FALSE;
+		d3dBlendDesc.IndependentBlendEnable = FALSE;
+		d3dBlendDesc.RenderTarget[0].BlendEnable = FALSE;
+		d3dBlendDesc.RenderTarget[0].LogicOpEnable = FALSE;
+		d3dBlendDesc.RenderTarget[0].SrcBlend = D3D12_BLEND_ONE;
+		d3dBlendDesc.RenderTarget[0].DestBlend = D3D12_BLEND_ZERO;
+		d3dBlendDesc.RenderTarget[0].BlendOp = D3D12_BLEND_OP_ADD;
+		d3dBlendDesc.RenderTarget[0].SrcBlendAlpha = D3D12_BLEND_ONE;
+		d3dBlendDesc.RenderTarget[0].DestBlendAlpha = D3D12_BLEND_ZERO;
+		d3dBlendDesc.RenderTarget[0].BlendOpAlpha = D3D12_BLEND_OP_ADD;
+		d3dBlendDesc.RenderTarget[0].LogicOp = D3D12_LOGIC_OP_NOOP;
+		d3dBlendDesc.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
+	}
+	else
+	{
+		d3dBlendDesc.AlphaToCoverageEnable = false;
+		d3dBlendDesc.IndependentBlendEnable = false;
+		d3dBlendDesc.RenderTarget[0].BlendEnable = TRUE;
+		d3dBlendDesc.RenderTarget[0].LogicOpEnable = false;
+		d3dBlendDesc.RenderTarget[0].SrcBlend = D3D12_BLEND_SRC_ALPHA;
+		d3dBlendDesc.RenderTarget[0].DestBlend = D3D12_BLEND_INV_SRC_ALPHA;
+		d3dBlendDesc.RenderTarget[0].BlendOp = D3D12_BLEND_OP_ADD;
+		d3dBlendDesc.RenderTarget[0].SrcBlendAlpha = D3D12_BLEND_ONE;
+		d3dBlendDesc.RenderTarget[0].DestBlendAlpha = D3D12_BLEND_ZERO;
+		d3dBlendDesc.RenderTarget[0].BlendOpAlpha = D3D12_BLEND_OP_ADD;
+		d3dBlendDesc.RenderTarget[0].LogicOp = D3D12_LOGIC_OP_NOOP;
+		d3dBlendDesc.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
+	}
 
 	return(d3dBlendDesc);
 }
@@ -164,9 +185,21 @@ void UIShader::CreatePSO(ID3D12Device *pd3dDevice, UINT nRenderTargets, UINT nIn
 	::ZeroMemory(&d3dPipelineStateDesc, sizeof(D3D12_GRAPHICS_PIPELINE_STATE_DESC));
 	d3dPipelineStateDesc.pRootSignature = m_pd3dGraphicsRootSignature;
 	d3dPipelineStateDesc.VS = CreateVertexShader(&pd3dVertexShaderBlob, nIndex);
-	d3dPipelineStateDesc.PS = CreatePixelShader(&pd3dPixelShaderBlob);
+
+	if (nIndex == SKILL1_COVER || nIndex == SKILL2_COVER)
+		d3dPipelineStateDesc.PS = CreatePixelShader(&pd3dPixelShaderBlob, 1);
+	else if (nIndex == OCCUPATION_GAZE_COVER)
+		d3dPipelineStateDesc.PS = CreatePixelShader(&pd3dPixelShaderBlob, 2);
+	else
+		d3dPipelineStateDesc.PS = CreatePixelShader(&pd3dPixelShaderBlob, 0);
+
 	d3dPipelineStateDesc.RasterizerState = CreateRasterizerState();
-	d3dPipelineStateDesc.BlendState = CreateBlendState();
+
+	if (nIndex == SKILL1_COVER || nIndex == SKILL2_COVER || nIndex == OCCUPATION_GAZE_COVER)
+		d3dPipelineStateDesc.BlendState = CreateBlendState(false);
+	else
+		d3dPipelineStateDesc.BlendState = CreateBlendState(true);
+
 	d3dPipelineStateDesc.DepthStencilState = CreateDepthStencilState();
 	d3dPipelineStateDesc.InputLayout = CreateInputLayout();
 	d3dPipelineStateDesc.SampleMask = UINT_MAX;
@@ -189,28 +222,51 @@ void UIShader::CreatePSO(ID3D12Device *pd3dDevice, UINT nRenderTargets, UINT nIn
 }
 D3D12_SHADER_BYTECODE UIShader::CreateVertexShader(ID3DBlob **ppd3dShaderBlob, UINT nIndex)
 {
-	if(nIndex == MINIMAP_UI)
+	if (nIndex == MINIMAP_UI)
 		return(CompileShaderFromFile(L"UI.hlsl", "MINIUI_VS", "vs_5_1", ppd3dShaderBlob));
-	else if(nIndex == ARROW)
+	else if (nIndex == ARROW)
 		return(CompileShaderFromFile(L"UI.hlsl", "ARROW_VS", "vs_5_1", ppd3dShaderBlob));
 	else if (nIndex == MINIMAP)
 		return(CompileShaderFromFile(L"UI.hlsl", "MINIMAP_VS", "vs_5_1", ppd3dShaderBlob));
 	else if (nIndex == CROSS)
 		return(CompileShaderFromFile(L"UI.hlsl", "CROSS_VS", "vs_5_1", ppd3dShaderBlob));
 	else if (nIndex == TIME_NUMBER)
-		return(CompileShaderFromFile(L"UI.hlsl", "SCORENUMBER_VS", "vs_5_1", ppd3dShaderBlob));
+		return(CompileShaderFromFile(L"UI.hlsl", "TIME_NUMBER_VS", "vs_5_1", ppd3dShaderBlob));
 	else if (nIndex == SCOREBOARD)
 		return(CompileShaderFromFile(L"UI.hlsl", "SCOREBOARD_VS", "vs_5_1", ppd3dShaderBlob));
 	else if (nIndex == POINTER)
 		return(CompileShaderFromFile(L"UI.hlsl", "GRAVITYPOINTER_VS", "vs_5_1", ppd3dShaderBlob));
 	else if (nIndex == HP_NUMBER)
 		return(CompileShaderFromFile(L"UI.hlsl", "HP_NUMBER_VS", "vs_5_1", ppd3dShaderBlob));
-	else
+	else if (nIndex == GRAVITY)
 		return(CompileShaderFromFile(L"UI.hlsl", "GRAVITYBAR_VS", "vs_5_1", ppd3dShaderBlob));
+	else if (nIndex == SCORE_NUMBER)
+		return(CompileShaderFromFile(L"UI.hlsl", "SCORE_NUMBER_VS", "vs_5_1", ppd3dShaderBlob));
+	else if (nIndex == SKILL1)
+		return(CompileShaderFromFile(L"UI.hlsl", "SKILL1_VS", "vs_5_1", ppd3dShaderBlob));
+	else if (nIndex == SKILL2)
+		return(CompileShaderFromFile(L"UI.hlsl", "SKILL2_VS", "vs_5_1", ppd3dShaderBlob));
+	else if (nIndex == SKILL1_COVER)
+		return(CompileShaderFromFile(L"UI.hlsl", "SKILL1_COVER_VS", "vs_5_1", ppd3dShaderBlob));
+	else if (nIndex == SKILL2_COVER)
+		return(CompileShaderFromFile(L"UI.hlsl", "SKILL2_COVER_VS", "vs_5_1", ppd3dShaderBlob));
+	else if (nIndex == LOBBY)
+		return(CompileShaderFromFile(L"UI.hlsl", "LOBBY_VS", "vs_5_1", ppd3dShaderBlob));
+	else if (nIndex == OCCUPATION_GAZE)
+		return(CompileShaderFromFile(L"UI.hlsl", "OCCUPATION_GAZE_VS", "vs_5_1", ppd3dShaderBlob));
+	else if (nIndex == OCCUPATION_GAZE_COVER)
+		return(CompileShaderFromFile(L"UI.hlsl", "OCCUPATION_GAZE_COVER_VS", "vs_5_1", ppd3dShaderBlob));
+	else if (nIndex == SELECT)
+		return(CompileShaderFromFile(L"UI.hlsl", "SELECT_VS", "vs_5_1", ppd3dShaderBlob));
 }
-D3D12_SHADER_BYTECODE UIShader::CreatePixelShader(ID3DBlob **ppd3dShaderBlob)
+D3D12_SHADER_BYTECODE UIShader::CreatePixelShader(ID3DBlob **ppd3dShaderBlob, UINT nType)
 {
-	return(CompileShaderFromFile(L"UI.hlsl", "UIPS", "ps_5_1", ppd3dShaderBlob));
+	if (nType == 0)
+		return(CompileShaderFromFile(L"UI.hlsl", "UIPS", "ps_5_1", ppd3dShaderBlob));
+	else if (nType == 1)
+		return(CompileShaderFromFile(L"UI.hlsl", "UI_COVER_PS", "ps_5_1", ppd3dShaderBlob));
+	else if (nType == 2)
+		return(CompileShaderFromFile(L"UI.hlsl", "OCCUPATION_GAZE_COVER_PS", "ps_5_1", ppd3dShaderBlob));
 }
 void UIShader::CreateGraphicsRootSignature(ID3D12Device *pd3dDevice)
 {
@@ -273,16 +329,26 @@ void UIShader::CreateGraphicsRootSignature(ID3D12Device *pd3dDevice)
 }
 void UIShader::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList)
 {
-	m_pTexture = new CTexture(9, RESOURCE_TEXTURE2D, 0);
+	m_pTexture = new CTexture(m_nPipelineStates + 1, RESOURCE_TEXTURE2D, 0);
+	m_pTexture->LoadTextureFromFile(pd3dDevice, pd3dCommandList, L"../Assets/map.dds", MINIMAP);
 	m_pTexture->LoadTextureFromFile(pd3dDevice, pd3dCommandList, L"../Assets/MiniMapUI.dds", MINIMAP_UI);
 	m_pTexture->LoadTextureFromFile(pd3dDevice, pd3dCommandList, L"../Assets/arrow.dds", ARROW);
-	m_pTexture->LoadTextureFromFile(pd3dDevice, pd3dCommandList, L"../Assets/map.dds", MINIMAP);
 	m_pTexture->LoadTextureFromFile(pd3dDevice, pd3dCommandList, L"../Assets/cross.dds", CROSS);
-	m_pTexture->LoadTextureFromFile(pd3dDevice, pd3dCommandList, L"../Assets/number.dds", TIME_NUMBER);
 	m_pTexture->LoadTextureFromFile(pd3dDevice, pd3dCommandList, L"../Assets/Scoreboard.dds", SCOREBOARD);
-	m_pTexture->LoadTextureFromFile(pd3dDevice, pd3dCommandList, L"../Assets/GravityPointer.dds", POINTER);
-	m_pTexture->LoadTextureFromFile(pd3dDevice, pd3dCommandList, L"../Assets/number.dds", HP_NUMBER);
+	m_pTexture->LoadTextureFromFile(pd3dDevice, pd3dCommandList, L"../Assets/number.dds", TIME_NUMBER);
 	m_pTexture->LoadTextureFromFile(pd3dDevice, pd3dCommandList, L"../Assets/GravityBar.dds", GRAVITY);
+	m_pTexture->LoadTextureFromFile(pd3dDevice, pd3dCommandList, L"../Assets/GravityPointer.dds", POINTER);
+	m_pTexture->LoadTextureFromFile(pd3dDevice, pd3dCommandList, L"../Assets/Human_1R.dds", H_1);
+	m_pTexture->LoadTextureFromFile(pd3dDevice, pd3dCommandList, L"../Assets/Human_2R.dds", H_2);
+	m_pTexture->LoadTextureFromFile(pd3dDevice, pd3dCommandList, L"../Assets/Protoss_1B.dds", P_1);
+	m_pTexture->LoadTextureFromFile(pd3dDevice, pd3dCommandList, L"../Assets/Protoss_2B.dds", P_2);
+	m_pTexture->LoadTextureFromFile(pd3dDevice, pd3dCommandList, L"../Assets/Zerg_1G.dds", Z_1);
+	m_pTexture->LoadTextureFromFile(pd3dDevice, pd3dCommandList, L"../Assets/Zerg_2G.dds", Z_2);
+	m_pTexture->LoadTextureFromFile(pd3dDevice, pd3dCommandList, L"../Assets/Lobby.dds", LOBBY);
+	m_pTexture->LoadTextureFromFile(pd3dDevice, pd3dCommandList, L"../Assets/Dominatebar.dds", OCCUPATION_GAZE);
+	m_pTexture->LoadTextureFromFile(pd3dDevice, pd3dCommandList, L"../Assets/Selected.dds", SELECT - 1);
+	m_pTexture->LoadTextureFromFile(pd3dDevice, pd3dCommandList, L"../Assets/Result_win.dds", END_W);
+	m_pTexture->LoadTextureFromFile(pd3dDevice, pd3dCommandList, L"../Assets/Result_lose.dds", END_L);
 
 	CreateSrvDescriptorHeaps(pd3dDevice, m_pTexture->GetTextureCount());
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
@@ -338,7 +404,16 @@ void UIShader::SetAndCalculateHPLocation(UINT nTime)
 		m_ui.xmf4HPNumber[1].w = 0.0f;
 	}
 }
-void UIShader::SetAndCalculateScoreLocation(UINT nTime)
+void UIShader::SetOccupationGauge(float fTime)
+{
+	if (fTime > 0.0f)
+		m_bGaze = true;
+	else
+		m_bGaze = false;
+
+	m_ui.fGaze = fTime / 5.0f;
+}
+void UIShader::SetAndCalculateTimeLocation(UINT nTime)
 {
 	UINT nTimes[3];
 
@@ -350,6 +425,16 @@ void UIShader::SetAndCalculateScoreLocation(UINT nTime)
 	{
 		m_ui.xmf4TimeNumber[i] = CalculateNumberTexture(nTimes[i]);
 	}
+}
+
+void UIShader::SetAndCalculateScoreLocation(UINT *pRed, UINT *pBlue, UINT *pGreen)
+{
+	m_ui.xmf4ScoreNumber[0] = CalculateNumberTexture(pRed[0]);
+	m_ui.xmf4ScoreNumber[1] = CalculateNumberTexture(pRed[1]);
+	m_ui.xmf4ScoreNumber[2] = CalculateNumberTexture(pBlue[0]);
+	m_ui.xmf4ScoreNumber[3] = CalculateNumberTexture(pBlue[1]);
+	m_ui.xmf4ScoreNumber[4] = CalculateNumberTexture(pGreen[0]);
+	m_ui.xmf4ScoreNumber[5] = CalculateNumberTexture(pGreen[1]);
 }
 void UIShader::CalculateMiniMap()
 {
@@ -536,41 +621,29 @@ XMFLOAT4& UIShader::CalculateNumberTexture(UINT nNumber)
 
 	return xmf4Result;
 }
-void UIShader::CalculatePointer()
+void UIShader::CalculatePointer(int nGravity)
 {
-	if (m_ui.fGravity == 2) {
-		m_ui.xmf2Point.y = 0.2;
-	}
-	else if (m_ui.fGravity == 1) {
-		m_ui.xmf2Point.y = 0.1;
-	}
-	else if (m_ui.fGravity == 0) {
-		m_ui.xmf2Point.y = 0.0;
-	}
-	else if (m_ui.fGravity == -1) {
-		m_ui.xmf2Point.y = -0.1;
-	}
-	else if (m_ui.fGravity == -2) {
-		m_ui.xmf2Point.y = -0.2;
-	}
-	else if (m_ui.fGravity == -3) {
-		m_ui.xmf2Point.y = -0.3;
-	}
-	else if (m_ui.fGravity == -4) {
-		m_ui.xmf2Point.y = -0.4;
-	}
-	else if (m_ui.fGravity == -5) {
-		m_ui.xmf2Point.y = -0.5;
-	}
-	else if (m_ui.fGravity == -6) {
-		m_ui.xmf2Point.y = -0.6;
-	}
-	else if (m_ui.fGravity == -7) {
-		m_ui.xmf2Point.y = -0.7;
-	}
-	else if (m_ui.fGravity == -8) {
-		m_ui.xmf2Point.y = -0.8;
-	}
+	float fValue = (nGravity + 11.0f) / 13.0f;
+
+	m_ui.xmf2Point.x = (1.0f - fValue);
+}
+void UIShader::SetSkillCover(float fTime1, float fTime2)
+{
+	m_ui.xmf2SKill.x = fTime1;
+	m_ui.xmf2SKill.y = fTime2;
+}
+void UIShader::SetGameStart(UINT nCharaterType)
+{
+	m_nCharaterType = nCharaterType;
+
+	if (m_nCharaterType == 0)
+		m_ui.CoverColor = XMFLOAT4(0.8f, 0.1f, 0.1f, 0.7f);
+	else if (m_nCharaterType == 1)
+		m_ui.CoverColor = XMFLOAT4(0.1f, 0.1f, 0.8f, 0.7f);
+	else
+		m_ui.CoverColor = XMFLOAT4(0.1f, 0.8f, 0.1f, 0.7f);
+
+	m_bLobby = true;
 }
 void UIShader::CreateShaderResourceViews(ID3D12Device *pd3dDevice, CTexture *pTexture)
 {
@@ -587,7 +660,7 @@ void UIShader::CreateShaderResourceViews(ID3D12Device *pd3dDevice, CTexture *pTe
 		pd3dDevice->CreateShaderResourceView(pShaderResource, &d3dShaderResourceViewDesc, d3dSrvCPUDescriptorHandle);
 		pTexture->SetRootArgument(i, 0, d3dSrvGPUDescriptorHandle);
 
-		d3dSrvCPUDescriptorHandle.ptr += ::gnCbvSrvDescriptorIncrementSize;	
+		d3dSrvCPUDescriptorHandle.ptr += ::gnCbvSrvDescriptorIncrementSize;
 		d3dSrvGPUDescriptorHandle.ptr += ::gnCbvSrvDescriptorIncrementSize;
 	}
 }
@@ -608,7 +681,6 @@ void UIShader::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCame
 {
 	CalculateArrow();
 	CalculateMiniMap();
-	CalculatePointer();
 
 	if (m_pd3dGraphicsRootSignature)
 		pd3dCommandList->SetGraphicsRootSignature(m_pd3dGraphicsRootSignature);
@@ -622,15 +694,135 @@ void UIShader::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCame
 
 	UpdateShaderVariables(pd3dCommandList);
 
-	for (int i = m_nPipelineStates - 1; i >= 0; i--)
+	for (int i = 0; i < m_nPipelineStates; i++)
 	{
-		if (m_ppd3dPipelineStates)
-			pd3dCommandList->SetPipelineState(m_ppd3dPipelineStates[i]);
+		if (i != LOBBY && i != SELECT)
+		{
+			if (m_ppd3dPipelineStates)
+				pd3dCommandList->SetPipelineState(m_ppd3dPipelineStates[i]);
 
-		pd3dCommandList->SetGraphicsRootDescriptorTable(0, m_pTexture->GetArgumentInfos(i).m_d3dSrvGpuDescriptorHandle);
+			if (i == TIME_NUMBER || i == HP_NUMBER || i == SCORE_NUMBER)
+				pd3dCommandList->SetGraphicsRootDescriptorTable(0, m_pTexture->GetArgumentInfos(TIME_NUMBER).m_d3dSrvGpuDescriptorHandle);
+			else if (i == SKILL1)
+			{
+				if (m_nCharaterType == 0)
+					pd3dCommandList->SetGraphicsRootDescriptorTable(0, m_pTexture->GetArgumentInfos(H_1).m_d3dSrvGpuDescriptorHandle);
+				else if (m_nCharaterType == 1)
+					pd3dCommandList->SetGraphicsRootDescriptorTable(0, m_pTexture->GetArgumentInfos(P_1).m_d3dSrvGpuDescriptorHandle);
+				else
+					pd3dCommandList->SetGraphicsRootDescriptorTable(0, m_pTexture->GetArgumentInfos(Z_1).m_d3dSrvGpuDescriptorHandle);
+			}
+			else if (i == SKILL2)
+			{
+				if (m_nCharaterType == 0)
+					pd3dCommandList->SetGraphicsRootDescriptorTable(0, m_pTexture->GetArgumentInfos(H_2).m_d3dSrvGpuDescriptorHandle);
+				else if (m_nCharaterType == 1)
+					pd3dCommandList->SetGraphicsRootDescriptorTable(0, m_pTexture->GetArgumentInfos(P_2).m_d3dSrvGpuDescriptorHandle);
+				else
+					pd3dCommandList->SetGraphicsRootDescriptorTable(0, m_pTexture->GetArgumentInfos(Z_2).m_d3dSrvGpuDescriptorHandle);
+			}
+			else if (i != SKILL1_COVER && i != SKILL2_COVER && i != OCCUPATION_GAZE_COVER)
+				pd3dCommandList->SetGraphicsRootDescriptorTable(0, m_pTexture->GetArgumentInfos(i).m_d3dSrvGpuDescriptorHandle);
 
-		pd3dCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-		if(i != TIME_NUMBER && i != HP_NUMBER)
-			pd3dCommandList->DrawInstanced(6, 1, 0, 0);
+			pd3dCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+			if (i == TIME_NUMBER || i == HP_NUMBER)
+				pd3dCommandList->DrawInstanced(18, 1, 0, 0);
+			else if (i == SCORE_NUMBER)
+				pd3dCommandList->DrawInstanced(36, 1, 0, 0);
+			else if (i == SKILL1_COVER)
+			{
+				if (m_ui.xmf2SKill.x < 1.0f)
+					pd3dCommandList->DrawInstanced(6, 1, 0, 0);
+			}
+			else if (i == SKILL2_COVER)
+			{
+				if (m_ui.xmf2SKill.y < 1.0f)
+					pd3dCommandList->DrawInstanced(6, 1, 0, 0);
+			}
+			else if (i == OCCUPATION_GAZE_COVER || i == OCCUPATION_GAZE)
+			{
+				if (m_bGaze)
+					pd3dCommandList->DrawInstanced(6, 1, 0, 0);
+			}
+			else
+				pd3dCommandList->DrawInstanced(6, 1, 0, 0);
+		}
 	}
+}
+void UIShader::SetSelect(UINT nCharacter)
+{
+	m_ui.xmf4Select.x = 0.39f;
+	m_ui.xmf4Select.z = 1.0f;
+
+	if (nCharacter == SOLDIER)
+	{
+		m_ui.xmf4Select.y = 0.606f;
+		m_ui.xmf4Select.w = 0.306f;
+	}
+	else if (nCharacter == DRONE)
+	{
+		m_ui.xmf4Select.y = 0.34f;
+		m_ui.xmf4Select.w = 0.04f;
+	}
+	else
+	{
+		m_ui.xmf4Select.y = 0.07f;
+		m_ui.xmf4Select.w = -0.24f;
+	}
+}
+void UIShader::RobbyRender(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera)
+{
+	if (m_pd3dGraphicsRootSignature)
+		pd3dCommandList->SetGraphicsRootSignature(m_pd3dGraphicsRootSignature);
+
+	pCamera->SetViewportsAndScissorRects(pd3dCommandList);
+
+	pd3dCommandList->SetDescriptorHeaps(1, &m_pd3dSrvDescriptorHeap);
+
+	D3D12_GPU_VIRTUAL_ADDRESS d3dcbUIGpuVirtualAddress = m_pd3dcbUI->GetGPUVirtualAddress();
+	pd3dCommandList->SetGraphicsRootConstantBufferView(1, d3dcbUIGpuVirtualAddress);
+
+	UpdateShaderVariables(pd3dCommandList);
+
+	if (m_ppd3dPipelineStates)
+		pd3dCommandList->SetPipelineState(m_ppd3dPipelineStates[LOBBY]);
+
+	pd3dCommandList->SetGraphicsRootDescriptorTable(0, m_pTexture->GetArgumentInfos(LOBBY).m_d3dSrvGpuDescriptorHandle);
+
+	pd3dCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	pd3dCommandList->DrawInstanced(6, 1, 0, 0);
+
+	pd3dCommandList->SetPipelineState(m_ppd3dPipelineStates[SELECT]);
+
+	pd3dCommandList->SetGraphicsRootDescriptorTable(0, m_pTexture->GetArgumentInfos(SELECT - 1).m_d3dSrvGpuDescriptorHandle);
+
+	pd3dCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	pd3dCommandList->DrawInstanced(6, 1, 0, 0);
+}
+
+void UIShader::EndRender(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera, bool bResult)
+{
+	if (m_pd3dGraphicsRootSignature)
+		pd3dCommandList->SetGraphicsRootSignature(m_pd3dGraphicsRootSignature);
+
+	pCamera->SetViewportsAndScissorRects(pd3dCommandList);
+
+	pd3dCommandList->SetDescriptorHeaps(1, &m_pd3dSrvDescriptorHeap);
+
+	D3D12_GPU_VIRTUAL_ADDRESS d3dcbUIGpuVirtualAddress = m_pd3dcbUI->GetGPUVirtualAddress();
+	pd3dCommandList->SetGraphicsRootConstantBufferView(1, d3dcbUIGpuVirtualAddress);
+
+	UpdateShaderVariables(pd3dCommandList);
+
+	if (m_ppd3dPipelineStates)
+		pd3dCommandList->SetPipelineState(m_ppd3dPipelineStates[LOBBY]);
+
+	if (bResult)
+		pd3dCommandList->SetGraphicsRootDescriptorTable(0, m_pTexture->GetArgumentInfos(END_W).m_d3dSrvGpuDescriptorHandle);
+	else
+		pd3dCommandList->SetGraphicsRootDescriptorTable(0, m_pTexture->GetArgumentInfos(END_L).m_d3dSrvGpuDescriptorHandle);
+
+
+	pd3dCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	pd3dCommandList->DrawInstanced(6, 1, 0, 0);
 }

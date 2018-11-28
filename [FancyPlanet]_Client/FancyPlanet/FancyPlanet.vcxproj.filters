@@ -13,11 +13,38 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
-    <Filter Include="Test">
-      <UniqueIdentifier>{1291981a-f0bd-461f-9848-ffb8e7b28990}</UniqueIdentifier>
-    </Filter>
     <Filter Include="리소스 파일\Terrain">
       <UniqueIdentifier>{688d3e8a-8cc5-49da-8ef8-b5310f6a8ca7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\GameFramework">
+      <UniqueIdentifier>{b5519d72-b4cf-44a5-94fd-951d68360d90}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\Object">
+      <UniqueIdentifier>{6334228a-600b-402f-bff0-db659677882d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\Shader">
+      <UniqueIdentifier>{564b8612-b214-419f-b993-043ab19f5c80}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\Effect">
+      <UniqueIdentifier>{10ba27f5-0a02-4f9e-b98d-fd4d756d0b0e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\Scene">
+      <UniqueIdentifier>{eba5a909-74bc-4bff-9d59-f9933326985a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\Mesh">
+      <UniqueIdentifier>{a725a144-ef38-49ae-a259-832ce5d1d5c1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\Camera">
+      <UniqueIdentifier>{65f0b866-57d0-461b-9025-35c28fa335b6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\ETC">
+      <UniqueIdentifier>{ba8af841-bcf6-4fc3-b808-409831b64084}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="HLSL">
+      <UniqueIdentifier>{c31dc85f-85ac-4067-81d4-2403d9be9aaa}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\Sound">
+      <UniqueIdentifier>{8b1ac1c3-f936-44ee-bab6-9376a187c77c}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -75,49 +102,97 @@
     <ClInclude Include="Effect.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
+    <ClInclude Include="FmodSound.h">
+      <Filter>소스 파일\Sound</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="stdafx.cpp">
-      <Filter>소스 파일</Filter>
-    </ClCompile>
-    <ClCompile Include="FancyPlanet.cpp">
-      <Filter>소스 파일</Filter>
-    </ClCompile>
-    <ClCompile Include="Camera.cpp">
-      <Filter>소스 파일</Filter>
-    </ClCompile>
-    <ClCompile Include="DDSTextureLoader12.cpp">
-      <Filter>소스 파일</Filter>
-    </ClCompile>
     <ClCompile Include="GameFramwork.cpp">
-      <Filter>소스 파일</Filter>
+      <Filter>소스 파일\GameFramework</Filter>
     </ClCompile>
-    <ClCompile Include="Player.cpp">
-      <Filter>소스 파일</Filter>
+    <ClCompile Include="Server.cpp">
+      <Filter>소스 파일\GameFramework</Filter>
     </ClCompile>
-    <ClCompile Include="Timer.cpp">
-      <Filter>소스 파일</Filter>
-    </ClCompile>
-    <ClCompile Include="Mesh.cpp">
-      <Filter>소스 파일</Filter>
+    <ClCompile Include="ProcessInput.cpp">
+      <Filter>소스 파일\GameFramework</Filter>
     </ClCompile>
     <ClCompile Include="Object.cpp">
-      <Filter>소스 파일</Filter>
+      <Filter>소스 파일\Object</Filter>
     </ClCompile>
-    <ClCompile Include="Scene.cpp">
-      <Filter>소스 파일</Filter>
+    <ClCompile Include="Player.cpp">
+      <Filter>소스 파일\Object</Filter>
     </ClCompile>
-    <ClCompile Include="Shader.cpp">
-      <Filter>소스 파일</Filter>
+    <ClCompile Include="Animation.cpp">
+      <Filter>소스 파일\Object</Filter>
     </ClCompile>
-    <ClCompile Include="UIShader.cpp">
-      <Filter>소스 파일</Filter>
+    <ClCompile Include="Material.cpp">
+      <Filter>소스 파일\Object</Filter>
     </ClCompile>
-    <ClCompile Include="ComputShader.cpp">
-      <Filter>소스 파일</Filter>
+    <ClCompile Include="AnimationObject.cpp">
+      <Filter>소스 파일\Object</Filter>
+    </ClCompile>
+    <ClCompile Include="SkyBox.cpp">
+      <Filter>소스 파일\Object</Filter>
+    </ClCompile>
+    <ClCompile Include="Terrain.cpp">
+      <Filter>소스 파일\Object</Filter>
     </ClCompile>
     <ClCompile Include="Effect.cpp">
-      <Filter>소스 파일</Filter>
+      <Filter>소스 파일\Effect</Filter>
+    </ClCompile>
+    <ClCompile Include="Shader.cpp">
+      <Filter>소스 파일\Shader</Filter>
+    </ClCompile>
+    <ClCompile Include="UIShader.cpp">
+      <Filter>소스 파일\Shader</Filter>
+    </ClCompile>
+    <ClCompile Include="ComputShader.cpp">
+      <Filter>소스 파일\Shader</Filter>
+    </ClCompile>
+    <ClCompile Include="Scene.cpp">
+      <Filter>소스 파일\Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="Mesh.cpp">
+      <Filter>소스 파일\Mesh</Filter>
+    </ClCompile>
+    <ClCompile Include="TerrainAndSkyScene.cpp">
+      <Filter>소스 파일\Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="EffectScene.cpp">
+      <Filter>소스 파일\Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="CharacterScene.cpp">
+      <Filter>소스 파일\Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="ObjectScene.cpp">
+      <Filter>소스 파일\Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="Camera.cpp">
+      <Filter>소스 파일\Camera</Filter>
+    </ClCompile>
+    <ClCompile Include="DDSTextureLoader12.cpp">
+      <Filter>소스 파일\ETC</Filter>
+    </ClCompile>
+    <ClCompile Include="FancyPlanet.cpp">
+      <Filter>소스 파일\ETC</Filter>
+    </ClCompile>
+    <ClCompile Include="stdafx.cpp">
+      <Filter>소스 파일\ETC</Filter>
+    </ClCompile>
+    <ClCompile Include="Timer.cpp">
+      <Filter>소스 파일\ETC</Filter>
+    </ClCompile>
+    <ClCompile Include="Build.cpp">
+      <Filter>소스 파일\GameFramework</Filter>
+    </ClCompile>
+    <ClCompile Include="FmodSound.cpp">
+      <Filter>소스 파일\Sound</Filter>
+    </ClCompile>
+    <ClCompile Include="StaticObject.cpp">
+      <Filter>소스 파일\Object</Filter>
+    </ClCompile>
+    <ClCompile Include="StaticObjectShader.cpp">
+      <Filter>소스 파일\Shader</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -138,21 +213,41 @@
     <Image Include="Assets\Image\Terrain\Detail_Texture_7.dds">
       <Filter>리소스 파일\Terrain</Filter>
     </Image>
-    <Image Include="..\Assets\Image\Test\rock3.png">
-      <Filter>Test</Filter>
+    <Image Include="icon1.ico">
+      <Filter>리소스 파일</Filter>
     </Image>
-    <Image Include="..\Assets\Image\Test\rock3Normal.dds">
-      <Filter>Test</Filter>
+    <Image Include="DeathStar32x32.ico">
+      <Filter>리소스 파일</Filter>
     </Image>
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="Light.hlsl" />
-    <FxCompile Include="UI.hlsl" />
-    <FxCompile Include="Animation.hlsl" />
-    <FxCompile Include="Object.hlsl" />
-    <FxCompile Include="Compute.hlsl" />
-    <FxCompile Include="Shaders.hlsl" />
-    <FxCompile Include="Effect.hlsl" />
+    <FxCompile Include="Animation.hlsl">
+      <Filter>HLSL</Filter>
+    </FxCompile>
+    <FxCompile Include="Compute.hlsl">
+      <Filter>HLSL</Filter>
+    </FxCompile>
+    <FxCompile Include="Effect.hlsl">
+      <Filter>HLSL</Filter>
+    </FxCompile>
+    <FxCompile Include="Light.hlsl">
+      <Filter>HLSL</Filter>
+    </FxCompile>
+    <FxCompile Include="Object.hlsl">
+      <Filter>HLSL</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders.hlsl">
+      <Filter>HLSL</Filter>
+    </FxCompile>
+    <FxCompile Include="UI.hlsl">
+      <Filter>HLSL</Filter>
+    </FxCompile>
+    <FxCompile Include="StaticObject.hlsl">
+      <Filter>HLSL</Filter>
+    </FxCompile>
+    <FxCompile Include="StaticObject_Emissive.hlsl">
+      <Filter>HLSL</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="Assets\Image\Terrain\HeightMap.raw">

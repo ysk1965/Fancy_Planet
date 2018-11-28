@@ -1,11 +1,12 @@
 #pragma once
 
 #define FRAME_BUFFER_WIDTH      1024
-#define FRAME_BUFFER_HEIGHT      768
+#define FRAME_BUFFER_HEIGHT     768
 
 #include "Timer.h"
 #include "Player.h"
 #include "Scene.h"
+#include "FmodSound.h"
 #include "ComputShader.h"
 #include <chrono>
 enum
@@ -21,6 +22,37 @@ enum
 	CHARACTER,
 	OBJECT
 };
+
+enum class BACKSOUND
+{
+	BACKGROUND_ROBBY,
+	BACKGROUND_INGAME,
+	BACKGROUND_END,
+};
+
+enum class EFFECTSOUND
+{
+	ROBBY_CLICK,
+	ROBBY_CHANGECHARACTER,
+	HUMAN_SHOT,
+	HUMAN_DIED,
+	HUMAN_JUMP,
+	HUMANSKILL_1,
+	HUMANSKILL_2,
+	DRONE_SHOT,
+	DRONE_DIED,
+	DRONE_JUMP,
+	DRONESKILL_1,
+	DRONESKILL_2,
+	CREATURE_SHOT,
+	CREATURE_DIED,
+	CREATURE_JUMP,
+	CREATURESKILL_1,
+	CREATURESKILL_2,
+	INGAME_CHARGE,
+	INGAME_COMPLETE
+};
+
 using namespace std;
 
 class CGameFramework
@@ -29,6 +61,13 @@ public:
 	CGameFramework();
 	~CGameFramework();
 
+	bool GetLobbyState()
+	{
+		return m_nIsLobby;
+	}
+	void SendBulletPacket();
+
+	void BuildLobby();
 	void BuildLightsAndMaterials();
 	bool OnCreate(HINSTANCE hInstance, HWND hMainWnd);
 	void OnDestroy();
@@ -50,26 +89,25 @@ public:
 	void ProcessInput();
 	void AnimateObjects();
 	void FrameAdvance();
+	void FrameAdvanceInLobby();
+	void FrameAdvanceInEnd();
 
 	void WaitForGpuComplete();
 	void MoveToNextFrame();
 
-	void SpaceDivision();
 	void RenderSubset(int iIndex);
 	void NotifyIdleState();
-	void SendBulletPacket();
 
 	void OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
 	void OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
 	LRESULT CALLBACK OnProcessingWindowMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
 	void UpdateLightsAndMaterialsShaderVariables();
-	void CalculatePickRay(const XMFLOAT2& xmf2MousePos);
 
 	XMFLOAT4X4& GetPlayerMatrix()
 	{
 		return m_pPlayer->GetPlayerWorldTransform();
 	};
-	void PrepareFrame(); 
+	void PrepareFrame();
 private:
 	ID3D12GraphicsCommandList * m_pd3dScreenCommandList;
 	ID3D12CommandAllocator      *m_pd3dScreenCommandAllocator;
@@ -82,6 +120,7 @@ private:
 
 	CShadowShader* m_pShadowShader = NULL;
 
+	UINT m_nIsLobby;
 
 	HINSTANCE               m_hInstance;
 	HWND                  m_hWnd;
@@ -89,18 +128,14 @@ private:
 	int                     m_nWndClientWidth;
 	int                     m_nWndClientHeight;
 
-	int						m_nCharacterType;
-
+	int						m_nCharacterType = 0;
+	int						m_iSceneState = INGAMEROOM;
 	XMFLOAT3			xmf3PickDirection;
 
 	IDXGIFactory4            *m_pdxgiFactory = NULL;
 	IDXGISwapChain3            *m_pdxgiSwapChain = NULL;
 	ID3D12Device            *m_pd3dDevice = NULL;
 
-	int                     m_nDivision = 0;
-	XMFLOAT3				 pickRayDirection;
-
-	bool                  **m_ppbDivision = NULL;
 	bool                  m_bMsaa4xEnable = false;
 	UINT                  m_nMsaa4xQualityLevels = 0;
 
@@ -127,7 +162,8 @@ private:
 	ID3D12Fence               *m_pd3dFence = NULL;
 	UINT64                  m_nFenceValues[m_nSwapChainBuffers];
 	HANDLE                  m_hFenceEvent;
-
+	bool m_bIsVictory = true;
+	bool m_bReady = false;
 #if defined(_DEBUG)
 	ID3D12Debug               *m_pd3dDebugController;
 #endif
@@ -158,6 +194,9 @@ private:
 
 	static CGameFramework* m_pGFforMultiThreads;
 
+	// FMOD
+	CFmodSound m_FmodSound;
+
 
 	//서버
 private:
@@ -180,13 +219,13 @@ private:
 	std::chrono::system_clock::time_point start;
 	std::chrono::system_clock::time_point mousestart;
 	bool istime = false;
-
-	float g_fgametime;// 게임시간.
-	float g_fgravity; //중력 세기.
+	XMFLOAT3 m_xmf3PrePosition;
+	float m_fgametime;// 게임시간.
+	float m_fgravity; //중력 세기.
 	XMFLOAT3 m_xmf3ObjectsPos[OBJECTS_NUMBER];
-
+	XMFLOAT4 m_xmf4ObjectsQuaternion[OBJECTS_NUMBER];
 	bool m_isMoveInput = false;
-
+	bool m_isMovePacketRecv = false;
 	ID3D12Resource				*m_pd3dcbLights = NULL;
 	LIGHTS						*m_pcbMappedLights = NULL;
 
@@ -202,4 +241,6 @@ public:
 	void ReadPacket(SOCKET sock);
 	void InitNetwork(HWND main_window);
 
+	TEAM Team[Team_NUMBER];
+	BASE Base[STATION_NUMBER];
 };

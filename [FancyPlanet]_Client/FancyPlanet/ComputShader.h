@@ -3,9 +3,14 @@
 enum {Mul = 0, Horizontal = 1, Vertical = 2, Add = 3 };
 enum {A= 0, B= 1, OriginScene = 2};
 enum { Input = 0, EMISSIVE = 1, SCENE = 2, Output = 3};
+
+#define DAMAGE_TIME 0.5f;
+#define VIBRATION_TIME 1.5f
+
 struct ComputeConstant
 {
-	float fW[11];
+	float fRed;
+	UINT fVibration;
 };
 class CComputShader
 {
@@ -30,7 +35,14 @@ class CComputShader
 	
 	D3D12_CPU_DESCRIPTOR_HANDLE    m_d3dStencilMapCPUHandle;
 	D3D12_GPU_DESCRIPTOR_HANDLE    m_d3dStencilMapGPUHandle;
+	
 	ComputeConstant m_Value;
+
+	float m_fDamage = 1.0f;
+	float m_fVibration = 1.0f;
+
+	DWORD m_dwDamage;
+	DWORD m_dwVibration;
 
 	UINT m_nWndClientWidth;
 	UINT m_nWndClientHeight;
@@ -39,8 +51,9 @@ public:
 	~CComputShader();
 
 	D3D12_SHADER_RESOURCE_VIEW_DESC GetShaderResourceViewDesc(D3D12_RESOURCE_DESC d3dResourceDesc, UINT nTextureType);
-
-	void CalcGaussWeights(float fSigma);
+	
+	void CalcComputeEffect();
+	void SetComputeEffect(UINT nIndex);
 	void CreateComputeRootSignature(ID3D12Device *pd3dDevice);
 	void CreateUavAndSrvDescriptorHeaps(ID3D12Device *pd3dDevice, int nConstantBufferViews, int nShaderResourceViews);
 	void CreateShaderResourceViews(ID3D12Device *pd3dDevice, CTexture *pTexture, ID3D12Resource* pStencilMap);

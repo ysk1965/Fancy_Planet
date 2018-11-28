@@ -98,17 +98,17 @@ D3D12_DEPTH_STENCIL_DESC CShader::CreateDepthStencilState()
 	d3dDepthStencilDesc.DepthEnable = TRUE;
 	d3dDepthStencilDesc.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
 	d3dDepthStencilDesc.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
-	d3dDepthStencilDesc.StencilEnable = true;
-	d3dDepthStencilDesc.StencilReadMask = 0xff;
-	d3dDepthStencilDesc.StencilWriteMask = 0xff;
+	d3dDepthStencilDesc.StencilEnable = FALSE;
+	d3dDepthStencilDesc.StencilReadMask = 0x00;
+	d3dDepthStencilDesc.StencilWriteMask = 0x00;
 	d3dDepthStencilDesc.FrontFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
 	d3dDepthStencilDesc.FrontFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
-	d3dDepthStencilDesc.FrontFace.StencilPassOp = D3D12_STENCIL_OP_REPLACE;
-	d3dDepthStencilDesc.FrontFace.StencilFunc = D3D12_COMPARISON_FUNC_ALWAYS;
+	d3dDepthStencilDesc.FrontFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
+	d3dDepthStencilDesc.FrontFace.StencilFunc = D3D12_COMPARISON_FUNC_NEVER;
 	d3dDepthStencilDesc.BackFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
 	d3dDepthStencilDesc.BackFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
-	d3dDepthStencilDesc.BackFace.StencilPassOp = D3D12_STENCIL_OP_REPLACE;
-	d3dDepthStencilDesc.BackFace.StencilFunc = D3D12_COMPARISON_FUNC_ALWAYS;
+	d3dDepthStencilDesc.BackFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
+	d3dDepthStencilDesc.BackFace.StencilFunc = D3D12_COMPARISON_FUNC_NEVER;
 
 	return(d3dDepthStencilDesc);
 }
@@ -213,7 +213,7 @@ void CShader::CreateConstantBufferViews(ID3D12Device *pd3dDevice, ID3D12Graphics
 	}
 }
 
-D3D12_SHADER_RESOURCE_VIEW_DESC GetShaderResourceViewDesc(D3D12_RESOURCE_DESC d3dResourceDesc, UINT nTextureType)
+D3D12_SHADER_RESOURCE_VIEW_DESC CShader::GetShaderResourceViewDesc(D3D12_RESOURCE_DESC d3dResourceDesc, UINT nTextureType)
 {
 	D3D12_SHADER_RESOURCE_VIEW_DESC d3dShaderResourceViewDesc;
 	d3dShaderResourceViewDesc.Format = d3dResourceDesc.Format;
@@ -403,6 +403,28 @@ CDefferredLightingTexturedShader::CDefferredLightingTexturedShader()
 
 CDefferredLightingTexturedShader::~CDefferredLightingTexturedShader()
 {
+}
+
+D3D12_DEPTH_STENCIL_DESC CDefferredLightingTexturedShader::CreateDepthStencilState()
+{
+	D3D12_DEPTH_STENCIL_DESC d3dDepthStencilDesc;
+	::ZeroMemory(&d3dDepthStencilDesc, sizeof(D3D12_DEPTH_STENCIL_DESC));
+	d3dDepthStencilDesc.DepthEnable = true;
+	d3dDepthStencilDesc.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
+	d3dDepthStencilDesc.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
+	d3dDepthStencilDesc.StencilEnable = true;
+	d3dDepthStencilDesc.StencilReadMask = 0xff;
+	d3dDepthStencilDesc.StencilWriteMask = 0xff;
+	d3dDepthStencilDesc.FrontFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
+	d3dDepthStencilDesc.FrontFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
+	d3dDepthStencilDesc.FrontFace.StencilPassOp = D3D12_STENCIL_OP_REPLACE;
+	d3dDepthStencilDesc.FrontFace.StencilFunc = D3D12_COMPARISON_FUNC_ALWAYS;
+	d3dDepthStencilDesc.BackFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
+	d3dDepthStencilDesc.BackFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
+	d3dDepthStencilDesc.BackFace.StencilPassOp = D3D12_STENCIL_OP_REPLACE;
+	d3dDepthStencilDesc.BackFace.StencilFunc = D3D12_COMPARISON_FUNC_ALWAYS;
+
+	return(d3dDepthStencilDesc);
 }
 void CDefferredLightingTexturedShader::CreateShader(ID3D12Device *pd3dDevice, ID3D12RootSignature *pd3dGraphicsRootSignature, UINT nRenderTargets)
 {
@@ -787,10 +809,14 @@ void CShadowShader::SetPlayer(CPlayer* pPlayer)
 }
 CShadowShader::~CShadowShader()
 {
+	Release();
+	m_pd3dDSVDescriptorHeap->Release();
+}
+void CShadowShader::Release()
+{
 	if (m_pd3dDepthStencilBuffer)
 		m_pd3dDepthStencilBuffer->Release();
 }
-
 void CShadowShader::CreateDsvDescriptorHeaps(ID3D12Device *pd3dDevice)
 {
 	D3D12_DESCRIPTOR_HEAP_DESC d3dDsvDescriptorHeapDesc;
@@ -851,13 +877,6 @@ void CShadowShader::CreateResource(ID3D12Device *pd3dDevice, UINT nWndClientWidt
 }
 void CShadowShader::UpdateTransform()
 {
-	//m_fLightRotationAngle += 0.000001f;
-
-	//XMFLOAT3 xmf3PlayerPosition = m_pPlayer->GetPosition();
-	//
-	//mSceneBounds.Center = XMFLOAT3(xmf3PlayerPosition.x, xmf3PlayerPosition.y, xmf3PlayerPosition.z);
-	//mSceneBounds.Radius = sqrtf((100) * (100) + (100) * (100));
-
 	XMMATRIX R = XMMatrixRotationY(m_fLightRotationAngle);
 
 	XMVECTOR RotationlightDir = XMLoadFloat3(&m_xmf3Lightdir);;
@@ -964,8 +983,8 @@ D3D12_SHADER_BYTECODE CEffectShader::CreatePixelShader(ID3DBlob **ppd3dShaderBlo
 void CEffectShader::BuildShader(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList)
 {
 	m_pTexture = new CTexture(2, RESOURCE_TEXTURE2D, 0);
-	m_pTexture->LoadTextureFromFile(pd3dDevice, pd3dCommandList, L"../Assets/smoke.dds", 0);
-	m_pTexture->LoadTextureFromFile(pd3dDevice, pd3dCommandList, L"../Assets/smoke.dds", 1);
+	m_pTexture->LoadTextureFromFile(pd3dDevice, pd3dCommandList, L"../Assets/Effect.dds", 0);
+	m_pTexture->LoadTextureFromFile(pd3dDevice, pd3dCommandList, L"../Assets/Effect.dds", 1);
 
 	CreateCbvAndSrvDescriptorHeaps(pd3dDevice, pd3dCommandList, 0, m_pTexture->GetTextureCount());
 	CreateShaderResourceViews(pd3dDevice, pd3dCommandList, m_pTexture, 2, false, NULL);

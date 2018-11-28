@@ -25,18 +25,18 @@ enum
 };
 
 
-#define DIR_FORWARD					0x01
-#define DIR_BACKWARD				0x02
-#define DIR_LEFT					0x04
-#define DIR_RIGHT					0x08
-#define DIR_UP						0x10
-#define DIR_DOWN					0x20
+#define DIR_FORWARD               0x01
+#define DIR_BACKWARD            0x02
+#define DIR_LEFT               0x04
+#define DIR_RIGHT               0x08
+#define DIR_UP                  0x10
+#define DIR_DOWN               0x20
 
-#define RESOURCE_TEXTURE2D			0x01
-#define RESOURCE_TEXTURE2D_ARRAY	0x02	//[]
-#define RESOURCE_TEXTURE2DARRAY		0x03
-#define RESOURCE_TEXTURE_CUBE		0x04
-#define RESOURCE_BUFFER				0x05
+#define RESOURCE_TEXTURE2D         0x01
+#define RESOURCE_TEXTURE2D_ARRAY   0x02   //[]
+#define RESOURCE_TEXTURE2DARRAY      0x03
+#define RESOURCE_TEXTURE_CUBE      0x04
+#define RESOURCE_BUFFER            0x05
 
 #define BONE_TRANSFORM_NUM 31
 #define BONE_TRANSFORM_NUM2 32
@@ -51,21 +51,20 @@ class CShader;
 class CAnimationObject;
 class AnimationResourceFactors;
 class AnimationTimeFactor;
-class CPhysXObject;
 
 struct CB_GAMEOBJECT_INFO
 {
-	XMFLOAT4X4						m_xmf4x4World;
+	XMFLOAT4X4                  m_xmf4x4World;
 };
 struct SRVROOTARGUMENTINFO
 {
-	UINT							m_nRootParameterIndex = 0;
-	D3D12_GPU_DESCRIPTOR_HANDLE		m_d3dSrvGpuDescriptorHandle;
+	UINT                     m_nRootParameterIndex = 0;
+	D3D12_GPU_DESCRIPTOR_HANDLE      m_d3dSrvGpuDescriptorHandle;
 };
 
 struct BONE_TRANSFORMS
 {
-	XMFLOAT4X4	m_xmf4x4World;
+	XMFLOAT4X4   m_xmf4x4World;
 	XMFLOAT4X4 m_xmf4x4BoneTransform[BONE_TRANSFORM_NUM];
 };
 struct BONE_TRANSFORMS2
@@ -75,7 +74,7 @@ struct BONE_TRANSFORMS2
 struct BONE_TRANSFORMS3
 {
 	XMFLOAT4X4 m_xmf4x4BoneTransform[BONE_TRANSFORM_NUM3];
-	XMFLOAT4X4	m_xmf4x4RedererMeshWorld[RENDERER_MESH_WORLD_TRANSFORM];
+	XMFLOAT4X4   m_xmf4x4RedererMeshWorld[RENDERER_MESH_WORLD_TRANSFORM];
 };
 struct FRAME
 {
@@ -97,6 +96,12 @@ typedef struct SRT
 	XMFLOAT3 T;
 }SRT;
 
+struct STO_E
+{
+	XMFLOAT4X4 xmf4x4World;
+	XMFLOAT4 xmf4Color;
+	float fAlpha;
+};
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 template <typename T>
@@ -128,7 +133,7 @@ private:
 public:
 	UINT m_nBone = 0;
 
-	XMFLOAT4X4								*m_pBindPoses;
+	XMFLOAT4X4                        *m_pBindPoses;
 
 	UINT GetAnimationCount()
 	{
@@ -160,15 +165,15 @@ public:
 	virtual ~CTexture();
 
 private:
-	int								m_nReferences = 0;
-	UINT							m_nTextureType = RESOURCE_TEXTURE2D;
-	int								m_nTextures = 0;
-	ID3D12Resource					**m_ppd3dTextures = NULL;
-	ID3D12Resource					**m_ppd3dTextureUploadBuffers;
-	SRVROOTARGUMENTINFO				*m_pRootArgumentInfos = NULL;
+	int                        m_nReferences = 0;
+	UINT                     m_nTextureType = RESOURCE_TEXTURE2D;
+	int                        m_nTextures = 0;
+	ID3D12Resource               **m_ppd3dTextures = NULL;
+	ID3D12Resource               **m_ppd3dTextureUploadBuffers;
+	SRVROOTARGUMENTINFO            *m_pRootArgumentInfos = NULL;
 
-	int								m_nSamplers = 0;
-	D3D12_GPU_DESCRIPTOR_HANDLE		*m_pd3dSamplerGpuDescriptorHandles = NULL;
+	int                        m_nSamplers = 0;
+	D3D12_GPU_DESCRIPTOR_HANDLE      *m_pd3dSamplerGpuDescriptorHandles = NULL;
 
 public:
 	void AddRef() { m_nReferences++; }
@@ -210,17 +215,17 @@ public:
 	virtual ~CMaterial();
 
 private:
-	int								m_nReferences = 0;
+	int                        m_nReferences = 0;
 
 public:
 	void AddRef() { m_nReferences++; }
 	void Release() { if (--m_nReferences <= 0) delete this; }
 
-	XMFLOAT4						m_xmf4Albedo = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+	XMFLOAT4                  m_xmf4Albedo = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
 
-	UINT							m_nReflection = 0;
-	CTexture						*m_pTexture = NULL;
-	CShader							*m_pShader = NULL;
+	UINT                     m_nReflection = 0;
+	CTexture                  *m_pTexture = NULL;
+	CShader                     *m_pShader = NULL;
 
 	void SetAlbedo(XMFLOAT4 xmf4Albedo) { m_xmf4Albedo = xmf4Albedo; }
 	void SetReflection(UINT nReflection)
@@ -236,6 +241,53 @@ public:
 	void ReleaseUploadBuffers();
 };
 
+class StaticObject
+{
+private:
+	XMFLOAT4X4 * m_xmf4x4World;
+	STO_E			*m_sto_e;
+	CMesh			*m_pMesh;
+	UINT				m_nObjects;
+	UINT				m_nType;
+	DWORD			m_dwdColorTime;
+	XMFLOAT3		m_xmf3CurrentColor = XMFLOAT3(1.0f, 1.0f, 1.0f);
+	XMFLOAT3		m_xmf3NewColor = XMFLOAT3(1.0f, 1.0f, 1.0f);
+
+	DWORD			m_dwdBaseTime[3] ={};
+	
+	bool Base[3] = { false, false, false };
+
+	UINT nCount;
+
+	ID3D12Resource * m_pd3dcbGameObjects = NULL;
+	XMFLOAT4X4* m_pcbMappedGameObjects = NULL;
+	STO_E* m_pcbMappedGameObjects1 = NULL;
+public:
+	void CreateShaderVariables(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList);
+	void UpdateShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList);
+	void SetChangeColor(ID3D12GraphicsCommandList *pd3dCommandList, const DWORD& dwd_mColorTime);
+	StaticObject(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, TCHAR *pstrFileName, UINT nObjects, UINT nType);
+	void SetBase(int Num, int Color);
+	void UpdateBase();
+
+	~StaticObject();
+	UINT GetType()
+	{
+		return m_nType;
+	}
+	UINT GetObjectsNum()
+	{
+		return m_nObjects;
+	}
+	void SetChangeColor(const DWORD& dwd_mColorTime);
+	void SetShaderVariable(UINT nIndex, void* p);
+	void SetScale(UINT nIndex, float x, float y, float z);
+	void SetPosition(UINT nIndex, const XMFLOAT3& xmf3Pos);
+	void Rotate(UINT nIndex, float fPitch = 10.0f, float fYaw = 10.0f, float fRoll = 10.0f);
+
+	void Render(ID3D12GraphicsCommandList *pd3dCommandList);
+};
+
 class CGameObject
 {
 public:
@@ -245,8 +297,8 @@ public:
 	virtual ~CGameObject();
 
 private:
-	int								m_nReferences = 0;
-	UINT							m_nObjects = 0;
+	int                        m_nReferences = 0;
+	UINT                     m_nObjects = 0;
 public:
 	void AddRef()
 	{
@@ -259,29 +311,31 @@ public:
 	}
 
 public:
-	XMFLOAT3						m_Direction;
-	bool							m_bActive = true;
-	bool							m_bShooted = false;
-	DWORD							m_dAlivedtime = 0;
+	XMFLOAT3                  m_Direction;
+	bool                     m_bActive = true;
+	bool                     m_bShooted = false;
+	DWORD                     m_dAlivedtime = 0;
 
-	XMFLOAT4X4						m_xmf4x4World;
+	XMFLOAT4X4                  m_xmf4x4World;
 
-	CMesh							**m_ppMeshes;
-	int								m_nMeshes;
+	CMesh                     **m_ppMeshes;
+	int                        m_nMeshes;
 
-	CMaterial						*m_pMaterial = NULL;
+	CMaterial                  *m_pMaterial = NULL;
 
-	D3D12_GPU_DESCRIPTOR_HANDLE		m_d3dCbvGPUDescriptorHandle;
+	D3D12_GPU_DESCRIPTOR_HANDLE      m_d3dCbvGPUDescriptorHandle;
 
 protected:
 	ID3D12Resource * m_pd3dcbGameObjects = NULL; // 샘플 오브젝트만 이값을 가지고 있다.
-	CB_GAMEOBJECT_INFO				*m_pcbMappedGameObjects = NULL;
+	CB_GAMEOBJECT_INFO            *m_pcbMappedGameObjects = NULL;
 
 	bool m_bRendererMesh = false;
 
-	UINT							m_nDrawType = -1;
-	UINT							m_nBoneType = 0;
+	UINT                     m_nDrawType = -1;
+	UINT                     m_nBoneType = 0;
 public:
+	TCHAR * char2tchar(char * asc);
+
 	void SetMesh(int nIndex, CMesh *pMesh);
 	void SetShader(CShader *pShader);
 	void SetMaterial(CMaterial *pMaterial);
@@ -412,7 +466,7 @@ public:
 	virtual ~CAnimationObject();
 	void ReleaseUploadBuffers();
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, int iRootParameterIndex, CCamera *pCamera = NULL);
-	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera, UINT nInstances, CAnimationObject** ppObject, UINT nIndex, CPlayer* pPlayer);
+	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera, UINT nInstances, CAnimationObject** ppObject, UINT nIndex, CPlayer* pPlayer, UINT nCharacterIndex);
 	virtual void ShadowRender(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera, UINT nInstances, CAnimationObject** ppObject, UINT nIndex);
 	void LoadAnimation(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ifstream& InFile, AnimationController* pAnimationController);
 	virtual int LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList,
@@ -442,22 +496,22 @@ public:
 	virtual void Rotate(XMFLOAT3 *pxmf3Axis, float fAngle);
 	virtual void Rotate(XMFLOAT4 *pxmf4Quaternion);
 
-	CAnimationObject					**m_ppAnimationFactorObjects;
-	CAnimationObject 					*m_pParent = NULL;
-	CAnimationObject 					*m_pChild = NULL;
-	CAnimationObject 					*m_pSibling = NULL;
+	CAnimationObject               **m_ppAnimationFactorObjects;
+	CAnimationObject                *m_pParent = NULL;
+	CAnimationObject                *m_pChild = NULL;
+	CAnimationObject                *m_pSibling = NULL;
 	// 부모좌표계로 변환하는 행렬
-	XMFLOAT4X4						m_xmf4x4ToRootTransform;
+	XMFLOAT4X4                  m_xmf4x4ToRootTransform;
 	// 현재 노드에서 월드좌표계로 변환하는 행렬
-	XMFLOAT4X4						m_xmf4x4ToParentTransform;
+	XMFLOAT4X4                  m_xmf4x4ToParentTransform;
 
-	TCHAR							m_strFrameName[256] = { '\0' };
-	bool							m_bRoot = false;
-	int								m_iBoneIndex = -1;
+	TCHAR                     m_strFrameName[256] = { '\0' };
+	bool                     m_bRoot = false;
+	int                        m_iBoneIndex = -1;
 	// 
-	AnimationController				*m_pAnimationController = NULL;
-	AnimationResourceFactors				*m_pAnimationFactors = NULL;
-	AnimationTimeFactor						*m_pAnimationTime = NULL;
+	AnimationController            *m_pAnimationController = NULL;
+	AnimationResourceFactors            *m_pAnimationFactors = NULL;
+	AnimationTimeFactor                  *m_pAnimationTime = NULL;
 	CAnimationObject& operator=(CAnimationObject& other)
 	{
 		if (this == &other)
@@ -492,7 +546,17 @@ public:
 
 		m_chronoStart = chrono::system_clock::now();
 	}
+	void Reset()
+	{
+		m_iNewState = 0;
+		m_iSaveState = 0;
 
+		m_fCurrentFrame = 0;
+		m_fSaveLastFrame = 0;
+		m_iState = 0;
+
+		m_chronoStart = chrono::system_clock::now();
+	}
 	int m_iNewState;
 	int m_iSaveState;
 
@@ -667,13 +731,13 @@ public:
 	UINT *m_pBoneIndexList = NULL;
 	UINT m_nBindpos = 0;
 
-	BONE_TRANSFORMS			*m_BoneTransforms;
-	BONE_TRANSFORMS2			*m_BoneTransforms2;
-	BONE_TRANSFORMS3			*m_BoneTransforms3;
+	BONE_TRANSFORMS         *m_BoneTransforms;
+	BONE_TRANSFORMS2         *m_BoneTransforms2;
+	BONE_TRANSFORMS3         *m_BoneTransforms3;
 
-	BONE_TRANSFORMS				*m_pcbMappedGameObjects = NULL;
-	BONE_TRANSFORMS2			*m_pcbMappedGameObjects2 = NULL;
-	BONE_TRANSFORMS3				*m_pcbMappedGameObjects3 = NULL;
+	BONE_TRANSFORMS            *m_pcbMappedGameObjects = NULL;
+	BONE_TRANSFORMS2         *m_pcbMappedGameObjects2 = NULL;
+	BONE_TRANSFORMS3            *m_pcbMappedGameObjects3 = NULL;
 
 	ID3D12Resource** m_ppResource;
 	UINT nResource;
@@ -687,10 +751,10 @@ public:
 private:
 	CHeightMapImage * m_pHeightMapImage;
 
-	int							m_nWidth;
-	int							m_nLength;
+	int                     m_nWidth;
+	int                     m_nLength;
 
-	XMFLOAT3					m_xmf3Scale;
+	XMFLOAT3               m_xmf3Scale;
 
 public:
 	float GetHeight(float x, float z, bool bReverseQuad = false) { return(m_pHeightMapImage->GetHeight(x, z, bReverseQuad) * m_xmf3Scale.y); } //World
