@@ -22,7 +22,7 @@
     <ProjectGuid>{2B2F6914-BB18-4A0E-96F7-E2619095AC16}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>My2016Server</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.16299.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.17134.0</WindowsTargetPlatformVersion>
     <ProjectName>FancyPlanetServer</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
