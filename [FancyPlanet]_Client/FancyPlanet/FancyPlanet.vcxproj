@@ -78,8 +78,8 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>D:\카톡\FancyPlanet%2808.08%29\[FancyPlanet]_Client %2808.10%29\FMOD_x64\inc;D:\카톡\FancyPlanet%2808.08%29\[FancyPlanet]_Client %283%29\FancyPlanet;D:\카톡\FancyPlanet%2808.08%29\[FancyPlanet]_Client %283%29\FMOD_x64\inc;$(IncludePath)</IncludePath>
-    <LibraryPath>D:\카톡\FancyPlanet%2808.08%29\[FancyPlanet]_Client %2808.10%29\FMOD_x64\lib;D:\카톡\FancyPlanet%2808.08%29\[FancyPlanet]_Client %283%29\FMOD_x64\lib;D:\FancyPlanet\PhysX\vc14win64;D:\카톡\FancyPlanet%2808.08%29\[FancyPlanet]_Client %283%29\FancyPlanet\x64\Release;$(LibraryPath)</LibraryPath>
+    <IncludePath>FMOD_x64\inc;FMOD_x64\lib;FancyPlanet;$(IncludePath)</IncludePath>
+    <LibraryPath>PhysX\vc14win64;FMOD_x64\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
@@ -115,13 +115,13 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>D:\카톡\FancyPlanet%2808.11%29\[FancyPlanet]_Client %2808.11%29\[FancyPlanet]_Client %2808.11%29\FMOD_x64\inc;../FMOD_x64\inc</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>FMOD_x64\inc</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>../FMOD_x64\lib</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>FMOD_x64\lib</AdditionalLibraryDirectories>
       <AdditionalDependencies>dinput8.lib;d3dcompiler.lib;dxguid.lib;winmm.lib;dxgi.lib;comctl32.lib;fmod64_vc.lib;fmodstudio64_vc.lib</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
