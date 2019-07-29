@@ -1,6 +1,9 @@
 #pragma once
 #include "stdafx.h"
 #include "protocol.h"
+#define UNICODE
+#include <sqlext.h>  
+#include <locale.h>
 
 class DBMANAGER
 {

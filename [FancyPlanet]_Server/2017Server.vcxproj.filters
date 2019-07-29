@@ -19,6 +19,39 @@
     <Filter Include="99.Etc">
       <UniqueIdentifier>{a33b0f21-c843-4788-92d5-55a2facb08b5}</UniqueIdentifier>
     </Filter>
+    <Filter Include="02.DB">
+      <UniqueIdentifier>{240a5ee7-1b1e-4cc9-9d30-f8b18336e23a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="00.PhysX\01.Player">
+      <UniqueIdentifier>{61bcc976-33b6-4f6f-a9fa-dc6b5203de7f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="00.PhysX\03.Object">
+      <UniqueIdentifier>{c5dd64a9-8d55-4819-9b87-61ff33bbe511}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="00.PhysX\02.Scene">
+      <UniqueIdentifier>{dc9a7410-3033-415c-97ee-bf7be89cebc1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="00.PhysX\04.GameTimer">
+      <UniqueIdentifier>{0b293e55-d90a-4d2d-afe5-e8c0a1841e3b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="00.PhysX\01.Player\OtherPlayer">
+      <UniqueIdentifier>{09bd1c12-46e7-42e4-b972-5e58e3c94390}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="00.PhysX\03.Object\01.DynamicActor">
+      <UniqueIdentifier>{7850ee6b-2671-488a-90b9-4c5d1e01dea5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="00.PhysX\03.Object\02.StaticActor">
+      <UniqueIdentifier>{c741795a-8443-4d52-adb7-6ac6ffb49189}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="00.PhysX\03.Object\03.Cloth">
+      <UniqueIdentifier>{a7bae891-7c45-4fe0-b966-f8f8385435ee}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Information">
+      <UniqueIdentifier>{d8424263-4d1b-465e-9fbd-06e8e04e29ef}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Information\Base">
+      <UniqueIdentifier>{6f522b15-c90a-4caa-93d7-5f876577af81}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="protocol.h">
@@ -29,6 +62,33 @@
     </ClInclude>
     <ClInclude Include="PhysXFramework.h">
       <Filter>00.PhysX</Filter>
+    </ClInclude>
+    <ClInclude Include="DBManager.h">
+      <Filter>02.DB</Filter>
+    </ClInclude>
+    <ClInclude Include="Player.h">
+      <Filter>00.PhysX\01.Player</Filter>
+    </ClInclude>
+    <ClInclude Include="Scene.h">
+      <Filter>00.PhysX\02.Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="Object.h">
+      <Filter>00.PhysX\03.Object</Filter>
+    </ClInclude>
+    <ClInclude Include="StaticActor.h">
+      <Filter>00.PhysX\03.Object\02.StaticActor</Filter>
+    </ClInclude>
+    <ClInclude Include="DynamicActor.h">
+      <Filter>00.PhysX\03.Object\01.DynamicActor</Filter>
+    </ClInclude>
+    <ClInclude Include="GameTimer.h">
+      <Filter>00.PhysX\04.GameTimer</Filter>
+    </ClInclude>
+    <ClInclude Include="CCloth.h">
+      <Filter>00.PhysX\03.Object\03.Cloth</Filter>
+    </ClInclude>
+    <ClInclude Include="Base.h">
+      <Filter>Information\Base</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -43,6 +103,36 @@
     </ClCompile>
     <ClCompile Include="PhysXFramework.cpp">
       <Filter>00.PhysX</Filter>
+    </ClCompile>
+    <ClCompile Include="DBManager.cpp">
+      <Filter>02.DB</Filter>
+    </ClCompile>
+    <ClCompile Include="Player.cpp">
+      <Filter>00.PhysX\01.Player</Filter>
+    </ClCompile>
+    <ClCompile Include="Scene.cpp">
+      <Filter>00.PhysX\02.Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="Object.cpp">
+      <Filter>00.PhysX\03.Object</Filter>
+    </ClCompile>
+    <ClCompile Include="StaticActor.cpp">
+      <Filter>00.PhysX\03.Object\02.StaticActor</Filter>
+    </ClCompile>
+    <ClCompile Include="DynamicActor.cpp">
+      <Filter>00.PhysX\03.Object\01.DynamicActor</Filter>
+    </ClCompile>
+    <ClCompile Include="GameTimer.cpp">
+      <Filter>00.PhysX\04.GameTimer</Filter>
+    </ClCompile>
+    <ClCompile Include="stdafx.cpp">
+      <Filter>99.Etc</Filter>
+    </ClCompile>
+    <ClCompile Include="CCloth.cpp">
+      <Filter>00.PhysX\03.Object\03.Cloth</Filter>
+    </ClCompile>
+    <ClCompile Include="Base.cpp">
+      <Filter>Information\Base</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
